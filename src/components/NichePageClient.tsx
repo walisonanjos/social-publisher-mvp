@@ -1,7 +1,8 @@
 "use client";
 
-import { useEffect, useState, useMemo, useCallback } from "react";
-import { useRouter } from "next/navigation"; // Importe o useRouter
+// CORREÇÃO: 'useCallback' foi removido da importação
+import { useEffect, useState, useMemo } from "react";
+import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabaseClient";
 import { User } from "@supabase/supabase-js";
 import { RefreshCw, Loader2 } from "lucide-react";
@@ -14,7 +15,7 @@ import { Video } from "@/types";
 import MainHeader from "./MainHeader";
 
 export default function NichePageClient({ nicheId }: { nicheId: string }) {
-  const router = useRouter(); // Inicialize o router
+  const router = useRouter();
   const supabase = createClient();
   const [user, setUser] = useState<User | null>(null);
   const [videos, setVideos] = useState<Video[]>([]);
@@ -34,7 +35,6 @@ export default function NichePageClient({ nicheId }: { nicheId: string }) {
     return groups;
   }, [videos]);
 
-  // Esta função não precisa mais de `useCallback` se só for usada dentro do useEffect
   const fetchPageData = async (userId: string) => {
     const { data: videosData, error: videosError } = await supabase
       .from("videos")
@@ -87,7 +87,6 @@ export default function NichePageClient({ nicheId }: { nicheId: string }) {
       console.error("Erro ao deletar agendamento:", error);
       alert("Não foi possível excluir o agendamento.");
     } else {
-      // CORREÇÃO: Atualiza a lista após deletar
       router.refresh();
     }
   };
@@ -123,7 +122,6 @@ export default function NichePageClient({ nicheId }: { nicheId: string }) {
       <main className="container mx-auto p-4 md:p-8">
         <Navbar nicheId={nicheId} />
         <div className="mt-8">
-          {/* A prop onScheduleSuccess foi removida */}
           <UploadForm nicheId={nicheId} />
         </div>
         <div className="mt-8">
@@ -138,7 +136,6 @@ export default function NichePageClient({ nicheId }: { nicheId: string }) {
           <h2 className="text-2xl font-bold tracking-tight text-white">
             Meus Agendamentos
           </h2>
-          {/* O botão de refresh manual agora chama router.refresh() */}
           <button
             onClick={() => router.refresh()}
             className="flex items-center gap-2 px-3 py-1.5 text-sm bg-gray-700/50 hover:bg-gray-700 border border-gray-600 rounded-lg transition-colors"

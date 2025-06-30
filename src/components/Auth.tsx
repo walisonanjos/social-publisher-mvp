@@ -21,7 +21,6 @@ export default function Auth() {
 
     try {
       if (isSignUp) {
-        // Lógica de Cadastro (Sign Up)
         const { error: signUpError } = await supabase.auth.signUp({
           email,
           password,
@@ -31,19 +30,21 @@ export default function Auth() {
           "Cadastro realizado! Por favor, verifique seu e-mail para confirmar a conta.",
         );
       } else {
-        // Lógica de Login (Sign In)
         const { error: signInError } = await supabase.auth.signInWithPassword({
           email,
           password,
         });
         if (signInError) throw signInError;
-
-        // CORREÇÃO: Força a atualização da página para carregar o estado de logado.
-        // Esta é a garantia explícita da reatividade.
         router.refresh();
       }
-    } catch (err: any) {
-      setError(err.error_description || err.message);
+    } catch (err: unknown) {
+      // CORREÇÃO: Trocamos 'any' por 'unknown'
+      // Verificamos se o erro tem o formato esperado
+      if (typeof err === "object" && err !== null && "message" in err) {
+        setError((err as { message: string }).message);
+      } else {
+        setError("Ocorreu um erro desconhecido.");
+      }
     } finally {
       setLoading(false);
     }

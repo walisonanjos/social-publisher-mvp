@@ -2,7 +2,7 @@
 
 import { useEffect, useState, FormEvent } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation"; // Precisamos do router de volta
+// CORREÇÃO: useRouter foi removido da importação
 import { createClient } from "../../lib/supabaseClient";
 import { User } from "@supabase/supabase-js";
 import { Loader2, PlusCircle, Trash2 } from "lucide-react";
@@ -12,7 +12,7 @@ import Auth from "@/components/Auth";
 
 export default function NichesPage() {
   const supabase = createClient();
-  const router = useRouter(); // Inicialize o router
+  // CORREÇÃO: A linha const router = useRouter() foi removida.
   const [user, setUser] = useState<User | null>(null);
   const [niches, setNiches] = useState<Niche[]>([]);
   const [loading, setLoading] = useState(true);
@@ -21,7 +21,6 @@ export default function NichesPage() {
   const [error, setError] = useState("");
 
   useEffect(() => {
-    // Busca inicial de dados
     const fetchInitialData = async () => {
       setLoading(true);
       const {
@@ -37,6 +36,7 @@ export default function NichesPage() {
 
         if (nichesError) {
           setError("Erro ao carregar seus workspaces.");
+          console.error(nichesError);
         } else {
           setNiches(nichesData || []);
         }
@@ -62,7 +62,6 @@ export default function NichesPage() {
       setError("Ocorreu um erro ao criar o workspace.");
       console.error(insertError);
     } else if (newNiche) {
-      // ATUALIZAÇÃO MANUAL PARA REATIVIDADE INSTANTÂNEA
       setNiches((currentNiches) => [...currentNiches, newNiche]);
       setNewNicheName("");
     }
@@ -72,7 +71,7 @@ export default function NichesPage() {
   const handleDeleteNiche = async (nicheId: string, nicheName: string) => {
     if (
       !window.confirm(
-        `Tem certeza que deseja excluir o workspace "${nicheName}"?`,
+        `Tem certeza que deseja excluir o workspace "${nicheName}"? Esta ação não pode ser desfeita.`,
       )
     ) {
       return;
@@ -89,7 +88,6 @@ export default function NichesPage() {
       setError("Ocorreu um erro ao excluir o workspace.");
       console.error(deleteError);
     } else {
-      // ATUALIZAÇÃO MANUAL PARA REATIVIDADE INSTANTÂNEA
       setNiches((currentNiches) =>
         currentNiches.filter((niche) => niche.id !== nicheId),
       );
@@ -113,10 +111,10 @@ export default function NichesPage() {
       <MainHeader user={user} pageTitle="Seus Workspaces" />
       <main className="container mx-auto p-4 md:p-8">
         <div className="w-full max-w-4xl mx-auto">
-          {/* O JSX continua o mesmo, a mudança foi na lógica das funções */}
           <p className="text-lg text-center text-gray-400 -mt-8 mb-12">
             Selecione um workspace para gerenciar ou crie um novo.
           </p>
+
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6 mb-12">
             {niches.map((niche) => (
               <div key={niche.id} className="relative group">
@@ -141,6 +139,7 @@ export default function NichesPage() {
               </div>
             ))}
           </div>
+
           <div className="bg-gray-800 p-6 rounded-lg border border-gray-700">
             <h3 className="text-lg font-semibold text-white mb-4">
               Criar Novo Workspace
