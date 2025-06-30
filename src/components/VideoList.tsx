@@ -39,11 +39,9 @@ function VideoCard({
           {video.title}
         </span>
         <div
-          // CORREÇÃO: Usando @ts-expect-error
           // @ts-expect-error O tipo 'status' pode não ser uma chave válida para statusStyles, mas confiamos que os dados do DB estarão corretos.
           className={`text-xs font-bold px-2 py-1 rounded-full border whitespace-nowrap ${statusStyles[video.status]}`}
         >
-          {/* CORREÇÃO: Usando @ts-expect-error */}
           {/* @ts-expect-error Acessando o primeiro caractere de status */}
           {video.status.charAt(0).toUpperCase() + video.status.slice(1)}
         </div>
