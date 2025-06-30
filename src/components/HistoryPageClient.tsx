@@ -7,7 +7,7 @@ import { Loader2 } from "lucide-react";
 import { Video } from "@/types";
 import MainHeader from "./MainHeader";
 import Navbar from "./Navbar";
-import VideoList from "./VideoList";
+import VideoGrid from "./VideoGrid"; // CORREÇÃO: Apontando para VideoGrid
 import Auth from "./Auth";
 
 export default function HistoryPageClient({ nicheId }: { nicheId: string }) {
@@ -39,18 +39,14 @@ export default function HistoryPageClient({ nicheId }: { nicheId: string }) {
 
       if (user) {
         const todayISO = new Date().toISOString();
-
-        const { data: videosData, error: videosError } = await supabase
+        const { data: videosData } = await supabase
           .from("videos")
           .select<"*", Video>("*")
           .eq("user_id", user.id)
           .eq("niche_id", nicheId)
-          .lt("scheduled_at", todayISO) // Busca vídeos com data no passado
+          .lt("scheduled_at", todayISO)
           .order("scheduled_at", { ascending: false });
-
-        if (videosError)
-          console.error("Erro ao buscar histórico:", videosError);
-        else setVideos(videosData || []);
+        setVideos(videosData || []);
 
         const { data: nicheData } = await supabase
           .from("niches")
@@ -61,7 +57,6 @@ export default function HistoryPageClient({ nicheId }: { nicheId: string }) {
       }
       setLoading(false);
     };
-
     fetchPageData();
   }, [supabase, nicheId]);
 
@@ -87,8 +82,8 @@ export default function HistoryPageClient({ nicheId }: { nicheId: string }) {
           <h2 className="text-2xl font-bold tracking-tight text-white mb-6">
             Histórico de Posts
           </h2>
-          {/* A prop onDelete pode ser uma função vazia aqui, já que não implementamos a exclusão nesta tela */}
-          <VideoList
+          {/* CORREÇÃO: Usando o componente VideoGrid */}
+          <VideoGrid
             groupedVideos={groupedVideos}
             onDelete={() => {}}
             sortOrder="desc"
@@ -97,4 +92,4 @@ export default function HistoryPageClient({ nicheId }: { nicheId: string }) {
       </main>
     </div>
   );
-}  
+}

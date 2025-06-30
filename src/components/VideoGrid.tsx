@@ -13,7 +13,8 @@ import Link from "next/link";
 import { format, isToday } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
-interface VideoListProps {
+// O nome da interface foi atualizado
+interface VideoGridProps {
   groupedVideos: { [key: string]: Video[] };
   onDelete: (videoId: string) => void;
   sortOrder?: "asc" | "desc";
@@ -32,6 +33,7 @@ function VideoCard({
   video: Video;
   onDelete: (id: string) => void;
 }) {
+  // ... o conteúdo do VideoCard continua exatamente o mesmo
   return (
     <div className="bg-gray-800/50 p-4 rounded-lg flex flex-col justify-between gap-3 border border-gray-700/80 h-full">
       <div className="flex justify-between items-start">
@@ -39,7 +41,7 @@ function VideoCard({
           {video.title}
         </span>
         <div
-          // @ts-expect-error O tipo 'status' pode não ser uma chave válida, mas confiamos que os dados do DB estarão corretos.
+          // @ts-expect-error O tipo 'status' pode não ser uma chave válida, mas confiamos nos dados do DB.
           className={`text-xs font-bold px-2 py-1 rounded-full border whitespace-nowrap ${statusStyles[video.status]}`}
         >
           {/* @ts-expect-error Acessando o primeiro caractere de status */}
@@ -87,11 +89,13 @@ function VideoCard({
   );
 }
 
-export default function VideoList({
+// O nome do componente principal foi atualizado
+export default function VideoGrid({
   groupedVideos,
   onDelete,
   sortOrder = "desc",
-}: VideoListProps) {
+}: VideoGridProps) {
+  // ... o conteúdo da função VideoGrid continua exatamente o mesmo
   const [openGroups, setOpenGroups] = useState<{ [key: string]: boolean }>({});
 
   const sortedGroupKeys = Object.keys(groupedVideos).sort((a, b) => {

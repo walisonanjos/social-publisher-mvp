@@ -1,6 +1,5 @@
 "use client";
 
-// CORREÇÃO: 'useCallback' foi removido da importação
 import { useEffect, useState, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabaseClient";
@@ -8,7 +7,7 @@ import { User } from "@supabase/supabase-js";
 import { RefreshCw, Loader2 } from "lucide-react";
 import Auth from "./Auth";
 import UploadForm from "./UploadForm";
-import VideoList from "./VideoList";
+import VideoGrid from "./VideoGrid"; // CORREÇÃO: Apontando para VideoGrid
 import Navbar from "./Navbar";
 import AccountConnection from "./AccountConnection";
 import { Video } from "@/types";
@@ -36,15 +35,13 @@ export default function NichePageClient({ nicheId }: { nicheId: string }) {
   }, [videos]);
 
   const fetchPageData = async (userId: string) => {
-    const { data: videosData, error: videosError } = await supabase
+    const { data: videosData } = await supabase
       .from("videos")
       .select<"*", Video>("*")
       .eq("user_id", userId)
       .eq("niche_id", nicheId)
       .order("scheduled_at", { ascending: true });
-
-    if (videosError) console.error("Erro ao buscar vídeos:", videosError);
-    else setVideos(videosData || []);
+    setVideos(videosData || []);
 
     const { count } = await supabase
       .from("social_connections")
@@ -75,8 +72,7 @@ export default function NichePageClient({ nicheId }: { nicheId: string }) {
       setLoading(false);
     };
     setupPage();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [supabase]);
+  }, [supabase, nicheId]);
 
   const handleDeleteVideo = async (videoId: string) => {
     if (!window.confirm("Tem certeza que deseja excluir este agendamento?"))
@@ -84,7 +80,6 @@ export default function NichePageClient({ nicheId }: { nicheId: string }) {
 
     const { error } = await supabase.from("videos").delete().eq("id", videoId);
     if (error) {
-      console.error("Erro ao deletar agendamento:", error);
       alert("Não foi possível excluir o agendamento.");
     } else {
       router.refresh();
@@ -145,7 +140,8 @@ export default function NichePageClient({ nicheId }: { nicheId: string }) {
             <span>Atualizar</span>
           </button>
         </div>
-        <VideoList
+        {/* CORREÇÃO: Usando o componente VideoGrid */}
+        <VideoGrid
           groupedVideos={groupedVideos}
           onDelete={handleDeleteVideo}
           sortOrder="asc"
