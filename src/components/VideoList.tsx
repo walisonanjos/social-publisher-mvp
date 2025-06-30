@@ -1,6 +1,5 @@
 "use client";
 
-// CORREÇÃO: Importando o tipo 'Video' do nosso arquivo central de tipos.
 import { Video } from "@/types";
 import {
   ChevronUp,
@@ -20,7 +19,6 @@ interface VideoListProps {
   sortOrder?: "asc" | "desc";
 }
 
-// CORREÇÃO: Atualizando os status para corresponder ao nosso tipo unificado
 const statusStyles = {
   agendado: "bg-blue-500/20 text-blue-300 border-blue-500/30",
   postado: "bg-green-500/20 text-green-300 border-green-500/30",
@@ -41,10 +39,12 @@ function VideoCard({
           {video.title}
         </span>
         <div
-          // @ts-ignore - Ignorando o erro de tipo aqui pois o status virá do DB
+          // CORREÇÃO: Usando @ts-expect-error
+          // @ts-expect-error O tipo 'status' pode não ser uma chave válida para statusStyles, mas confiamos que os dados do DB estarão corretos.
           className={`text-xs font-bold px-2 py-1 rounded-full border whitespace-nowrap ${statusStyles[video.status]}`}
         >
-          {/* @ts-ignore */}
+          {/* CORREÇÃO: Usando @ts-expect-error */}
+          {/* @ts-expect-error Acessando o primeiro caractere de status */}
           {video.status.charAt(0).toUpperCase() + video.status.slice(1)}
         </div>
       </div>
@@ -75,7 +75,6 @@ function VideoCard({
               <AlertTriangle size={16} />
             </div>
           )}
-          {/* Adicionamos uma condição para não mostrar o botão de deletar em posts já concluídos */}
           {video.status === "agendado" && (
             <button
               onClick={() => onDelete(video.id)}
