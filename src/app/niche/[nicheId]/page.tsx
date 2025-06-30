@@ -1,14 +1,15 @@
 import NichePageClient from "@/components/NichePageClient";
 
-// A tipagem para as props da página
-type Props = {
-  params: {
-    nicheId: string;
-  };
-};
+// Não precisamos mais do 'type Props'
 
-// CORREÇÃO: Destruturamos o nicheId diretamente na assinatura da função
-export default async function NichePage({ params: { nicheId } }: Props) {
-  // Agora o nicheId já está disponível diretamente, sem uma linha extra.
+// A MUDANÇA CRÍTICA ESTÁ AQUI: na tipagem dos 'params' e no uso do 'await'
+export default async function NichePage({
+  params,
+}: {
+  params: Promise<{ nicheId: string }>;
+}) {
+  // Agora, esperamos a Promise dos parâmetros ser resolvida para poder usar o nicheId
+  const { nicheId } = await params;
+
   return <NichePageClient nicheId={nicheId} />;
 }

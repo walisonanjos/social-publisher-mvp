@@ -1,14 +1,15 @@
 import HistoryPageClient from "@/components/HistoryPageClient";
 
-// A mudança aqui é que não estamos mais criando um 'type alias' chamado 'Props'.
-// Estamos definindo o tipo diretamente na assinatura da função.
+// Não precisamos mais do 'type Props'
 
+// A MUDANÇA CRÍTICA ESTÁ AQUI: na tipagem dos 'params' e no uso do 'await'
 export default async function HistoryPage({
   params,
 }: {
-  params: { nicheId: string };
+  params: Promise<{ nicheId: string }>;
 }) {
-  const { nicheId } = params;
+  // Agora, esperamos a Promise dos parâmetros ser resolvida para poder usar o nicheId
+  const { nicheId } = await params;
 
   return <HistoryPageClient nicheId={nicheId} />;
 }
