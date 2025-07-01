@@ -1,53 +1,59 @@
-// src/components/CallbackHandler.tsx
+"use client";
 
-'use client';
-
-import { useEffect, useState } from 'react';
-import { useSearchParams, useRouter } from 'next/navigation';
-import { createClient } from '@/lib/supabaseClient';
+import { useEffect, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
+import { createClient } from "@/lib/supabaseClient";
+import { Loader2 } from "lucide-react";
 
 export default function CallbackHandler() {
-  const [message, setMessage] = useState('Autenticando com o Google, por favor aguarde...');
-  const [error, setError] = useState('');
-  const searchParams = useSearchParams();
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const code = searchParams.get('code');
-    const supabase = createClient();
+    const code = searchParams.get("code");
+    const state = searchParams.get("state");
 
-    if (code) {
-      const exchangeCodeForTokens = async () => {
-        try {
-          const { error: invokeError } = await supabase.functions.invoke('exchange-auth-code', {
-            body: { code },
-          });
+    if (code && state) {
+      const supabase = createClient();
 
-          if (invokeError) throw invokeError;
-
-          setMessage('Sucesso! Redirecionando para o seu painel...');
-          setTimeout(() => {
-            router.push('/');
-          }, 2000);
-
-        } catch (e) {
-          const errorMsg = (e as Error).message;
-          console.error(e);
-          setError(`Erro ao conectar sua conta: ${errorMsg}`);
-        }
-      };
-      exchangeCodeForTokens();
+      supabase.functions
+        .invoke("exchange-auth-code", {
+          body: { code, state },
+        })
+        .then((response) => {
+          if (response.error) throw response.error;
+          const { nicheId } = response.data;
+          router.push(`/niche/${nicheId}`);
+        })
+        .catch((err) => {
+          console.error("Callback error:", err);
+          setError(err.message);
+        });
     } else {
-      setError('Nenhum código de autorização encontrado. Voltando ao início...');
-      setTimeout(() => {
-        router.push('/');
-      }, 3000);
+      setError("Código de autorização ou estado ausente na URL.");
     }
   }, [searchParams, router]);
 
   if (error) {
-    return <p className="text-red-400">{error}</p>;
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen text-red-500">
+        <p>Ocorreu um erro ao conectar sua conta:</p>
+        <p className="mt-2 font-mono bg-red-100 p-2 rounded">{error}</p>
+        <button
+          onClick={() => router.push("/")}
+          className="mt-4 px-4 py-2 bg-gray-200 rounded"
+        >
+          Voltar para o Início
+        </button>
+      </div>
+    );
   }
 
-  return <p>{message}</p>;
+  return (
+    <div className="flex flex-col gap-4 items-center justify-center min-h-screen">
+      <Loader2 className="h-12 w-12 text-teal-400 animate-spin" />
+      <p>Finalizando conexão, por favor aguarde...</p>
+    </div>
+  );
 }

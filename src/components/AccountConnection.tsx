@@ -1,7 +1,7 @@
 "use client";
 import { useState } from "react";
 import { Youtube, CheckCircle } from "lucide-react";
-import { createClient } from "../lib/supabaseClient"; // Corrigido para o caminho relativo
+import { createClient } from "../lib/supabaseClient";
 
 interface AccountConnectionProps {
   isYouTubeConnected: boolean;
@@ -20,17 +20,12 @@ export default function AccountConnection({
   const handleConnect = async () => {
     setIsLoading(true);
     try {
-      // CORREÇÃO: Passamos o nicheId no 'body' da chamada da função.
-      // A função de backend precisa saber para qual workspace é a conexão.
       const { data, error } = await supabase.functions.invoke(
         "generate-youtube-auth-url",
         { body: { nicheId } },
       );
-
       if (error) throw error;
-
       if (data.authUrl) {
-        // Redireciona o usuário para a página de autorização do Google
         window.location.href = data.authUrl;
       } else {
         throw new Error(
@@ -54,9 +49,7 @@ export default function AccountConnection({
           ? "Sua conta do YouTube está pronta para postagens neste workspace."
           : "Conecte suas contas de redes sociais para começar a agendar."}
       </p>
-
       {isYouTubeConnected ? (
-        // UI para quando a conta ESTÁ conectada
         <div className="p-4 bg-green-900/50 border border-green-500/30 rounded-lg flex items-center justify-between">
           <div className="flex items-center gap-3">
             <CheckCircle className="text-green-400" size={24} />
@@ -72,7 +65,6 @@ export default function AccountConnection({
           </button>
         </div>
       ) : (
-        // UI para quando a conta NÃO ESTÁ conectada
         <button
           onClick={handleConnect}
           disabled={isLoading}

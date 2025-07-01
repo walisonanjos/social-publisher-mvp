@@ -1,6 +1,6 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-// CORREÇÃO: O código do 'cors.ts' foi colado diretamente aqui.
+// O código do 'cors.ts' está embutido aqui
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers":
