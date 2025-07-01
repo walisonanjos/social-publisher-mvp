@@ -1,7 +1,7 @@
 "use client";
 import { useState } from "react";
 import { Youtube, CheckCircle } from "lucide-react";
-import { createClient } from "../lib/supabaseClient";
+import { createClient } from "../lib/supabaseClient"; // Corrigido para o caminho relativo
 
 interface AccountConnectionProps {
   isYouTubeConnected: boolean;
@@ -32,6 +32,10 @@ export default function AccountConnection({
       if (data.authUrl) {
         // Redireciona o usuário para a página de autorização do Google
         window.location.href = data.authUrl;
+      } else {
+        throw new Error(
+          "A função de backend não retornou uma URL de autorização.",
+        );
       }
     } catch (error) {
       console.error("Erro ao gerar URL de autorização:", error);
