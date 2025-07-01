@@ -1,13 +1,14 @@
 "use client";
 
-import { useEffect, useState, useMemo } from "react";
+// CORREÇÃO: useCallback foi re-adicionado
+import { useEffect, useState, useMemo, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabaseClient";
 import { User } from "@supabase/supabase-js";
 import { RefreshCw, Loader2 } from "lucide-react";
 import Auth from "./Auth";
 import UploadForm from "./UploadForm";
-import VideoGrid from "./VideoGrid"; // Apontando para o componente renomeado
+import VideoGrid from "./VideoGrid";
 import Navbar from "./Navbar";
 import AccountConnection from "./AccountConnection";
 import { Video } from "@/types";
@@ -34,30 +35,34 @@ export default function NichePageClient({ nicheId }: { nicheId: string }) {
     return groups;
   }, [videos]);
 
-  const fetchPageData = async (userId: string) => {
-    const { data: videosData } = await supabase
-      .from("videos")
-      .select<"*", Video>("*")
-      .eq("user_id", userId)
-      .eq("niche_id", nicheId)
-      .order("scheduled_at", { ascending: true });
-    setVideos(videosData || []);
+  // CORREÇÃO: Envolvemos a função com useCallback
+  const fetchPageData = useCallback(
+    async (userId: string) => {
+      const { data: videosData } = await supabase
+        .from("videos")
+        .select<"*", Video>("*")
+        .eq("user_id", userId)
+        .eq("niche_id", nicheId)
+        .order("scheduled_at", { ascending: true });
+      setVideos(videosData || []);
 
-    const { count } = await supabase
-      .from("social_connections")
-      .select("*", { count: "exact", head: true })
-      .eq("user_id", userId)
-      .eq("niche_id", nicheId)
-      .eq("platform", "youtube");
-    setIsYouTubeConnected(!!count && count > 0);
+      const { count } = await supabase
+        .from("social_connections")
+        .select("*", { count: "exact", head: true })
+        .eq("user_id", userId)
+        .eq("niche_id", nicheId)
+        .eq("platform", "youtube");
+      setIsYouTubeConnected(!!count && count > 0);
 
-    const { data: nicheData } = await supabase
-      .from("niches")
-      .select("name")
-      .eq("id", nicheId)
-      .single();
-    if (nicheData) setNicheName(nicheData.name);
-  };
+      const { data: nicheData } = await supabase
+        .from("niches")
+        .select("name")
+        .eq("id", nicheId)
+        .single();
+      if (nicheData) setNicheName(nicheData.name);
+    },
+    [supabase, nicheId],
+  ); // Adicionamos as dependências da função
 
   useEffect(() => {
     const setupPage = async () => {
@@ -72,7 +77,7 @@ export default function NichePageClient({ nicheId }: { nicheId: string }) {
       setLoading(false);
     };
     setupPage();
-  }, [supabase, nicheId]);
+  }, [supabase, fetchPageData]); // CORREÇÃO: Adicionamos a dependência que faltava
 
   const handleDeleteVideo = async (videoId: string) => {
     if (!window.confirm("Tem certeza que deseja excluir este agendamento?"))
@@ -87,6 +92,7 @@ export default function NichePageClient({ nicheId }: { nicheId: string }) {
   };
 
   const handleDisconnectYouTube = async () => {
+    // ... (função continua a mesma)
     if (!user) return;
     const { error } = await supabase
       .from("social_connections")

@@ -38,11 +38,10 @@ function VideoCard({
         <span className="font-medium text-white break-all pr-2">
           {video.title}
         </span>
+        {/* CORREÇÃO: Os comentários @ts-expect-error foram removidos */}
         <div
-          // @ts-expect-error O tipo 'status' pode não ser uma chave válida, mas confiamos nos dados do DB.
-          className={`text-xs font-bold px-2 py-1 rounded-full border whitespace-nowrap ${statusStyles[video.status]}`}
+          className={`text-xs font-bold px-2 py-1 rounded-full border whitespace-nowrap ${statusStyles[video.status as keyof typeof statusStyles]}`}
         >
-          {/* @ts-expect-error Acessando o primeiro caractere de status */}
           {video.status.charAt(0).toUpperCase() + video.status.slice(1)}
         </div>
       </div>
@@ -131,7 +130,6 @@ export default function VideoGrid({
               className="flex justify-between items-center w-full text-left mb-3"
             >
               <h3 className="text-lg font-semibold text-teal-400 capitalize">
-                {/* CORREÇÃO APLICADA AQUI */}
                 {format(date, "eeee, dd 'de' MMMM 'de' yyyy", { locale: ptBR })}
               </h3>
               {isGroupOpen ? (
