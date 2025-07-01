@@ -7,7 +7,7 @@ import { User } from "@supabase/supabase-js";
 import { RefreshCw, Loader2 } from "lucide-react";
 import Auth from "./Auth";
 import UploadForm from "./UploadForm";
-import VideoGrid from "./VideoGrid"; // CORREÇÃO: Apontando para VideoGrid
+import VideoGrid from "./VideoGrid"; // Apontando para o componente renomeado
 import Navbar from "./Navbar";
 import AccountConnection from "./AccountConnection";
 import { Video } from "@/types";
@@ -140,7 +140,6 @@ export default function NichePageClient({ nicheId }: { nicheId: string }) {
             <span>Atualizar</span>
           </button>
         </div>
-        {/* CORREÇÃO: Usando o componente VideoGrid */}
         <VideoGrid
           groupedVideos={groupedVideos}
           onDelete={handleDeleteVideo}

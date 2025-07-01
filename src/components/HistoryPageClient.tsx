@@ -7,7 +7,7 @@ import { Loader2 } from "lucide-react";
 import { Video } from "@/types";
 import MainHeader from "./MainHeader";
 import Navbar from "./Navbar";
-import VideoGrid from "./VideoGrid"; // CORREÇÃO: Apontando para VideoGrid
+import VideoGrid from "./VideoGrid"; // Usando o componente renomeado
 import Auth from "./Auth";
 
 export default function HistoryPageClient({ nicheId }: { nicheId: string }) {
@@ -82,7 +82,6 @@ export default function HistoryPageClient({ nicheId }: { nicheId: string }) {
           <h2 className="text-2xl font-bold tracking-tight text-white mb-6">
             Histórico de Posts
           </h2>
-          {/* CORREÇÃO: Usando o componente VideoGrid */}
           <VideoGrid
             groupedVideos={groupedVideos}
             onDelete={() => {}}
