@@ -1,15 +1,14 @@
 "use client";
 
 import { useState, FormEvent } from "react";
-import { useRouter } from "next/navigation";
+// CORREÇÃO: useRouter foi removido da importação
 import { createClient } from "../lib/supabaseClient";
 import { DayPicker } from "react-day-picker";
 import "react-day-picker/dist/style.css";
 import { addDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { Video } from "@/types"; // Importe o tipo Video
+import { Video } from "@/types";
 
-// CORREÇÃO: Adicionamos a prop 'onScheduleSuccess' de volta
 interface UploadFormProps {
   nicheId: string;
   onScheduleSuccess: (newVideo: Video) => void;
@@ -19,7 +18,7 @@ export default function UploadForm({
   nicheId,
   onScheduleSuccess,
 }: UploadFormProps) {
-  const router = useRouter();
+  // CORREÇÃO: A linha const router = useRouter() foi removida.
   const [file, setFile] = useState<File | null>(null);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -33,7 +32,6 @@ export default function UploadForm({
   const [postToYouTube, setPostToYouTube] = useState(true);
   const supabase = createClient();
 
-  // ... (a parte inicial com today, availableTimes, handleFileChange continua a mesma) ...
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   const tenDaysFromNow = addDays(today, 9);
@@ -51,14 +49,16 @@ export default function UploadForm({
       setError("Por favor, preencha todos os campos obrigatórios.");
       return;
     }
-    // ... (resto da validação inicial) ...
+    if (!postToYouTube) {
+      setError("Por favor, selecione pelo menos uma rede social para postar.");
+      return;
+    }
 
     setIsUploading(true);
     setError("");
     setSuccessMessage("");
 
     try {
-      // ... (lógica de validação de duplicidade e upload no cloudinary continuam os mesmos) ...
       if (!nicheId) throw new Error("O ID do workspace é inválido.");
 
       const [hours, minutes] = scheduleTime.split(":");
@@ -105,7 +105,6 @@ export default function UploadForm({
       } = await supabase.auth.getUser();
       if (!user) throw new Error("Usuário não autenticado.");
 
-      // CORREÇÃO: Usamos .select().single() para pegar o agendamento recém-criado
       const { data: newVideo, error: insertError } = await supabase
         .from("videos")
         .insert({
@@ -129,7 +128,6 @@ export default function UploadForm({
 
       setSuccessMessage("Seu vídeo foi agendado com sucesso!");
 
-      // Limpa o formulário
       setFile(null);
       setTitle("");
       setDescription("");
@@ -138,7 +136,6 @@ export default function UploadForm({
       ) as HTMLInputElement;
       if (fileInput) fileInput.value = "";
 
-      // CORREÇÃO: Chamamos a função de callback, passando o novo vídeo
       onScheduleSuccess(newVideo);
     } catch (err) {
       console.error("Erro no agendamento:", err);
@@ -150,11 +147,9 @@ export default function UploadForm({
   };
 
   return (
-    // O JSX do formulário continua o mesmo
     <div className="bg-gray-800 p-8 rounded-lg shadow-lg border border-gray-700">
       <h2 className="text-xl font-bold text-white mb-6">Novo Agendamento</h2>
       <form onSubmit={handleSubmit} className="space-y-6">
-        {/* ... todo o seu JSX do formulário aqui ... */}
         <div>
           <label
             htmlFor="file-upload"

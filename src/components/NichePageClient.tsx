@@ -1,7 +1,7 @@
 "use client";
 
+// CORREÇÃO: Removido useRouter da importação
 import { useEffect, useState, useMemo, useCallback } from "react";
-import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabaseClient";
 import { User } from "@supabase/supabase-js";
 import { RefreshCw, Loader2 } from "lucide-react";
@@ -14,7 +14,7 @@ import { Video } from "@/types";
 import MainHeader from "./MainHeader";
 
 export default function NichePageClient({ nicheId }: { nicheId: string }) {
-  const router = useRouter();
+  // CORREÇÃO: Removida a linha 'const router = useRouter()'
   const supabase = createClient();
   const [user, setUser] = useState<User | null>(null);
   const [videos, setVideos] = useState<Video[]>([]);
@@ -23,7 +23,6 @@ export default function NichePageClient({ nicheId }: { nicheId: string }) {
   const [nicheName, setNicheName] = useState("Carregando...");
 
   const groupedVideos = useMemo(() => {
-    // Ordena os vídeos por data antes de agrupar
     const sortedVideos = [...videos].sort(
       (a, b) =>
         new Date(a.scheduled_at).getTime() - new Date(b.scheduled_at).getTime(),
@@ -41,7 +40,6 @@ export default function NichePageClient({ nicheId }: { nicheId: string }) {
 
   const fetchPageData = useCallback(
     async (userId: string) => {
-      // ... (função fetchPageData continua a mesma)
       const { data: videosData } = await supabase
         .from("videos")
         .select<"*", Video>("*")
@@ -49,6 +47,7 @@ export default function NichePageClient({ nicheId }: { nicheId: string }) {
         .eq("niche_id", nicheId)
         .order("scheduled_at", { ascending: true });
       setVideos(videosData || []);
+
       const { count } = await supabase
         .from("social_connections")
         .select("*", { count: "exact", head: true })
@@ -56,6 +55,7 @@ export default function NichePageClient({ nicheId }: { nicheId: string }) {
         .eq("niche_id", nicheId)
         .eq("platform", "youtube");
       setIsYouTubeConnected(!!count && count > 0);
+
       const { data: nicheData } = await supabase
         .from("niches")
         .select("name")
@@ -82,7 +82,6 @@ export default function NichePageClient({ nicheId }: { nicheId: string }) {
   }, [fetchPageData, supabase]);
 
   const handleDeleteVideo = async (videoId: string) => {
-    // ... (função handleDeleteVideo continua a mesma)
     if (!window.confirm("Tem certeza que deseja excluir este agendamento?"))
       return;
     const { error } = await supabase.from("videos").delete().eq("id", videoId);
@@ -96,7 +95,6 @@ export default function NichePageClient({ nicheId }: { nicheId: string }) {
   };
 
   const handleDisconnectYouTube = async () => {
-    // ... (função handleDisconnectYouTube continua a mesma)
     if (!user) return;
     const { error } = await supabase
       .from("social_connections")
@@ -109,7 +107,6 @@ export default function NichePageClient({ nicheId }: { nicheId: string }) {
     }
   };
 
-  // CORREÇÃO: Nova função para lidar com o agendamento bem-sucedido
   const handleScheduleSuccess = (newVideo: Video) => {
     setVideos((currentVideos) => [...currentVideos, newVideo]);
   };
@@ -128,11 +125,9 @@ export default function NichePageClient({ nicheId }: { nicheId: string }) {
   return (
     <div className="bg-gray-900 min-h-screen text-white">
       <MainHeader user={user} pageTitle={nicheName} backLink="/niches" />
-
       <main className="container mx-auto p-4 md:p-8">
         <Navbar nicheId={nicheId} />
         <div className="mt-8">
-          {/* CORREÇÃO: Passando a nova função como prop */}
           <UploadForm
             nicheId={nicheId}
             onScheduleSuccess={handleScheduleSuccess}
@@ -150,7 +145,7 @@ export default function NichePageClient({ nicheId }: { nicheId: string }) {
           <h2 className="text-2xl font-bold tracking-tight text-white">
             Meus Agendamentos
           </h2>
-          {/* O botão de refresh agora é um fallback, a atualização principal é automática */}
+          {/* CORREÇÃO: O botão agora chama a função fetchPageData para atualizar */}
           <button
             onClick={() => user && fetchPageData(user.id)}
             className="flex items-center gap-2 px-3 py-1.5 text-sm bg-gray-700/50 hover:bg-gray-700 border border-gray-600 rounded-lg transition-colors"
