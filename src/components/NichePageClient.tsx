@@ -1,6 +1,5 @@
 "use client";
 
-// CORREÇÃO: useCallback foi re-adicionado
 import { useEffect, useState, useMemo, useCallback } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabaseClient";
@@ -24,8 +23,13 @@ export default function NichePageClient({ nicheId }: { nicheId: string }) {
   const [nicheName, setNicheName] = useState("Carregando...");
 
   const groupedVideos = useMemo(() => {
+    // Ordena os vídeos por data antes de agrupar
+    const sortedVideos = [...videos].sort(
+      (a, b) =>
+        new Date(a.scheduled_at).getTime() - new Date(b.scheduled_at).getTime(),
+    );
     const groups: { [key: string]: Video[] } = {};
-    videos.forEach((video) => {
+    sortedVideos.forEach((video) => {
       const dateKey = new Date(video.scheduled_at).toISOString().split("T")[0];
       if (!groups[dateKey]) {
         groups[dateKey] = [];
@@ -35,9 +39,9 @@ export default function NichePageClient({ nicheId }: { nicheId: string }) {
     return groups;
   }, [videos]);
 
-  // CORREÇÃO: Envolvemos a função com useCallback
   const fetchPageData = useCallback(
     async (userId: string) => {
+      // ... (função fetchPageData continua a mesma)
       const { data: videosData } = await supabase
         .from("videos")
         .select<"*", Video>("*")
@@ -45,7 +49,6 @@ export default function NichePageClient({ nicheId }: { nicheId: string }) {
         .eq("niche_id", nicheId)
         .order("scheduled_at", { ascending: true });
       setVideos(videosData || []);
-
       const { count } = await supabase
         .from("social_connections")
         .select("*", { count: "exact", head: true })
@@ -53,7 +56,6 @@ export default function NichePageClient({ nicheId }: { nicheId: string }) {
         .eq("niche_id", nicheId)
         .eq("platform", "youtube");
       setIsYouTubeConnected(!!count && count > 0);
-
       const { data: nicheData } = await supabase
         .from("niches")
         .select("name")
@@ -62,7 +64,7 @@ export default function NichePageClient({ nicheId }: { nicheId: string }) {
       if (nicheData) setNicheName(nicheData.name);
     },
     [supabase, nicheId],
-  ); // Adicionamos as dependências da função
+  );
 
   useEffect(() => {
     const setupPage = async () => {
@@ -77,22 +79,24 @@ export default function NichePageClient({ nicheId }: { nicheId: string }) {
       setLoading(false);
     };
     setupPage();
-  }, [supabase, fetchPageData]); // CORREÇÃO: Adicionamos a dependência que faltava
+  }, [fetchPageData, supabase]);
 
   const handleDeleteVideo = async (videoId: string) => {
+    // ... (função handleDeleteVideo continua a mesma)
     if (!window.confirm("Tem certeza que deseja excluir este agendamento?"))
       return;
-
     const { error } = await supabase.from("videos").delete().eq("id", videoId);
     if (error) {
       alert("Não foi possível excluir o agendamento.");
     } else {
-      router.refresh();
+      setVideos((currentVideos) =>
+        currentVideos.filter((v) => v.id !== videoId),
+      );
     }
   };
 
   const handleDisconnectYouTube = async () => {
-    // ... (função continua a mesma)
+    // ... (função handleDisconnectYouTube continua a mesma)
     if (!user) return;
     const { error } = await supabase
       .from("social_connections")
@@ -103,6 +107,11 @@ export default function NichePageClient({ nicheId }: { nicheId: string }) {
       setIsYouTubeConnected(false);
       alert("Conta do YouTube desconectada com sucesso deste workspace.");
     }
+  };
+
+  // CORREÇÃO: Nova função para lidar com o agendamento bem-sucedido
+  const handleScheduleSuccess = (newVideo: Video) => {
+    setVideos((currentVideos) => [...currentVideos, newVideo]);
   };
 
   if (loading) {
@@ -123,7 +132,11 @@ export default function NichePageClient({ nicheId }: { nicheId: string }) {
       <main className="container mx-auto p-4 md:p-8">
         <Navbar nicheId={nicheId} />
         <div className="mt-8">
-          <UploadForm nicheId={nicheId} />
+          {/* CORREÇÃO: Passando a nova função como prop */}
+          <UploadForm
+            nicheId={nicheId}
+            onScheduleSuccess={handleScheduleSuccess}
+          />
         </div>
         <div className="mt-8">
           <AccountConnection
@@ -137,8 +150,9 @@ export default function NichePageClient({ nicheId }: { nicheId: string }) {
           <h2 className="text-2xl font-bold tracking-tight text-white">
             Meus Agendamentos
           </h2>
+          {/* O botão de refresh agora é um fallback, a atualização principal é automática */}
           <button
-            onClick={() => router.refresh()}
+            onClick={() => user && fetchPageData(user.id)}
             className="flex items-center gap-2 px-3 py-1.5 text-sm bg-gray-700/50 hover:bg-gray-700 border border-gray-600 rounded-lg transition-colors"
             title="Atualizar lista"
           >
