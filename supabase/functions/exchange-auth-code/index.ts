@@ -1,4 +1,4 @@
-// supabase/functions/exchange-auth-code/index.ts
+// Forçando a atualização em 01/07/2025
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 import { corsHeaders } from "../_shared/cors.ts";
 
@@ -34,11 +34,13 @@ Deno.serve(async (req) => {
 
     const tokens = await response.json();
 
+    // Usando a chave de 'service_role' para ter permissão de escrita
     const supabaseAdmin = createClient(
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
     );
 
+    // Salva ou atualiza a conexão na tabela 'social_connections'
     const { error: dbError } = await supabaseAdmin
       .from("social_connections")
       .upsert(
@@ -47,7 +49,7 @@ Deno.serve(async (req) => {
           niche_id: nicheId,
           platform: "youtube",
           access_token: tokens.access_token,
-          refresh_token: tokens.refresh_token,
+          refresh_token: tokens.refresh_token, // O refresh_token é crucial
           expires_at: new Date(
             Date.now() + tokens.expires_in * 1000,
           ).toISOString(),
