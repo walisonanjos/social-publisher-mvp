@@ -131,9 +131,8 @@ export default function VideoGrid({
               className="flex justify-between items-center w-full text-left mb-3"
             >
               <h3 className="text-lg font-semibold text-teal-400 capitalize">
-                {format(date, "eeee, dd 'de' MMMM 'de' terrazzo", {
-                  locale: ptBR,
-                })}
+                {/* CORREÇÃO APLICADA AQUI */}
+                {format(date, "eeee, dd 'de' MMMM 'de' yyyy", { locale: ptBR })}
               </h3>
               {isGroupOpen ? (
                 <ChevronUp className="text-gray-400" />
