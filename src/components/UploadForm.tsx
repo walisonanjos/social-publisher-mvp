@@ -71,7 +71,7 @@ export default function UploadForm({
       );
       const scheduled_at_iso = finalScheduleDate.toISOString();
 
-      // --- INÍCIO DA NOVA VALIDAÇÃO DE WALISON DUPLICIDADE ---
+      // --- INÍCIO DA NOVA VALIDAÇÃO DE  DUPLICIDADE ---
       const { data: existingPost, error: checkError } = await supabase
         .from("videos")
         .select("id")
