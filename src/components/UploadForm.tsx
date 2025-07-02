@@ -71,7 +71,7 @@ export default function UploadForm({
       );
       const scheduled_at_iso = finalScheduleDate.toISOString();
 
-      // --- INÍCIO DA NOVA VALIDAÇÃO DE DUPLICIDADE ---
+      // --- INÍCIO DA NOVA VALIDAÇÃO DE WALISON DUPLICIDADE ---
       const { data: existingPost, error: checkError } = await supabase
         .from("videos")
         .select("id")
@@ -325,7 +325,7 @@ export default function UploadForm({
         )}
         {successMessage && (
           <div className="bg-green-500/20 text-green-300 p-3 rounded-md text-sm">
-            {successMessag}
+            {successMessage}
           </div>
         )}
       </form>
