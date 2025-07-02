@@ -1,7 +1,7 @@
 "use client";
 
-// CORREÇÃO: Removido useRouter da importação
 import { useEffect, useState, useMemo, useCallback } from "react";
+import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabaseClient";
 import { User } from "@supabase/supabase-js";
 import { RefreshCw, Loader2 } from "lucide-react";
@@ -14,7 +14,7 @@ import { Video } from "@/types";
 import MainHeader from "./MainHeader";
 
 export default function NichePageClient({ nicheId }: { nicheId: string }) {
-  // CORREÇÃO: Removida a linha 'const router = useRouter()'
+  const router = useRouter();
   const supabase = createClient();
   const [user, setUser] = useState<User | null>(null);
   const [videos, setVideos] = useState<Video[]>([]);
@@ -40,14 +40,26 @@ export default function NichePageClient({ nicheId }: { nicheId: string }) {
 
   const fetchPageData = useCallback(
     async (userId: string) => {
-      const { data: videosData } = await supabase
+      // CORREÇÃO: Adicionamos o filtro de data aqui
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const todayISO = today.toISOString();
+
+      const { data: videosData, error: videosError } = await supabase
         .from("videos")
         .select<"*", Video>("*")
         .eq("user_id", userId)
         .eq("niche_id", nicheId)
+        .gte("scheduled_at", todayISO) // gte = greater than or equal to (maior ou igual a)
         .order("scheduled_at", { ascending: true });
-      setVideos(videosData || []);
 
+      if (videosError) {
+        console.error("Erro ao buscar agendamentos:", videosError);
+      } else {
+        setVideos(videosData || []);
+      }
+
+      // O resto da busca continua igual...
       const { count } = await supabase
         .from("social_connections")
         .select("*", { count: "exact", head: true })
@@ -84,6 +96,7 @@ export default function NichePageClient({ nicheId }: { nicheId: string }) {
   const handleDeleteVideo = async (videoId: string) => {
     if (!window.confirm("Tem certeza que deseja excluir este agendamento?"))
       return;
+
     const { error } = await supabase.from("videos").delete().eq("id", videoId);
     if (error) {
       alert("Não foi possível excluir o agendamento.");
@@ -145,7 +158,6 @@ export default function NichePageClient({ nicheId }: { nicheId: string }) {
           <h2 className="text-2xl font-bold tracking-tight text-white">
             Meus Agendamentos
           </h2>
-          {/* CORREÇÃO: O botão agora chama a função fetchPageData para atualizar */}
           <button
             onClick={() => user && fetchPageData(user.id)}
             className="flex items-center gap-2 px-3 py-1.5 text-sm bg-gray-700/50 hover:bg-gray-700 border border-gray-600 rounded-lg transition-colors"
