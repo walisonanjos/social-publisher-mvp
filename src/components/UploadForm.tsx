@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, FormEvent } from "react";
-// CORREÇÃO: useRouter foi removido da importação
+import { useRouter } from "next/navigation";
 import { createClient } from "../lib/supabaseClient";
 import { DayPicker } from "react-day-picker";
 import "react-day-picker/dist/style.css";
@@ -18,7 +18,7 @@ export default function UploadForm({
   nicheId,
   onScheduleSuccess,
 }: UploadFormProps) {
-  // CORREÇÃO: A linha const router = useRouter() foi removida.
+  const router = useRouter();
   const [file, setFile] = useState<File | null>(null);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -63,10 +63,15 @@ export default function UploadForm({
 
       const [hours, minutes] = scheduleTime.split(":");
       const finalScheduleDate = new Date(scheduleDate);
-      finalScheduleDate.setHours(parseInt(hours, 10));
-      finalScheduleDate.setMinutes(parseInt(minutes, 10));
+      finalScheduleDate.setHours(
+        parseInt(hours, 10),
+        parseInt(minutes, 10),
+        0,
+        0,
+      );
       const scheduled_at_iso = finalScheduleDate.toISOString();
 
+      // --- INÍCIO DA NOVA VALIDAÇÃO DE DUPLICIDADE ---
       const { data: existingPost, error: checkError } = await supabase
         .from("videos")
         .select("id")
@@ -74,11 +79,17 @@ export default function UploadForm({
         .eq("scheduled_at", scheduled_at_iso)
         .single();
 
-      if (checkError && checkError.code !== "PGRST116") throw checkError;
-      if (existingPost)
+      // Ignora o erro 'PGRST116' (nenhuma linha encontrada), que é o resultado que queremos.
+      if (checkError && checkError.code !== "PGRST116") {
+        throw checkError;
+      }
+
+      if (existingPost) {
         throw new Error(
           "Já existe um agendamento para este workspace neste mesmo dia e hora.",
         );
+      }
+      // --- FIM DA NOVA VALIDAÇÃO ---
 
       const formData = new FormData();
       formData.append("file", file);
@@ -150,6 +161,7 @@ export default function UploadForm({
     <div className="bg-gray-800 p-8 rounded-lg shadow-lg border border-gray-700">
       <h2 className="text-xl font-bold text-white mb-6">Novo Agendamento</h2>
       <form onSubmit={handleSubmit} className="space-y-6">
+        {/* O JSX do formulário continua o mesmo */}
         <div>
           <label
             htmlFor="file-upload"
