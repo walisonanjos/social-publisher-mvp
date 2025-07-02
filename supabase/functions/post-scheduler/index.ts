@@ -32,7 +32,9 @@ Deno.serve(async (_req) => {
 
     for (const video of scheduledVideos) {
       try {
-        console.log(`Processando vídeo ID: ${video.id}`);
+        console.log(
+          `Processando vídeo ID: ${video.id} para o nicho ${video.niche_id}`,
+        );
 
         const { data: connection, error: connError } = await supabaseAdmin
           .from("social_connections")
@@ -67,8 +69,8 @@ Deno.serve(async (_req) => {
         const newTokens = await tokenResponse.json();
         const newAccessToken = newTokens.access_token;
 
-        // Esta é uma SIMULAÇÃO do upload. A API real é mais complexa.
-        // Vamos assumir que a criação dos metadados significa sucesso.
+        // Esta é uma SIMULAÇÃO do upload de vídeo, que é um processo mais complexo.
+        // Nós criamos os metadados do vídeo no YouTube. Se isso funcionar, consideramos sucesso.
         const videoMetadataResponse = await fetch(
           "https://www.googleapis.com/upload/youtube/v3/videos?part=snippet,status",
           {
@@ -81,10 +83,10 @@ Deno.serve(async (_req) => {
               snippet: {
                 title: video.title,
                 description: video.description,
-                categoryId: "22",
+                categoryId: "22", // Categoria "People & Blogs"
               },
               status: {
-                privacyStatus: "private",
+                privacyStatus: "private", // Posta como privado por padrão
               },
             }),
           },
