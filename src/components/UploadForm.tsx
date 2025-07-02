@@ -49,10 +49,6 @@ export default function UploadForm({
       setError("Por favor, preencha todos os campos obrigatórios.");
       return;
     }
-    if (!postToYouTube) {
-      setError("Por favor, selecione pelo menos uma rede social para postar.");
-      return;
-    }
 
     setIsUploading(true);
     setError("");
@@ -71,7 +67,7 @@ export default function UploadForm({
       );
       const scheduled_at_iso = finalScheduleDate.toISOString();
 
-      // --- INÍCIO DA NOVA VALIDAÇÃO DE  DUPLICIDADE ---
+      // VALIDAÇÃO DE DUPLICIDADE (FRONT-END)
       const { data: existingPost, error: checkError } = await supabase
         .from("videos")
         .select("id")
@@ -79,18 +75,16 @@ export default function UploadForm({
         .eq("scheduled_at", scheduled_at_iso)
         .single();
 
-      // Ignora o erro 'PGRST116' (nenhuma linha encontrada), que é o resultado que queremos.
       if (checkError && checkError.code !== "PGRST116") {
         throw checkError;
       }
-
       if (existingPost) {
         throw new Error(
           "Já existe um agendamento para este workspace neste mesmo dia e hora.",
         );
       }
-      // --- FIM DA NOVA VALIDAÇÃO ---
 
+      // Se passou na validação, continua com o upload
       const formData = new FormData();
       formData.append("file", file);
       formData.append(
@@ -100,12 +94,8 @@ export default function UploadForm({
 
       const cloudinaryResponse = await fetch(
         `https://api.cloudinary.com/v1_1/${process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME}/video/upload`,
-        {
-          method: "POST",
-          body: formData,
-        },
+        { method: "POST", body: formData },
       );
-
       if (!cloudinaryResponse.ok)
         throw new Error("Falha no upload para o Cloudinary.");
 
@@ -149,7 +139,6 @@ export default function UploadForm({
 
       onScheduleSuccess(newVideo);
     } catch (err) {
-      console.error("Erro no agendamento:", err);
       if (err instanceof Error) setError(`Ocorreu um erro: ${err.message}`);
       else setError("Ocorreu um erro inesperado.");
     } finally {
