@@ -325,7 +325,7 @@ export default function UploadForm({
         )}
         {successMessage && (
           <div className="bg-green-500/20 text-green-300 p-3 rounded-md text-sm">
-            {successMessage}
+            {successMessag}
           </div>
         )}
       </form>
