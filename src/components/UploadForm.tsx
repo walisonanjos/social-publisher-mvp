@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, FormEvent } from "react";
-import { useRouter } from "next/navigation";
+// CORREÇÃO: useRouter foi removido da importação
+// import { useRouter } from "next/navigation"; 
 import { createClient } from "../lib/supabaseClient";
 import { DayPicker } from "react-day-picker";
 import "react-day-picker/dist/style.css";
@@ -18,7 +19,7 @@ export default function UploadForm({
   nicheId,
   onScheduleSuccess,
 }: UploadFormProps) {
-  const router = useRouter();
+  // CORREÇÃO: A linha const router = useRouter() foi removida.
   const [file, setFile] = useState<File | null>(null);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -49,6 +50,10 @@ export default function UploadForm({
       setError("Por favor, preencha todos os campos obrigatórios.");
       return;
     }
+    if (!postToYouTube) {
+        setError("Por favor, selecione pelo menos uma rede social para postar.");
+        return;
+    }
 
     setIsUploading(true);
     setError("");
@@ -67,7 +72,6 @@ export default function UploadForm({
       );
       const scheduled_at_iso = finalScheduleDate.toISOString();
 
-      // VALIDAÇÃO DE DUPLICIDADE (FRONT-END)
       const { data: existingPost, error: checkError } = await supabase
         .from("videos")
         .select("id")
@@ -84,7 +88,6 @@ export default function UploadForm({
         );
       }
 
-      // Se passou na validação, continua com o upload
       const formData = new FormData();
       formData.append("file", file);
       formData.append(
@@ -101,6 +104,8 @@ export default function UploadForm({
 
       const cloudinaryData = await cloudinaryResponse.json();
       const videoUrl = cloudinaryData.secure_url;
+      const cloudinaryPublicId = cloudinaryData.public_id; 
+
       const {
         data: { user },
       } = await supabase.auth.getUser();
@@ -114,6 +119,7 @@ export default function UploadForm({
           title,
           description,
           video_url: videoUrl,
+          cloudinary_public_id: cloudinaryPublicId,
           scheduled_at: scheduled_at_iso,
           target_youtube: postToYouTube,
           status: "agendado",
@@ -121,7 +127,12 @@ export default function UploadForm({
         .select()
         .single();
 
-      if (insertError) throw insertError;
+      if (insertError) {
+        if (insertError.code === '23505') {
+          throw new Error('Já existe um agendamento para este workspace neste mesmo dia e hora.');
+        }
+        throw insertError;
+      }
       if (!newVideo)
         throw new Error(
           "Não foi possível obter os dados do agendamento criado.",
@@ -150,7 +161,6 @@ export default function UploadForm({
     <div className="bg-gray-800 p-8 rounded-lg shadow-lg border border-gray-700">
       <h2 className="text-xl font-bold text-white mb-6">Novo Agendamento</h2>
       <form onSubmit={handleSubmit} className="space-y-6">
-        {/* O JSX do formulário continua o mesmo */}
         <div>
           <label
             htmlFor="file-upload"
