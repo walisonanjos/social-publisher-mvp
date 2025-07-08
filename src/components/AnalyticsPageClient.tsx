@@ -3,7 +3,7 @@
 "use client";
 import { useEffect, useState, useMemo } from "react";
 import Link from 'next/link';
-import Image from 'next/image'; // Importamos o componente de Imagem do Next.js
+import Image from 'next/image';
 import { createClient } from "@/lib/supabaseClient";
 import { User } from "@supabase/supabase-js";
 import { Loader2, BarChart2, Youtube, Eye, ThumbsUp, MessageSquare } from "lucide-react";
@@ -25,7 +25,7 @@ interface AnalyticsVideo {
   statistics: VideoStatistics;
 }
 
-// Componente StatCard (continua o mesmo)
+// Componente StatCard
 const StatCard = ({ icon: Icon, label, value }: { icon: React.ElementType, label: string, value: string | number }) => (
   <div className="bg-gray-800 p-6 rounded-lg border border-gray-700">
     <div className="flex items-center">
@@ -49,7 +49,6 @@ export default function AnalyticsPageClient({ nicheId }: { nicheId: string }) {
   const [analyticsData, setAnalyticsData] = useState<AnalyticsVideo[]>([]);
   const [isYouTubeConnected, setIsYouTubeConnected] = useState(false);
 
-  // useMemo para os totais (continua o mesmo)
   const summaryStats = useMemo(() => {
     if (!analyticsData || analyticsData.length === 0) {
       return { totalVideos: 0, totalViews: 0, totalLikes: 0, totalComments: 0 };
@@ -67,7 +66,6 @@ export default function AnalyticsPageClient({ nicheId }: { nicheId: string }) {
     };
   }, [analyticsData]);
 
-  // useEffect para buscar os dados (continua o mesmo)
   useEffect(() => {
     const fetchInitialData = async () => {
       setLoading(true);
@@ -84,7 +82,6 @@ export default function AnalyticsPageClient({ nicheId }: { nicheId: string }) {
           try {
             const { data, error: functionError } = await supabase.functions.invoke("get-youtube-analytics",{ body: { nicheId } });
             if (functionError) throw functionError;
-            // Ordena os dados para mostrar os mais vistos primeiro
             const sortedData = (data.data || []).sort((a: AnalyticsVideo, b: AnalyticsVideo) => 
               parseInt(b.statistics.viewCount || '0', 10) - parseInt(a.statistics.viewCount || '0', 10)
             );
@@ -100,15 +97,45 @@ export default function AnalyticsPageClient({ nicheId }: { nicheId: string }) {
     fetchInitialData();
   }, [nicheId, supabase]);
 
-  if (loading) { /* ... */ }
-  if (!user) { /* ... */ }
+  // CORREÇÃO: Blocos de 'loading' e 'auth' agora estão completos
+  if (loading) { 
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-gray-900">
+        <Loader2 className="h-12 w-12 text-teal-400 animate-spin" />
+      </div>
+    );
+  }
+  if (!user) { 
+    return <Auth />;
+  }
 
   const renderContent = () => {
-    if (!isYouTubeConnected) { /* ... */ }
-    if (error) { /* ... */ }
-    
-    // Mostra mensagem se não houver dados, antes de tentar renderizar a tabela
-    if (analyticsData.length === 0 && isYouTubeConnected) {
+    // CORREÇÃO: Todos os blocos de renderização de conteúdo estão completos
+    if (!isYouTubeConnected) {
+      return (
+        <div className="text-center bg-gray-800 p-8 rounded-lg border border-gray-700">
+          <Youtube className="mx-auto h-12 w-12 text-gray-500" />
+          <h3 className="mt-4 text-lg font-medium text-white">YouTube não conectado</h3>
+          <p className="mt-2 text-sm text-gray-400">
+            Para ver as análises de performance, primeiro conecte uma conta do YouTube a este workspace.
+          </p>
+          <Link href={`/niche/${nicheId}`}>
+            <button className="mt-6 inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-teal-600 hover:bg-teal-700">
+              Ir para a página de conexão
+            </button>
+          </Link>
+        </div>
+      );
+    }
+    if (error) {
+       return (
+        <div className="bg-red-500/20 text-red-300 p-4 rounded-md">
+          <p className="font-bold mb-2">Ocorreu um erro:</p>
+          <p>{error}</p>
+        </div>
+      );
+    }
+    if (analyticsData.length === 0) {
       return (
          <div className="bg-gray-800 p-8 rounded-lg border border-gray-700 text-center text-gray-400">
            <BarChart2 className="mx-auto h-12 w-12 text-gray-500" />
@@ -129,7 +156,6 @@ export default function AnalyticsPageClient({ nicheId }: { nicheId: string }) {
           <StatCard icon={MessageSquare} label="Total de Comentários" value={summaryStats.totalComments.toLocaleString('pt-BR')} />
         </div>
         
-        {/* --- NOVA TABELA DE DETALHES --- */}
         <div className="bg-gray-800 rounded-lg border border-gray-700 overflow-hidden">
           <table className="min-w-full divide-y divide-gray-700">
             <thead className="bg-gray-800/50">
@@ -155,15 +181,14 @@ export default function AnalyticsPageClient({ nicheId }: { nicheId: string }) {
                       </div>
                     </div>
                   </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">{parseInt(video.statistics.viewCount || '0').toLocaleString('pt-BR')}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">{parseInt(video.statistics.likeCount || '0').toLocaleString('pt-BR')}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">{parseInt(video.statistics.commentCount || '0').toLocaleString('pt-BR')}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">{parseInt(video.statistics.viewCount || '0', 10).toLocaleString('pt-BR')}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">{parseInt(video.statistics.likeCount || '0', 10).toLocaleString('pt-BR')}</td>
+                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">{parseInt(video.statistics.commentCount || '0', 10).toLocaleString('pt-BR')}</td>
                 </tr>
               ))}
             </tbody>
           </table>
         </div>
-        {/* --- FIM DA NOVA TABELA --- */}
       </>
     );
   };
