@@ -1,5 +1,6 @@
-"use client";
+// src/components/NichePageClient.tsx
 
+"use client";
 import { useEffect, useState, useMemo, useCallback } from "react";
 import { createClient } from "@/lib/supabaseClient";
 import { User } from "@supabase/supabase-js";
@@ -10,7 +11,7 @@ import VideoGrid from "./VideoGrid";
 import Navbar from "./Navbar";
 import AccountConnection from "./AccountConnection";
 import { Video } from "@/types";
-import MainHeader from "./MainHeader"; 
+import MainHeader from "./MainHeader";
 
 export default function NichePageClient({ nicheId }: { nicheId: string }) {
   const supabase = createClient();
@@ -71,14 +72,52 @@ export default function NichePageClient({ nicheId }: { nicheId: string }) {
     setupPage();
   }, [fetchPageData, supabase]);
   
+  // --- NOVO BLOCO DE CÓDIGO PARA REALTIME ---
+  useEffect(() => {
+    if (!user) return; // Só ativa o listener se o usuário estiver logado
+
+    console.log("Iniciando listener de Realtime para a tabela de vídeos...");
+
+    const channel = supabase
+      .channel('videos-niche-channel')
+      .on(
+        'postgres_changes',
+        { 
+          event: '*', // Ouvir INSERT, UPDATE, DELETE
+          schema: 'public',
+          table: 'videos',
+          filter: `niche_id=eq.${nicheId}` // Só ouvir mudanças para o nicho atual
+        },
+        (payload) => {
+          console.log('Mudança recebida do Supabase Realtime!', payload);
+          // A forma mais simples de atualizar a UI é chamar a função de busca novamente.
+          fetchPageData(user.id);
+        }
+      )
+      .subscribe();
+
+    // Função de "limpeza": quando o componente for desmontado, remove o listener
+    // para evitar vazamentos de memória.
+    return () => {
+      console.log("Removendo listener de Realtime.");
+      supabase.removeChannel(channel);
+    };
+  }, [user, nicheId, supabase, fetchPageData]); // Dependências do useEffect
+  // --- FIM DO NOVO BLOCO DE CÓDIGO ---
+
+  const handleScheduleSuccess = (newVideo: Video) => {
+    // A atualização agora será tratada pelo listener do Realtime, 
+    // mas podemos manter esta para uma reatividade instantânea no agendamento.
+    setVideos(currentVideos => [...currentVideos, newVideo]);
+  };
+
   const handleDeleteVideo = async (videoId: string) => {
     if (!window.confirm("Tem certeza que deseja excluir este agendamento?")) return;
     const { error } = await supabase.from('videos').delete().eq('id', videoId);
     if (error) {
       alert("Não foi possível excluir o agendamento.");
-    } else {
-      setVideos(currentVideos => currentVideos.filter(v => v.id !== videoId));
     }
+    // A atualização da UI após deletar também será tratada pelo Realtime.
   };
 
   const handleDisconnectYouTube = async () => {
@@ -90,10 +129,6 @@ export default function NichePageClient({ nicheId }: { nicheId: string }) {
       setIsYouTubeConnected(false);
       alert("Conta do YouTube desconectada com sucesso deste workspace.");
     }
-  };
-
-  const handleScheduleSuccess = (newVideo: Video) => {
-    setVideos(currentVideos => [...currentVideos, newVideo]);
   };
 
   if (loading) { return <div className="flex items-center justify-center min-h-screen bg-gray-900"><Loader2 className="h-12 w-12 text-teal-400 animate-spin" /></div>; }

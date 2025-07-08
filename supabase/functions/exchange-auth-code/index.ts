@@ -1,3 +1,5 @@
+// supabase/functions/exchange-auth-code/index.ts
+
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
@@ -6,70 +8,56 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type",
 };
 
-// Log para sabermos que a versão correta foi implantada
-console.log("Função 'exchange-auth-code' v2 (com logs) INICIALIZADA.");
+console.log("Função 'exchange-auth-code' v4 (versão correta) INICIALIZADA.");
 
 Deno.serve(async (req) => {
-  console.log("Recebida uma nova requisição para troca de código.");
   if (req.method === "OPTIONS") {
     return new Response("ok", { headers: corsHeaders });
   }
 
   try {
-    const { code, state } = await req.json();
-    console.log("Dados recebidos do corpo da requisição:", {
-      code: code ? "presente" : "ausente",
-      state: state ? "presente" : "ausente",
-    });
-    if (!code || !state)
-      throw new Error("Código de autorização ou estado ausentes.");
+    // CORREÇÃO: Lendo 'code' e 'state' da URL, não do corpo da requisição.
+    const url = new URL(req.url);
+    const code = url.searchParams.get("code");
+    const state = url.searchParams.get("state");
 
-    const { nicheId, userId } = JSON.parse(state);
-    console.log("Dados extraídos do 'state':", { nicheId, userId });
-    if (!nicheId || !userId)
-      throw new Error("Estado (state) inválido ou faltando dados.");
+    if (!code) throw new Error("O 'code' de autorização não foi encontrado na URL.");
+    if (!state) throw new Error("O 'state' (com niche_id e user_id) não foi encontrado na URL.");
+    
+    // O 'state' vem codificado em Base64, precisamos decodificá-lo
+    const { nicheId, userId } = JSON.parse(atob(state));
+    console.log(`Recebida troca de código para o nicho: ${nicheId}`);
 
-    // Logando as variáveis que vamos enviar para o Google
-    const googleClientId = Deno.env.get("GOOGLE_CLIENT_ID");
-    const googleClientSecret = Deno.env.get("GOOGLE_CLIENT_SECRET");
-    const redirectUri = Deno.env.get("YOUTUBE_REDIRECT_URI");
-
-    console.log("Verificando segredos para a chamada ao Google...");
-    console.log("GOOGLE_CLIENT_ID:", googleClientId ? "Ok" : "FALTOU!");
-    console.log("GOOGLE_CLIENT_SECRET:", googleClientSecret ? "Ok" : "FALTOU!");
-    console.log("YOUTUBE_REDIRECT_URI:", redirectUri ? redirectUri : "FALTOU!");
+    const GOOGLE_CLIENT_ID = Deno.env.get("GOOGLE_CLIENT_ID");
+    const GOOGLE_CLIENT_SECRET = Deno.env.get("GOOGLE_CLIENT_SECRET");
+    const YOUTUBE_REDIRECT_URI = Deno.env.get("YOUTUBE_REDIRECT_URI");
 
     const response = await fetch("https://oauth2.googleapis.com/token", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         code: code,
-        client_id: googleClientId!,
-        client_secret: googleClientSecret!,
-        redirect_uri: redirectUri!,
+        client_id: GOOGLE_CLIENT_ID,
+        client_secret: GOOGLE_CLIENT_SECRET,
+        redirect_uri: YOUTUBE_REDIRECT_URI,
         grant_type: "authorization_code",
       }),
     });
 
-    console.log("Resposta da API do Google - Status:", response.status);
-
     if (!response.ok) {
-      const errorData = await response.json();
-      console.error("Resposta de ERRO do Google:", errorData);
-      throw new Error(
-        errorData.error_description || "Falha ao buscar tokens do Google",
-      );
+      const errorText = await response.text();
+      console.error("Resposta de erro do Google:", errorText);
+      throw new Error(`O Google retornou um erro durante a troca de código: ${errorText}`);
     }
 
     const tokens = await response.json();
-    console.log("Tokens recebidos do Google com sucesso.");
+    console.log("Tokens recebidos com sucesso.");
 
-    // O resto da função continua igual...
     const supabaseAdmin = createClient(
       Deno.env.get("SUPABASE_URL")!,
       Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
     );
-    console.log("Salvando tokens no banco de dados...");
+
     const { error: dbError } = await supabaseAdmin
       .from("social_connections")
       .upsert(
@@ -79,11 +67,10 @@ Deno.serve(async (req) => {
           platform: "youtube",
           access_token: tokens.access_token,
           refresh_token: tokens.refresh_token,
-          expires_at: new Date(
-            Date.now() + tokens.expires_in * 1000,
-          ).toISOString(),
+          expires_at: new Date(Date.now() + tokens.expires_in * 1000).toISOString(),
         },
-        { onConflict: "user_id, niche_id, platform" },
+        // A regra de conflito correta é garantir uma conexão por plataforma em cada nicho
+        { onConflict: "niche_id, platform" },
       );
 
     if (dbError) {
@@ -91,11 +78,11 @@ Deno.serve(async (req) => {
       throw dbError;
     }
     console.log("Tokens salvos com sucesso!");
+    
+    // CORREÇÃO: Redireciona o usuário de volta para a página do nicho no seu site
+    const siteUrl = Deno.env.get("SITE_URL") || 'https://social-publisher-mvp.vercel.app'; // URL de fallback
+    return Response.redirect(`${siteUrl}/niche/${nicheId}`);
 
-    return new Response(JSON.stringify({ success: true, nicheId }), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-      status: 200,
-    });
   } catch (error) {
     console.error("ERRO FINAL NO BLOCO CATCH:", error.message);
     return new Response(JSON.stringify({ error: error.message }), {
