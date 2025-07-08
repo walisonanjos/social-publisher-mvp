@@ -2,9 +2,11 @@
 
 import AnalyticsPageClient from "@/components/AnalyticsPageClient";
 
-// Esta é uma página de servidor que simplesmente passa os parâmetros 
-// para o nosso componente de cliente, que fará todo o trabalho.
-export default async function AnalyticsPage({ params }: { params: { nicheId: string } }) {
-  const { nicheId } = params;
+// A correção é marcar a função como 'async' e tipar os params como uma 'Promise'
+export default async function AnalyticsPage({ params }: { params: Promise<{ nicheId:string }> }) {
+  
+  // E então usar 'await' para extrair o valor do nicheId
+  const { nicheId } = await params;
+  
   return <AnalyticsPageClient nicheId={nicheId} />;
 }
