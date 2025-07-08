@@ -1,4 +1,5 @@
 // src/components/Navbar.tsx
+
 'use client';
 
 import Link from 'next/link';
@@ -7,13 +8,12 @@ import { usePathname } from 'next/navigation';
 export default function Navbar({ nicheId }: { nicheId: string }) {
   const pathname = usePathname();
 
-  // Os links agora são dinâmicos, baseados no nicheId
-  const navLinks = [
-    { name: 'Agendamentos', href: `/niche/${nicheId}` },
-    { name: 'Histórico', href: `/niche/${nicheId}/history` },
-    // Futuramente, a página de conexões também usará o ID do nicho
-    // { name: 'Conexões', href: `/niche/${nicheId}/connections` },
-  ];
+  // Adicionamos o novo link para a página de Análises
+  const navLinks = [
+    { name: 'Agendamentos', href: `/niche/${nicheId}` },
+    { name: 'Histórico', href: `/niche/${nicheId}/history` },
+    { name: 'Análises', href: `/niche/${nicheId}/analytics` },
+  ];
 
   return (
     <div className="border-b border-gray-700">
