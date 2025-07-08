@@ -2,7 +2,7 @@
 
 "use client";
 import { useEffect, useState, useMemo } from "react";
-import Link from 'next/link'; // Necessário para o botão de 'conectar conta'
+import Link from 'next/link';
 import { createClient } from "@/lib/supabaseClient";
 import { User } from "@supabase/supabase-js";
 import { Loader2, BarChart2, Youtube, Eye, ThumbsUp, MessageSquare } from "lucide-react";
@@ -11,7 +11,7 @@ import MainHeader from "@/components/MainHeader";
 import Navbar from "@/components/Navbar";
 import Auth from "@/components/Auth";
 
-// Tipos que já definimos antes
+// Tipos
 interface VideoStatistics {
   viewCount: string;
   likeCount: string;
@@ -21,10 +21,9 @@ interface AnalyticsVideo {
   youtube_video_id: string;
   title: string;
   statistics: VideoStatistics;
-  // ... outras propriedades que já temos
 }
 
-// Componente para um cartão de estatística individual
+// Componente StatCard
 const StatCard = ({ icon: Icon, label, value }: { icon: React.ElementType, label: string, value: string | number }) => (
   <div className="bg-gray-800 p-6 rounded-lg border border-gray-700">
     <div className="flex items-center">
@@ -39,7 +38,6 @@ const StatCard = ({ icon: Icon, label, value }: { icon: React.ElementType, label
   </div>
 );
 
-
 export default function AnalyticsPageClient({ nicheId }: { nicheId: string }) {
   const supabase = createClient();
   const [user, setUser] = useState<User | null>(null);
@@ -49,19 +47,32 @@ export default function AnalyticsPageClient({ nicheId }: { nicheId: string }) {
   const [analyticsData, setAnalyticsData] = useState<AnalyticsVideo[]>([]);
   const [isYouTubeConnected, setIsYouTubeConnected] = useState(false);
 
+  // --- CORREÇÃO IMPORTANTE APLICADA AQUI ---
   const summaryStats = useMemo(() => {
     if (!analyticsData || analyticsData.length === 0) {
       return { totalVideos: 0, totalViews: 0, totalLikes: 0, totalComments: 0 };
     }
+    
+    // Função auxiliar para converter 'N/A' ou outros valores inválidos para 0
+    const safeParseInt = (value: string | undefined | null): number => {
+      if (value === null || value === undefined || value === 'N/A') {
+        return 0;
+      }
+      const parsed = parseInt(value, 10);
+      return isNaN(parsed) ? 0 : parsed;
+    };
+
     return {
       totalVideos: analyticsData.length,
-      totalViews: analyticsData.reduce((sum, video) => sum + parseInt(video.statistics.viewCount || '0', 10), 0),
-      totalLikes: analyticsData.reduce((sum, video) => sum + parseInt(video.statistics.likeCount || '0', 10), 0),
-      totalComments: analyticsData.reduce((sum, video) => sum + parseInt(video.statistics.commentCount || '0', 10), 0),
+      totalViews: analyticsData.reduce((sum, video) => sum + safeParseInt(video.statistics.viewCount), 0),
+      totalLikes: analyticsData.reduce((sum, video) => sum + safeParseInt(video.statistics.likeCount), 0),
+      totalComments: analyticsData.reduce((sum, video) => sum + safeParseInt(video.statistics.commentCount), 0),
     };
   }, [analyticsData]);
+  // --- FIM DA CORREÇÃO ---
 
   useEffect(() => {
+    // useEffect para buscar dados continua o mesmo...
     const fetchInitialData = async () => {
       setLoading(true);
       setError(null);
@@ -79,7 +90,6 @@ export default function AnalyticsPageClient({ nicheId }: { nicheId: string }) {
             if (functionError) throw functionError;
             setAnalyticsData(data.data || []);
           } catch (e) {
-            console.error("Erro ao buscar dados de análise:", e);
             if (e instanceof Error) setError(e.message);
             else setError("Ocorreu um erro desconhecido ao buscar análises.");
           }
@@ -94,7 +104,7 @@ export default function AnalyticsPageClient({ nicheId }: { nicheId: string }) {
   if (!user) { return <Auth />; }
 
   const renderContent = () => {
-    // CORREÇÃO: Bloco de código para 'não conectado' agora está completo
+    // ... (o renderContent continua o mesmo)
     if (!isYouTubeConnected) {
       return (
         <div className="text-center bg-gray-800 p-8 rounded-lg border border-gray-700">
@@ -129,7 +139,6 @@ export default function AnalyticsPageClient({ nicheId }: { nicheId: string }) {
           <StatCard icon={MessageSquare} label="Total de Comentários" value={summaryStats.totalComments.toLocaleString('pt-BR')} />
         </div>
         
-        {/* Futuramente, aqui entrarão os gráficos. */}
         {analyticsData.length === 0 && (
            <div className="bg-gray-800 p-8 rounded-lg border border-gray-700 text-center text-gray-400">
              <BarChart2 className="mx-auto h-12 w-12 text-gray-500" />
@@ -139,6 +148,7 @@ export default function AnalyticsPageClient({ nicheId }: { nicheId: string }) {
              </p>
            </div>
         )}
+        {/* Futuramente, aqui entrarão os gráficos com a lista de vídeos */}
       </>
     );
   };
