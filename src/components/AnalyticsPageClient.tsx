@@ -10,29 +10,43 @@ import MainHeader from "@/components/MainHeader";
 import Navbar from "@/components/Navbar";
 import Auth from "@/components/Auth";
 
+// PASSO 1: Definindo tipos específicos para nossos dados
+interface VideoStatistics {
+  viewCount: string;
+  likeCount: string;
+  commentCount: string;
+}
+
+interface AnalyticsVideo {
+  youtube_video_id: string;
+  title: string;
+  scheduled_at: string;
+  video_url: string;
+  thumbnail: string;
+  statistics: VideoStatistics;
+}
+
 export default function AnalyticsPageClient({ nicheId }: { nicheId: string }) {
   const supabase = createClient();
   const [user, setUser] = useState<User | null>(null);
   const [nicheName, setNicheName] = useState("Análises");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [analyticsData, setAnalyticsData] = useState<any[]>([]);
+  // PASSO 2: Usando nosso novo tipo 'AnalyticsVideo' no estado
+  const [analyticsData, setAnalyticsData] = useState<AnalyticsVideo[]>([]);
 
   useEffect(() => {
     const fetchInitialData = async () => {
       setLoading(true);
       setError(null);
 
-      // Pega o usuário logado
       const { data: { user } } = await supabase.auth.getUser();
       setUser(user);
 
       if (user) {
-        // Pega o nome do nicho para o cabeçalho
         const { data: nicheData } = await supabase.from('niches').select('name').eq('id', nicheId).single();
         if (nicheData) setNicheName(nicheData.name);
 
-        // Chama nossa função de backend para buscar as análises
         try {
           const { data, error: functionError } = await supabase.functions.invoke(
             "get-youtube-analytics",
@@ -41,11 +55,15 @@ export default function AnalyticsPageClient({ nicheId }: { nicheId: string }) {
 
           if (functionError) throw functionError;
           
-          setAnalyticsData(data.data || []); // Armazena os dados recebidos
+          setAnalyticsData(data.data || []);
 
-        } catch (e: any) {
+        } catch (e) { // PASSO 3: Tratando o erro sem usar 'any'
           console.error("Erro ao buscar dados de análise:", e);
-          setError(e.message);
+          if (e instanceof Error) {
+            setError(e.message);
+          } else {
+            setError("Ocorreu um erro desconhecido.");
+          }
         }
       }
       setLoading(false);
@@ -82,11 +100,10 @@ export default function AnalyticsPageClient({ nicheId }: { nicheId: string }) {
             </div>
           )}
 
-          {/* Por enquanto, vamos apenas mostrar os dados brutos para testar */}
           <div className="bg-gray-800 p-4 rounded-lg border border-gray-700">
             <h3 className="text-lg font-semibold mb-2">Dados Recebidos do Backend</h3>
             <pre className="text-xs text-gray-300 whitespace-pre-wrap overflow-auto">
-              {JSON.stringify(analyticsData, null, 2)}
+              {analyticsData.length > 0 ? JSON.stringify(analyticsData, null, 2) : "Nenhum dado para exibir."}
             </pre>
           </div>
 
