@@ -40,11 +40,9 @@ const StatCard = ({ icon: Icon, label, value }: { icon: React.ElementType, label
   </div>
 );
 
-// Função auxiliar para converter 'N/A' ou outros valores inválidos para 0
+// Função auxiliar para parse seguro
 const safeParseInt = (value: string | undefined | null): number => {
-  if (value === null || value === undefined || value === 'N/A') {
-    return 0;
-  }
+  if (value === null || value === undefined || value === 'N/A') return 0;
   const parsed = parseInt(value, 10);
   return isNaN(parsed) ? 0 : parsed;
 };
@@ -101,13 +99,55 @@ export default function AnalyticsPageClient({ nicheId }: { nicheId: string }) {
     fetchInitialData();
   }, [nicheId, supabase]);
 
-  if (loading) { return <div className="flex items-center justify-center min-h-screen bg-gray-900"><Loader2 className="h-12 w-12 text-teal-400 animate-spin" /></div>; }
-  if (!user) { return <Auth />; }
+  // BLOCOS DE VERIFICAÇÃO RESTAURADOS
+  if (loading) { 
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-gray-900">
+        <Loader2 className="h-12 w-12 text-teal-400 animate-spin" />
+      </div>
+    );
+  }
+  if (!user) { 
+    return <Auth />;
+  }
 
   const renderContent = () => {
-    if (!isYouTubeConnected) { /* ... */ }
-    if (error) { /* ... */ }
-    if (analyticsData.length === 0 && isYouTubeConnected) { /* ... */ }
+    // BLOCOS DE RENDERIZAÇÃO CONDICIONAL RESTAURADOS
+    if (!isYouTubeConnected) {
+      return (
+        <div className="text-center bg-gray-800 p-8 rounded-lg border border-gray-700">
+          <Youtube className="mx-auto h-12 w-12 text-gray-500" />
+          <h3 className="mt-4 text-lg font-medium text-white">YouTube não conectado</h3>
+          <p className="mt-2 text-sm text-gray-400">
+            Para ver as análises de performance, primeiro conecte uma conta do YouTube a este workspace.
+          </p>
+          <Link href={`/niche/${nicheId}`}>
+            <button className="mt-6 inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-teal-600 hover:bg-teal-700">
+              Ir para a página de conexão
+            </button>
+          </Link>
+        </div>
+      );
+    }
+    if (error) {
+       return (
+        <div className="bg-red-500/20 text-red-300 p-4 rounded-md">
+          <p className="font-bold mb-2">Ocorreu um erro:</p>
+          <p>{error}</p>
+        </div>
+      );
+    }
+    if (analyticsData.length === 0) {
+      return (
+         <div className="bg-gray-800 p-8 rounded-lg border border-gray-700 text-center text-gray-400">
+           <BarChart2 className="mx-auto h-12 w-12 text-gray-500" />
+           <h3 className="mt-4 text-lg font-medium text-white">Nenhum dado para exibir</h3>
+           <p className="mt-2 text-sm text-gray-400">
+             Ainda não há vídeos postados com sucesso para analisar neste workspace.
+           </p>
+         </div>
+      );
+    }
     
     return (
       <>
@@ -143,7 +183,6 @@ export default function AnalyticsPageClient({ nicheId }: { nicheId: string }) {
                       </div>
                     </div>
                   </td>
-                  {/* --- CORREÇÃO APLICADA AQUI --- */}
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">{safeParseInt(video.statistics.viewCount).toLocaleString('pt-BR')}</td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">{safeParseInt(video.statistics.likeCount).toLocaleString('pt-BR')}</td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">{safeParseInt(video.statistics.commentCount).toLocaleString('pt-BR')}</td>
