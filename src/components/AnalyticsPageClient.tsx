@@ -3,6 +3,7 @@
 "use client";
 import { useEffect, useState, useMemo, useCallback } from "react";
 import Link from 'next/link';
+// A importação do 'Image' foi removida pois estamos usando a tag 'img'
 import { createClient } from "@/lib/supabaseClient";
 import { User } from "@supabase/supabase-js";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
