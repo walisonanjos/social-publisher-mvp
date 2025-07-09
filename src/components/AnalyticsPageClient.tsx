@@ -1,7 +1,7 @@
 // src/components/AnalyticsPageClient.tsx
 
 "use client";
-import { useEffect, useState, useMemo } from "react";
+import { useEffect, useState, useMemo, useCallback } from "react"; // Adicionado useCallback
 import Link from 'next/link';
 import Image from 'next/image';
 import { createClient } from "@/lib/supabaseClient";
@@ -76,37 +76,82 @@ export default function AnalyticsPageClient({ nicheId }: { nicheId: string }) {
       Curtidas: safeParseInt(video.statistics.likeCount),
     }));
   }, [analyticsData]);
-
-  useEffect(() => {
-    const fetchInitialData = async () => {
-      setLoading(true);
-      setError(null);
-      const { data: { user } } = await supabase.auth.getUser();
-      setUser(user);
-      if (user) {
-        const { data: nicheData } = await supabase.from('niches').select('name').eq('id', nicheId).single();
-        if (nicheData) setNicheName(nicheData.name);
-        const { count } = await supabase.from('social_connections').select('*', { count: 'exact', head: true }).eq('user_id', user.id).eq('niche_id', nicheId).eq('platform', 'youtube');
-        const connected = !!count && count > 0;
-        setIsYouTubeConnected(connected);
-        if (connected) {
-          try {
-            const { data, error: functionError } = await supabase.functions.invoke("get-youtube-analytics",{ body: { nicheId } });
-            if (functionError) throw functionError;
-            const sortedData = (data.data || []).sort((a: AnalyticsVideo, b: AnalyticsVideo) => 
-              safeParseInt(b.statistics.viewCount) - safeParseInt(a.statistics.viewCount)
-            );
-            setAnalyticsData(sortedData);
-          } catch (e) {
-            if (e instanceof Error) setError(e.message);
-            else setError("Ocorreu um erro desconhecido ao buscar análises.");
-          }
-        }
-      }
-      setLoading(false);
+  
+  // A lógica de busca de dados foi movida para esta função para ser reutilizável
+  const fetchPageData = useCallback(async () => {
+    console.log("Buscando dados da página...");
+    
+    const { data: { user: currentUser } } = await supabase.auth.getUser();
+    if (!currentUser) {
+        setLoading(false);
+        return;
     };
-    fetchInitialData();
-  }, [nicheId, supabase]);
+    
+    // Para não mostrar o spinner toda vez que o realtime atualizar
+    // Apenas na carga inicial.
+    if(loading) setLoading(true); 
+    setError(null);
+
+    const { data: nicheData } = await supabase.from('niches').select('name').eq('id', nicheId).single();
+    if (nicheData) setNicheName(nicheData.name);
+    
+    const { count } = await supabase.from('social_connections').select('*', { count: 'exact', head: true }).eq('user_id', currentUser.id).eq('niche_id', nicheId).eq('platform', 'youtube');
+    const connected = !!count && count > 0;
+    setIsYouTubeConnected(connected);
+
+    if (connected) {
+      try {
+        const { data, error: functionError } = await supabase.functions.invoke("get-youtube-analytics",{ body: { nicheId } });
+        if (functionError) throw functionError;
+        const sortedData = (data.data || []).sort((a: AnalyticsVideo, b: AnalyticsVideo) => 
+          safeParseInt(b.statistics.viewCount) - safeParseInt(a.statistics.viewCount)
+        );
+        setAnalyticsData(sortedData);
+      } catch (e) {
+        if (e instanceof Error) setError(e.message);
+        else setError("Ocorreu um erro desconhecido ao buscar análises.");
+      }
+    }
+    setLoading(false);
+  }, [nicheId, supabase, loading]);
+
+  // useEffect que busca os dados iniciais
+  useEffect(() => {
+    const initialize = async () => {
+      const { data: { user: currentUser } } = await supabase.auth.getUser();
+      setUser(currentUser);
+      fetchPageData();
+    };
+    initialize();
+  }, [fetchPageData, supabase.auth]);
+  
+  // ADICIONADO DE VOLTA: useEffect para o Realtime
+  useEffect(() => {
+    if (!user) return;
+
+    const channel = supabase
+      .channel(`analytics-realtime-${nicheId}`)
+      .on(
+        'postgres_changes',
+        { 
+          event: '*', // Ouvir INSERT, UPDATE, DELETE
+          schema: 'public',
+          table: 'videos',
+          filter: `niche_id=eq.${nicheId}`
+        },
+        (payload) => {
+          console.log('Mudança na tabela de vídeos recebida!', payload);
+          // Quando uma mudança acontece, busca os dados novamente para atualizar a dashboard
+          fetchPageData();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [user, nicheId, supabase, fetchPageData]);
+
 
   if (loading) { 
     return (
@@ -144,21 +189,9 @@ export default function AnalyticsPageClient({ nicheId }: { nicheId: string }) {
         </div>
       );
     }
-    if (analyticsData.length === 0) {
-      return (
-         <div className="bg-gray-800 p-8 rounded-lg border border-gray-700 text-center text-gray-400">
-           <ChartIcon className="mx-auto h-12 w-12 text-gray-500" />
-           <h3 className="mt-4 text-lg font-medium text-white">Nenhum dado para exibir</h3>
-           <p className="mt-2 text-sm text-gray-400">
-             Ainda não há vídeos postados com sucesso para analisar neste workspace.
-           </p>
-         </div>
-      );
-    }
     
     return (
       <>
-        {/* CORREÇÃO APLICADA AQUI com a classe w-full */}
         <div className="grid w-full grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4 mb-8">
           <StatCard icon={ChartIcon} label="Vídeos Analisados" value={summaryStats.totalVideos} />
           <StatCard icon={Eye} label="Total de Visualizações" value={summaryStats.totalViews.toLocaleString('pt-BR')} />
@@ -181,39 +214,49 @@ export default function AnalyticsPageClient({ nicheId }: { nicheId: string }) {
             </ResponsiveContainer>
         </div>
         
-        <div className="bg-gray-800 rounded-lg border border-gray-700 overflow-hidden">
-          <table className="min-w-full divide-y divide-gray-700">
-            <thead className="bg-gray-800/50">
-              <tr>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Vídeo</th>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Visualizações</th>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Curtidas</th>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Comentários</th>
-              </tr>
-            </thead>
-            <tbody className="bg-gray-800 divide-y divide-gray-700">
-              {analyticsData.map((video) => (
-                <tr key={video.youtube_video_id} className="hover:bg-gray-700/50">
-                  <td className="px-6 py-4 whitespace-nowrap">
-                    <div className="flex items-center">
-                      <div className="flex-shrink-0 h-10 w-20 relative">
-                        <Image src={video.thumbnail} alt={`Thumbnail for ${video.title}`} layout="fill" objectFit="cover" className="rounded-md" />
-                      </div>
-                      <div className="ml-4 max-w-xs truncate">
-                        <a href={`https://www.youtube.com/watch?v=${video.youtube_video_id}`} target="_blank" rel="noopener noreferrer" className="text-sm font-medium text-white hover:text-teal-400 transition-colors">
-                          {video.title}
-                        </a>
-                      </div>
-                    </div>
-                  </td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">{safeParseInt(video.statistics.viewCount).toLocaleString('pt-BR')}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">{safeParseInt(video.statistics.likeCount).toLocaleString('pt-BR')}</td>
-                  <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">{safeParseInt(video.statistics.commentCount).toLocaleString('pt-BR')}</td>
+        {analyticsData.length > 0 ? (
+          <div className="bg-gray-800 rounded-lg border border-gray-700 overflow-hidden">
+            <table className="min-w-full divide-y divide-gray-700">
+              <thead className="bg-gray-800/50">
+                <tr>
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Vídeo</th>
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Visualizações</th>
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Curtidas</th>
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Comentários</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody className="bg-gray-800 divide-y divide-gray-700">
+                {analyticsData.map((video) => (
+                  <tr key={video.youtube_video_id} className="hover:bg-gray-700/50">
+                    <td className="px-6 py-4 whitespace-nowrap">
+                      <div className="flex items-center">
+                        <div className="flex-shrink-0 h-10 w-20 relative">
+                          <Image src={video.thumbnail} alt={`Thumbnail for ${video.title}`} layout="fill" objectFit="cover" className="rounded-md" />
+                        </div>
+                        <div className="ml-4 max-w-xs truncate">
+                          <a href={`https://www.youtube.com/watch?v=${video.youtube_video_id}`} target="_blank" rel="noopener noreferrer" className="text-sm font-medium text-white hover:text-teal-400 transition-colors">
+                            {video.title}
+                          </a>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">{safeParseInt(video.statistics.viewCount).toLocaleString('pt-BR')}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">{safeParseInt(video.statistics.likeCount).toLocaleString('pt-BR')}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">{safeParseInt(video.statistics.commentCount).toLocaleString('pt-BR')}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <div className="bg-gray-800 p-8 rounded-lg border border-gray-700 text-center text-gray-400">
+            <ChartIcon className="mx-auto h-12 w-12 text-gray-500" />
+            <h3 className="mt-4 text-lg font-medium text-white">Nenhum dado para exibir</h3>
+            <p className="mt-2 text-sm text-gray-400">
+              Ainda não há vídeos postados com sucesso para analisar neste workspace.
+            </p>
+          </div>
+        )}
       </>
     );
   };
