@@ -1,3 +1,5 @@
+// supabase/functions/post-scheduler/index.ts
+
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
@@ -5,6 +7,15 @@ const corsHeaders = {
   "Access-Control-Allow-Headers":
     "authorization, x-client-info, apikey, content-type",
 };
+
+// Função auxiliar para gerar o hash SHA1 usando a API Web Crypto (método moderno)
+async function sha1(str: string): Promise<string> {
+    const data = new TextEncoder().encode(str);
+    const hashBuffer = await crypto.subtle.digest('SHA-1', data);
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+    return hashHex;
+}
 
 // Função principal do agendador
 Deno.serve(async (_req) => {
@@ -51,9 +62,7 @@ Deno.serve(async (_req) => {
         
         const refreshToken = connection.refresh_token;
 
-        // --- INÍCIO DA LÓGICA REAL DE POSTAGEM ---
-
-        // PASSO 1: Renovar o Access Token usando o Refresh Token
+        // PASSO A: Renovar o Access Token usando o Refresh Token
         console.log("Renovando o Access Token...");
         const tokenResponse = await fetch("https://oauth2.googleapis.com/token", {
           method: "POST",
@@ -75,26 +84,21 @@ Deno.serve(async (_req) => {
         const accessToken = tokenData.access_token;
         console.log("Access Token renovado com sucesso.");
 
-        // PASSO 2: Fazer o upload do vídeo para o YouTube
+        // PASSO B: Fazer o upload do vídeo para o YouTube
         console.log(`Iniciando upload para o YouTube do vídeo: ${video.title}`);
         
-        // O corpo da requisição para o YouTube precisa de duas partes: metadados e o vídeo.
-        // Usamos FormData para construir essa requisição multipart.
         const videoMetadata = {
           snippet: {
             title: video.title,
             description: video.description,
-            // A categoria '22' é "Pessoas e blogs", uma categoria genérica.
-            // Outras comuns: 24 (Entretenimento), 28 (Ciência e tecnologia)
             categoryId: "22", 
           },
           status: {
-            privacyStatus: "private", // Posta como 'privado'. Mude para 'public' ou 'unlisted' se desejar.
+            privacyStatus: "private",
             selfDeclaredMadeForKids: false,
           },
         };
 
-        // Faz o fetch do vídeo a partir da URL do Cloudinary
         const videoFileResponse = await fetch(video.video_url);
         if (!videoFileResponse.ok) {
           throw new Error("Não foi possível buscar o vídeo do Cloudinary.");
@@ -102,24 +106,18 @@ Deno.serve(async (_req) => {
         const videoBlob = await videoFileResponse.blob();
 
         const formData = new FormData();
-        formData.append(
-          "metadata", 
-          new Blob([JSON.stringify(videoMetadata)], { type: "application/json" })
-        );
+        formData.append("metadata", new Blob([JSON.stringify(videoMetadata)], { type: "application/json" }));
         formData.append("video", videoBlob);
         
         const uploadUrl = "https://www.googleapis.com/upload/youtube/v3/videos?part=snippet,status";
 
         const uploadResponse = await fetch(uploadUrl, {
           method: "POST",
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-          },
+          headers: { Authorization: `Bearer ${accessToken}` },
           body: formData,
         });
 
         const uploadResult = await uploadResponse.json();
-
         if (!uploadResponse.ok) {
           throw new Error(`Falha no upload para o YouTube: ${uploadResult.error.message}`);
         }
@@ -127,9 +125,7 @@ Deno.serve(async (_req) => {
         const youtubeVideoId = uploadResult.id;
         console.log(`Upload para o YouTube concluído com sucesso! ID do vídeo: ${youtubeVideoId}`);
 
-        // --- FIM DA LÓGICA REAL DE POSTAGEM ---
-
-        // PASSO 3: Atualiza o status no banco de dados com o ID real
+        // PASSO C: Atualiza o status no banco de dados com o ID real
         await supabaseAdmin
           .from("videos")
           .update({
@@ -140,6 +136,37 @@ Deno.serve(async (_req) => {
           .eq("id", video.id);
 
         console.log(`Vídeo ID ${video.id} marcado como 'postado' com sucesso (REAL).`);
+        
+        // PASSO D: Excluir o vídeo do Cloudinary
+        if (video.cloudinary_public_id) {
+          console.log(`Iniciando exclusão do vídeo no Cloudinary. Public ID: ${video.cloudinary_public_id}`);
+          
+          const apiKey = Deno.env.get('CLOUDINARY_API_KEY')!;
+          const apiSecret = Deno.env.get('CLOUDINARY_API_SECRET')!;
+          const cloudName = Deno.env.get('CLOUDINARY_CLOUD_NAME')!;
+          const timestamp = Math.round(new Date().getTime() / 1000);
+          
+          const signatureString = `public_id=${video.cloudinary_public_id}&timestamp=${timestamp}${apiSecret}`;
+          const signature = await sha1(signatureString); // Usando a nova função
+
+          const deleteFormData = new FormData();
+          deleteFormData.append('public_id', video.cloudinary_public_id);
+          deleteFormData.append('timestamp', timestamp.toString());
+          deleteFormData.append('api_key', apiKey);
+          deleteFormData.append('signature', signature);
+          
+          const deleteResponse = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/video/destroy`, {
+            method: 'POST',
+            body: deleteFormData,
+          });
+
+          const deleteResult = await deleteResponse.json();
+          if (deleteResult.result !== 'ok') {
+            console.error("Falha ao deletar do Cloudinary:", deleteResult);
+          } else {
+            console.log(`Vídeo ${video.cloudinary_public_id} deletado do Cloudinary com sucesso.`);
+          }
+        }
 
       } catch (postError) {
         console.error(`Erro ao processar vídeo ID ${video.id}:`, postError.message);
