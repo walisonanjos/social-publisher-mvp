@@ -77,7 +77,6 @@ export default function AnalyticsPageClient({ nicheId }: { nicheId: string }) {
     }));
   }, [analyticsData]);
   
-  // A lógica de busca de dados foi movida para esta função para ser reutilizável
   const fetchPageData = useCallback(async () => {
     const { data: { user: currentUser } } = await supabase.auth.getUser();
     if (!currentUser) {
@@ -110,7 +109,6 @@ export default function AnalyticsPageClient({ nicheId }: { nicheId: string }) {
     setLoading(false);
   }, [nicheId, supabase]);
 
-  // useEffect que busca os dados iniciais
   useEffect(() => {
     const initialize = async () => {
       setLoading(true);
@@ -125,7 +123,6 @@ export default function AnalyticsPageClient({ nicheId }: { nicheId: string }) {
     initialize();
   }, [fetchPageData, supabase.auth]);
   
-  // ADICIONADO DE VOLTA: useEffect para o Realtime
   useEffect(() => {
     if (!user) return;
 
@@ -134,14 +131,13 @@ export default function AnalyticsPageClient({ nicheId }: { nicheId: string }) {
       .on(
         'postgres_changes',
         { 
-          event: '*', // Ouvir INSERT, UPDATE, DELETE
+          event: '*',
           schema: 'public',
           table: 'videos',
           filter: `niche_id=eq.${nicheId}`
         },
         (payload) => {
           console.log('Mudança na tabela de vídeos recebida pela Dashboard!', payload);
-          // Quando uma mudança acontece, busca os dados novamente para atualizar
           fetchPageData();
         }
       )
@@ -231,10 +227,23 @@ export default function AnalyticsPageClient({ nicheId }: { nicheId: string }) {
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center">
                         <div className="flex-shrink-0 h-10 w-20 relative">
-                          <Image src={video.thumbnail} alt={`Thumbnail for ${video.title}`} fill style={{ objectFit: 'cover' }} className="rounded-md" />
+                          {/* CORREÇÃO APLICADA AQUI */}
+                          <Image 
+                            src={video.thumbnail} 
+                            alt={`Thumbnail for ${video.title}`} 
+                            fill 
+                            style={{ objectFit: 'cover' }} 
+                            className="rounded-md" 
+                          />
                         </div>
                         <div className="ml-4 max-w-xs truncate">
-                          <a href={`https://www.youtube.com/watch?v=${video.youtube_video_id}`} target="_blank" rel="noopener noreferrer" className="text-sm font-medium text-white hover:text-teal-400 transition-colors">
+                           {/* CORREÇÃO APLICADA AQUI */}
+                          <a 
+                            href={`https://www.youtube.com/watch?v=${video.youtube_video_id}`} 
+                            target="_blank" 
+                            rel="noopener noreferrer" 
+                            className="text-sm font-medium text-white hover:text-teal-400 transition-colors"
+                          >
                             {video.title}
                           </a>
                         </div>
