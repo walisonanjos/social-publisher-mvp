@@ -1,7 +1,7 @@
 // src/components/AnalyticsPageClient.tsx
 
 "use client";
-import { useEffect, useState, useMemo, useCallback } from "react"; // Adicionado useCallback
+import { useEffect, useState, useMemo, useCallback } from "react";
 import Link from 'next/link';
 import Image from 'next/image';
 import { createClient } from "@/lib/supabaseClient";
@@ -79,17 +79,12 @@ export default function AnalyticsPageClient({ nicheId }: { nicheId: string }) {
   
   // A lógica de busca de dados foi movida para esta função para ser reutilizável
   const fetchPageData = useCallback(async () => {
-    console.log("Buscando dados da página...");
-    
     const { data: { user: currentUser } } = await supabase.auth.getUser();
     if (!currentUser) {
         setLoading(false);
         return;
     };
     
-    // Para não mostrar o spinner toda vez que o realtime atualizar
-    // Apenas na carga inicial.
-    if(loading) setLoading(true); 
     setError(null);
 
     const { data: nicheData } = await supabase.from('niches').select('name').eq('id', nicheId).single();
@@ -113,14 +108,19 @@ export default function AnalyticsPageClient({ nicheId }: { nicheId: string }) {
       }
     }
     setLoading(false);
-  }, [nicheId, supabase, loading]);
+  }, [nicheId, supabase]);
 
   // useEffect que busca os dados iniciais
   useEffect(() => {
     const initialize = async () => {
+      setLoading(true);
       const { data: { user: currentUser } } = await supabase.auth.getUser();
       setUser(currentUser);
-      fetchPageData();
+      if (currentUser) {
+        fetchPageData();
+      } else {
+        setLoading(false);
+      }
     };
     initialize();
   }, [fetchPageData, supabase.auth]);
@@ -140,8 +140,8 @@ export default function AnalyticsPageClient({ nicheId }: { nicheId: string }) {
           filter: `niche_id=eq.${nicheId}`
         },
         (payload) => {
-          console.log('Mudança na tabela de vídeos recebida!', payload);
-          // Quando uma mudança acontece, busca os dados novamente para atualizar a dashboard
+          console.log('Mudança na tabela de vídeos recebida pela Dashboard!', payload);
+          // Quando uma mudança acontece, busca os dados novamente para atualizar
           fetchPageData();
         }
       )
@@ -231,7 +231,7 @@ export default function AnalyticsPageClient({ nicheId }: { nicheId: string }) {
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center">
                         <div className="flex-shrink-0 h-10 w-20 relative">
-                          <Image src={video.thumbnail} alt={`Thumbnail for ${video.title}`} layout="fill" objectFit="cover" className="rounded-md" />
+                          <Image src={video.thumbnail} alt={`Thumbnail for ${video.title}`} fill style={{ objectFit: 'cover' }} className="rounded-md" />
                         </div>
                         <div className="ml-4 max-w-xs truncate">
                           <a href={`https://www.youtube.com/watch?v=${video.youtube_video_id}`} target="_blank" rel="noopener noreferrer" className="text-sm font-medium text-white hover:text-teal-400 transition-colors">
