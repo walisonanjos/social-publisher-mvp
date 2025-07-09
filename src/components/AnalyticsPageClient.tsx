@@ -1,5 +1,3 @@
-// src/components/AnalyticsPageClient.tsx
-
 "use client";
 import { useEffect, useState, useMemo, useCallback } from "react";
 import Link from 'next/link';
@@ -7,7 +5,7 @@ import Link from 'next/link';
 import { createClient } from "@/lib/supabaseClient";
 import { User } from "@supabase/supabase-js";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
-import { Loader2, BarChart2 as ChartIcon, Youtube, Eye, ThumbsUp, MessageSquare } from "lucide-react";
+import { Loader2, BarChart2 as ChartIcon, Youtube, Eye, ThumbsUp, MessageSquare, CameraOff } from "lucide-react";
 
 import MainHeader from "@/components/MainHeader";
 import Navbar from "@/components/Navbar";
@@ -23,7 +21,7 @@ interface AnalyticsVideo {
   youtube_video_id: string;
   title: string;
   thumbnail: string;
-  scheduled_at: string; // 1. ADICIONADO O CAMPO DE DATA AQUI
+  scheduled_at: string;
   statistics: VideoStatistics;
 }
 
@@ -217,7 +215,6 @@ export default function AnalyticsPageClient({ nicheId }: { nicheId: string }) {
               <thead className="bg-gray-800/50">
                 <tr>
                   <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Vídeo</th>
-                  {/* 2. NOVO CABEÇALHO DE COLUNA */}
                   <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Data da Postagem</th>
                   <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Visualizações</th>
                   <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Curtidas</th>
@@ -229,8 +226,12 @@ export default function AnalyticsPageClient({ nicheId }: { nicheId: string }) {
                   <tr key={video.youtube_video_id} className="hover:bg-gray-700/50">
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center">
-                        <div className="flex-shrink-0 h-10 w-20">
-                          <img src={video.thumbnail} alt={`Thumbnail for ${video.title}`} className="h-full w-full rounded-md object-cover" />
+                        <div className="flex-shrink-0 h-10 w-20 bg-gray-700 rounded-md flex items-center justify-center">
+                          {video.thumbnail ? (
+                            <img src={video.thumbnail} alt={`Thumbnail for ${video.title}`} className="h-full w-full rounded-md object-cover" />
+                          ) : (
+                            <CameraOff className="h-5 w-5 text-gray-500" />
+                          )}
                         </div>
                         <div className="ml-4 max-w-xs truncate">
                           <a href={`https://www.youtube.com/watch?v=${video.youtube_video_id}`} target="_blank" rel="noopener noreferrer" className="text-sm font-medium text-white hover:text-teal-400 transition-colors">
@@ -239,7 +240,6 @@ export default function AnalyticsPageClient({ nicheId }: { nicheId: string }) {
                         </div>
                       </div>
                     </td>
-                    {/* 3. NOVA CÉLULA COM A DATA FORMATADA */}
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
                       {new Date(video.scheduled_at).toLocaleString('pt-BR', {
                         day: '2-digit', month: '2-digit', year: 'numeric',
