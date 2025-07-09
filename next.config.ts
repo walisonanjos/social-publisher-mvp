@@ -4,8 +4,21 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   images: {
-    // Usando a configuração 'domains', que é mais simples que 'remotePatterns'
-    domains: ['res.cloudinary.com', 'i.ytimg.com'],
+    // Usando 'remotePatterns', que é a forma mais moderna e explícita
+    remotePatterns: [
+      {
+        protocol: 'https',
+        hostname: 'res.cloudinary.com',
+        port: '',
+        pathname: '/**',
+      },
+      {
+        protocol: 'https',
+        hostname: 'i.ytimg.com',
+        port: '',
+        pathname: '/**',
+      },
+    ],
   },
 };
 
