@@ -23,6 +23,7 @@ interface AnalyticsVideo {
   youtube_video_id: string;
   title: string;
   thumbnail: string;
+  scheduled_at: string; // 1. ADICIONADO O CAMPO DE DATA AQUI
   statistics: VideoStatistics;
 }
 
@@ -216,6 +217,8 @@ export default function AnalyticsPageClient({ nicheId }: { nicheId: string }) {
               <thead className="bg-gray-800/50">
                 <tr>
                   <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Vídeo</th>
+                  {/* 2. NOVO CABEÇALHO DE COLUNA */}
+                  <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Data da Postagem</th>
                   <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Visualizações</th>
                   <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Curtidas</th>
                   <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Comentários</th>
@@ -226,28 +229,22 @@ export default function AnalyticsPageClient({ nicheId }: { nicheId: string }) {
                   <tr key={video.youtube_video_id} className="hover:bg-gray-700/50">
                     <td className="px-6 py-4 whitespace-nowrap">
                       <div className="flex items-center">
-                        <div className="flex-shrink-0 h-10 w-20 relative">
-                          {/* CORREÇÃO APLICADA AQUI */}
-                          <Image 
-                            src={video.thumbnail} 
-                            alt={`Thumbnail for ${video.title}`} 
-                            fill 
-                            style={{ objectFit: 'cover' }} 
-                            className="rounded-md" 
-                          />
+                        <div className="flex-shrink-0 h-10 w-20">
+                          <img src={video.thumbnail} alt={`Thumbnail for ${video.title}`} className="h-full w-full rounded-md object-cover" />
                         </div>
                         <div className="ml-4 max-w-xs truncate">
-                           {/* CORREÇÃO APLICADA AQUI */}
-                          <a 
-                            href={`https://www.youtube.com/watch?v=${video.youtube_video_id}`} 
-                            target="_blank" 
-                            rel="noopener noreferrer" 
-                            className="text-sm font-medium text-white hover:text-teal-400 transition-colors"
-                          >
+                          <a href={`https://www.youtube.com/watch?v=${video.youtube_video_id}`} target="_blank" rel="noopener noreferrer" className="text-sm font-medium text-white hover:text-teal-400 transition-colors">
                             {video.title}
                           </a>
                         </div>
                       </div>
+                    </td>
+                    {/* 3. NOVA CÉLULA COM A DATA FORMATADA */}
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
+                      {new Date(video.scheduled_at).toLocaleString('pt-BR', {
+                        day: '2-digit', month: '2-digit', year: 'numeric',
+                        hour: '2-digit', minute: '2-digit'
+                      })}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">{safeParseInt(video.statistics.viewCount).toLocaleString('pt-BR')}</td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">{safeParseInt(video.statistics.likeCount).toLocaleString('pt-BR')}</td>
