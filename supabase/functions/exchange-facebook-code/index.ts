@@ -2,33 +2,24 @@
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
-const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers":
-    "authorization, x-client-info, apikey, content-type",
-};
+const corsHeaders = { /* ... */ };
 
-console.log("Função 'exchange-facebook-code' inicializada.");
+console.log("Função 'exchange-facebook-code' v2 (com busca de ID) INICIALIZADA.");
 
 Deno.serve(async (req) => {
-  if (req.method === "OPTIONS") {
-    return new Response("ok", { headers: corsHeaders });
-  }
+  if (req.method === "OPTIONS") { return new Response("ok", { headers: corsHeaders }); }
 
   try {
     const url = new URL(req.url);
     const code = url.searchParams.get("code");
     const state = url.searchParams.get("state");
 
-    if (!code) throw new Error("O 'code' de autorização não foi encontrado na requisição.");
-    if (!state) throw new Error("O 'state' (com niche_id e user_id) não foi encontrado.");
+    if (!code || !state) throw new Error("Código ou state ausentes.");
 
     const { nicheId, userId } = JSON.parse(atob(state));
-    if (!nicheId || !userId) throw new Error("Dados do 'state' são inválidos.");
-    
     console.log(`Recebida troca de código para o nicho: ${nicheId}`);
 
-    // Troca o código por um access token
+    // Troca o código por um access token de curta duração
     const tokenUrl = "https://graph.facebook.com/v19.0/oauth/access_token";
     const tokenParams = new URLSearchParams({
       client_id: Deno.env.get("META_APP_ID")!,
@@ -36,52 +27,61 @@ Deno.serve(async (req) => {
       client_secret: Deno.env.get("META_APP_SECRET")!,
       code: code,
     });
-
     const tokenResponse = await fetch(`${tokenUrl}?${tokenParams.toString()}`);
-    if (!tokenResponse.ok) {
-      const errorText = await tokenResponse.text();
-      console.error("Resposta de erro do Facebook:", errorText);
-      throw new Error(`O Facebook retornou um erro durante a troca de código: ${errorText}`);
-    }
+    if (!tokenResponse.ok) { const err = await tokenResponse.text(); throw new Error(`Erro na troca de código: ${err}`); }
+    const shortLivedTokenData = await tokenResponse.json();
     
-    const tokens = await tokenResponse.json();
-    console.log("Access Token (temporário) recebido com sucesso.");
+    // Troca o token de curta duração por um de longa duração
+    const longLivedTokenUrl = "https://graph.facebook.com/v19.0/oauth/access_token";
+    const longLivedParams = new URLSearchParams({
+      grant_type: 'fb_exchange_token',
+      client_id: Deno.env.get("META_APP_ID")!,
+      client_secret: Deno.env.get("META_APP_SECRET")!,
+      fb_exchange_token: shortLivedTokenData.access_token,
+    });
+    const longLivedResponse = await fetch(`${longLivedTokenUrl}?${longLivedParams.toString()}`);
+    if (!longLivedResponse.ok) { const err = await longLivedResponse.text(); throw new Error(`Erro ao buscar token de longa duração: ${err}`);}
+    const longLivedTokenData = await longLivedResponse.json();
+    const longLivedAccessToken = longLivedTokenData.access_token;
+    console.log("Token de longa duração obtido com sucesso.");
 
-    // O ideal seria trocar este token por um de longa duração,
-    // mas para o nosso MVP, vamos salvar este primeiro.
+    // --- NOVA LÓGICA: BUSCAR O ID DA CONTA DO INSTAGRAM ---
+    const accountsUrl = `https://graph.facebook.com/v19.0/me/accounts?fields=instagram_business_account{id,username}&access_token=${longLivedAccessToken}`;
+    const accountsResponse = await fetch(accountsUrl);
+    if (!accountsResponse.ok) { const err = await accountsResponse.text(); throw new Error(`Erro ao buscar contas: ${err}`);}
+    const accountsData = await accountsResponse.json();
+
+    // Pega o ID da primeira conta do Instagram que o usuário conectou
+    const instagramBusinessAccount = accountsData.data.find((page: any) => page.instagram_business_account);
+    if (!instagramBusinessAccount) throw new Error("Nenhuma conta de negócios do Instagram foi encontrada conectada a esta Página do Facebook.");
     
-    const supabaseAdmin = createClient(
-      Deno.env.get("SUPABASE_URL")!,
-      Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!,
-    );
+    const instagramUserId = instagramBusinessAccount.instagram_business_account.id;
+    const instagramUsername = instagramBusinessAccount.instagram_business_account.username;
+    console.log(`Instagram User ID encontrado: ${instagramUserId} (${instagramUsername})`);
+    // --- FIM DA NOVA LÓGICA ---
 
-    // Salva a nova conexão na tabela
+    const supabaseAdmin = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
+
+    // Salva a conexão com o novo ID do provedor
     const { error: upsertError } = await supabaseAdmin
       .from("social_connections")
       .upsert({
         niche_id: nicheId,
         user_id: userId,
-        platform: "instagram", // Vamos salvar como 'instagram' por enquanto
-        access_token: tokens.access_token,
-        // O Facebook não retorna um refresh_token neste fluxo, o token de longa duração é o que importa
+        platform: "instagram",
+        access_token: longLivedAccessToken,
+        provider_user_id: instagramUserId, // Salvando o ID do Instagram
         refresh_token: null, 
       }, { onConflict: 'niche_id, platform' });
 
-    if (upsertError) {
-      throw new Error(`Erro ao salvar os tokens no banco: ${upsertError.message}`);
-    }
+    if (upsertError) throw new Error(`Erro ao salvar os tokens no banco: ${upsertError.message}`);
+    console.log(`Conexão com o Instagram salva com sucesso para o nicho ${nicheId}.`);
 
-    console.log(`Conexão salva com sucesso para o nicho ${nicheId}.`);
-
-    // Redireciona o usuário de volta para a página do nicho
     const siteUrl = Deno.env.get("SITE_URL") || 'https://social-publisher-mvp.vercel.app';
     return Response.redirect(`${siteUrl}/niche/${nicheId}`);
 
   } catch (e) {
     console.error("ERRO FINAL:", e.message);
-    return new Response(JSON.stringify({ error: e.message }), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-      status: 400,
-    });
+    return new Response(JSON.stringify({ error: e.message }), { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 400 });
   }
 });
