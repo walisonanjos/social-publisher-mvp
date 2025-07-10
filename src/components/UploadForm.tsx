@@ -1,8 +1,8 @@
+// src/components/UploadForm.tsx
+
 "use client";
 
 import { useState, FormEvent } from "react";
-// CORREÇÃO: useRouter foi removido da importação
-// import { useRouter } from "next/navigation"; 
 import { createClient } from "../lib/supabaseClient";
 import { DayPicker } from "react-day-picker";
 import "react-day-picker/dist/style.css";
@@ -10,16 +10,20 @@ import { addDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Video } from "@/types";
 
+// ALTERADO: Adicionamos as novas propriedades
 interface UploadFormProps {
   nicheId: string;
   onScheduleSuccess: (newVideo: Video) => void;
+  isYouTubeConnected: boolean;
+  isInstagramConnected: boolean;
 }
 
 export default function UploadForm({
   nicheId,
   onScheduleSuccess,
+  isYouTubeConnected, // ALTERADO: Recebemos a nova propriedade
+  isInstagramConnected, // ALTERADO: Recebemos a nova propriedade
 }: UploadFormProps) {
-  // CORREÇÃO: A linha const router = useRouter() foi removida.
   const [file, setFile] = useState<File | null>(null);
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -30,9 +34,12 @@ export default function UploadForm({
   const [isUploading, setIsUploading] = useState(false);
   const [error, setError] = useState("");
   const [successMessage, setSuccessMessage] = useState("");
-  const [postToYouTube, setPostToYouTube] = useState(true);
-  const supabase = createClient();
 
+  // ALTERADO: Estados para cada checkbox
+  const [postToYouTube, setPostToYouTube] = useState(true);
+  const [postToInstagram, setPostToInstagram] = useState(true); // NOVO: Estado para o checkbox do Instagram
+
+  const supabase = createClient();
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   const tenDaysFromNow = addDays(today, 9);
@@ -50,9 +57,10 @@ export default function UploadForm({
       setError("Por favor, preencha todos os campos obrigatórios.");
       return;
     }
-    if (!postToYouTube) {
-        setError("Por favor, selecione pelo menos uma rede social para postar.");
-        return;
+    // ALTERADO: Verificamos se pelo menos uma plataforma foi selecionada
+    if (!postToYouTube && !postToInstagram) {
+      setError("Por favor, selecione pelo menos uma rede social para postar.");
+      return;
     }
 
     setIsUploading(true);
@@ -104,13 +112,14 @@ export default function UploadForm({
 
       const cloudinaryData = await cloudinaryResponse.json();
       const videoUrl = cloudinaryData.secure_url;
-      const cloudinaryPublicId = cloudinaryData.public_id; 
+      const cloudinaryPublicId = cloudinaryData.public_id;
 
       const {
         data: { user },
       } = await supabase.auth.getUser();
       if (!user) throw new Error("Usuário não autenticado.");
 
+      // ALTERADO: Adicionamos 'target_instagram' ao objeto de inserção
       const { data: newVideo, error: insertError } = await supabase
         .from("videos")
         .insert({
@@ -122,6 +131,7 @@ export default function UploadForm({
           cloudinary_public_id: cloudinaryPublicId,
           scheduled_at: scheduled_at_iso,
           target_youtube: postToYouTube,
+          target_instagram: postToInstagram, // NOVO: Salvamos o estado do checkbox do Instagram
           status: "agendado",
         })
         .select()
@@ -262,17 +272,23 @@ export default function UploadForm({
             </select>
           </div>
         </div>
+        
+        {/* ALTERADO: Seção dos checkboxes agora é dinâmica */}
         <div>
           <h3 className="text-sm font-medium text-gray-300 mb-2">Postar em:</h3>
           <div className="flex flex-wrap gap-x-6 gap-y-2">
-            <label className="flex items-center gap-2 cursor-pointer text-gray-500">
+            
+            <label className={`flex items-center gap-2 ${isInstagramConnected ? 'cursor-pointer text-white' : 'cursor-not-allowed text-gray-500'}`}>
               <input
                 type="checkbox"
-                className="h-4 w-4 rounded bg-gray-700 border-gray-500 text-teal-600 focus:ring-teal-500"
-                disabled
-              />{" "}
+                className="h-4 w-4 rounded bg-gray-700 border-gray-500 text-teal-600 focus:ring-teal-500 disabled:opacity-50"
+                checked={postToInstagram}
+                onChange={(e) => setPostToInstagram(e.target.checked)}
+                disabled={!isInstagramConnected}
+              />
               Instagram
             </label>
+            
             <label className="flex items-center gap-2 cursor-pointer text-gray-500">
               <input
                 type="checkbox"
@@ -281,15 +297,18 @@ export default function UploadForm({
               />{" "}
               Facebook
             </label>
-            <label className="flex items-center gap-2 cursor-pointer">
+            
+            <label className={`flex items-center gap-2 ${isYouTubeConnected ? 'cursor-pointer text-white' : 'cursor-not-allowed text-gray-500'}`}>
               <input
                 type="checkbox"
                 checked={postToYouTube}
                 onChange={(e) => setPostToYouTube(e.target.checked)}
-                className="h-4 w-4 rounded bg-gray-700 border-gray-500 text-teal-600 focus:ring-teal-500"
-              />{" "}
+                disabled={!isYouTubeConnected}
+                className="h-4 w-4 rounded bg-gray-700 border-gray-500 text-teal-600 focus:ring-teal-500 disabled:opacity-50"
+              />
               YouTube
             </label>
+
             <label className="flex items-center gap-2 cursor-pointer text-gray-500">
               <input
                 type="checkbox"
@@ -298,6 +317,7 @@ export default function UploadForm({
               />{" "}
               Tiktok
             </label>
+
             <label className="flex items-center gap-2 cursor-pointer text-gray-500">
               <input
                 type="checkbox"
@@ -306,8 +326,10 @@ export default function UploadForm({
               />{" "}
               Kwai
             </label>
+
           </div>
         </div>
+        
         <div>
           <button
             type="submit"
