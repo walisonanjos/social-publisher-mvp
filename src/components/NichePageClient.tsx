@@ -17,10 +17,8 @@ export default function NichePageClient({ nicheId }: { nicheId: string }) {
   const supabase = createClient();
   const [user, setUser] = useState<User | null>(null);
   const [videos, setVideos] = useState<Video[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(true); // Começa como true
   const [nicheName, setNicheName] = useState("Carregando...");
-
-  // 1. ESTADOS SEPARADOS PARA CADA CONEXÃO
   const [isYouTubeConnected, setIsYouTubeConnected] = useState(false);
   const [isInstagramConnected, setIsInstagramConnected] = useState(false);
 
@@ -37,10 +35,8 @@ export default function NichePageClient({ nicheId }: { nicheId: string }) {
     return groups;
   }, [videos]);
 
+  // CORREÇÃO: A lógica de 'loading' foi removida das dependências
   const fetchPageData = useCallback(async (userId: string) => {
-    // Para não mostrar o spinner piscando a cada atualização do realtime
-    if (!loading) setLoading(true);
-
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const todayISO = today.toISOString();
@@ -51,7 +47,6 @@ export default function NichePageClient({ nicheId }: { nicheId: string }) {
       .order("scheduled_at", { ascending: true });
     setVideos(videosData || []);
     
-    // 2. BUSCA TODAS AS CONEXÕES E ATUALIZA OS ESTADOS
     const { data: connections } = await supabase
       .from('social_connections')
       .select('platform')
@@ -63,22 +58,22 @@ export default function NichePageClient({ nicheId }: { nicheId: string }) {
 
     const { data: nicheData } = await supabase.from('niches').select('name').eq('id', nicheId).single();
     if (nicheData) setNicheName(nicheData.name);
+  }, [supabase, nicheId]); // A dependência 'loading' foi removida daqui
 
-    setLoading(false);
-  }, [supabase, nicheId, loading]); // Adicionado 'loading' como dependência
-
+  // CORREÇÃO: Este useEffect agora controla o ciclo de loading e só roda uma vez
   useEffect(() => {
     const setupPage = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
-      setUser(user);
-      if (user) { 
-        await fetchPageData(user.id); 
-      } else {
-        setLoading(false);
+      setLoading(true);
+      const { data: { user: currentUser } } = await supabase.auth.getUser();
+      setUser(currentUser);
+      if (currentUser) { 
+        await fetchPageData(currentUser.id); 
       }
+      setLoading(false);
     };
     setupPage();
-  }, [fetchPageData, supabase.auth]);
+    // O array de dependências vazio garante que ele rode uma única vez na montagem.
+  }, []);
   
   // Realtime para a lista de vídeos
   useEffect(() => {
@@ -90,6 +85,7 @@ export default function NichePageClient({ nicheId }: { nicheId: string }) {
         { event: '*', schema: 'public', table: 'videos', filter: `niche_id=eq.${nicheId}`},
         (payload) => {
           console.log('Mudança nos vídeos recebida!', payload);
+          // O Realtime não ativa o spinner, apenas atualiza os dados
           fetchPageData(user.id);
         }
       )
@@ -111,7 +107,6 @@ export default function NichePageClient({ nicheId }: { nicheId: string }) {
     }
   };
 
-  // 3. FUNÇÃO DE DESCONECTAR AGORA É GENÉRICA
   const handleDisconnect = async (platform: 'youtube' | 'instagram') => {
     if (!user) return;
     const platformName = platform === 'youtube' ? 'YouTube' : 'Instagram';
@@ -143,7 +138,6 @@ export default function NichePageClient({ nicheId }: { nicheId: string }) {
           <UploadForm nicheId={nicheId} onScheduleSuccess={handleScheduleSuccess} />
         </div>
         <div className="mt-8">
-          {/* 4. PASSANDO AS NOVAS PROPRIEDADES PARA O COMPONENTE FILHO */}
           <AccountConnection 
             nicheId={nicheId}
             isYouTubeConnected={isYouTubeConnected}
@@ -154,7 +148,12 @@ export default function NichePageClient({ nicheId }: { nicheId: string }) {
         <hr className="my-8 border-gray-700" />
         <div className="flex justify-between items-center mb-6">
             <h2 className="text-2xl font-bold tracking-tight text-white">Meus Agendamentos</h2>
-            <button onClick={() => user && fetchPageData(user.id)} className="flex items-center gap-2 px-3 py-1.5 text-sm bg-gray-700/50 hover:bg-gray-700 border border-gray-600 rounded-lg transition-colors" title="Atualizar lista">
+            {/* CORREÇÃO: Botão de atualizar agora controla seu próprio loading */}
+            <button 
+              onClick={async () => { setLoading(true); if(user) {await fetchPageData(user.id)}; setLoading(false); }} 
+              className="flex items-center gap-2 px-3 py-1.5 text-sm bg-gray-700/50 hover:bg-gray-700 border border-gray-600 rounded-lg transition-colors" 
+              title="Atualizar lista"
+            >
               <RefreshCw size={14} /><span>Atualizar</span>
             </button>
         </div>
