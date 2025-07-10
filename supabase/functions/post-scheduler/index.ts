@@ -41,15 +41,17 @@ Deno.serve(async (_req) => {
     }
 
     for (const video of scheduledVideos) {
-      // Essas variáveis nos ajudarão a decidir o status final
+      // Variáveis para rastrear o sucesso e erros de cada plataforma
       let anyPostSucceeded = false;
       const errorMessages = [];
 
-      // --- VERIFICA SE O DESTINO É YOUTUBE ---
+      // --- ESTRUTURA PARA MÚLTIPLAS PLATAFORMAS ---
+      // A lógica original do YouTube foi mantida, mas agora dentro de uma condição.
+
+      // --- TENTATIVA DE POSTAGEM NO YOUTUBE ---
       if (video.target_youtube) {
         try {
           console.log(`Processando YouTube para o vídeo ID: ${video.id}`);
-          // SEU CÓDIGO ORIGINAL E COMPLETO PARA O YOUTUBE COMEÇA AQUI
           const { data: connection, error: connError } = await supabaseAdmin
             .from("social_connections")
             .select("refresh_token")
@@ -64,7 +66,17 @@ Deno.serve(async (_req) => {
           const refreshToken = connection.refresh_token;
 
           console.log("Renovando o Access Token do YouTube...");
-          const tokenResponse = await fetch("https://oauth2.googleapis.com/token", { /* ... */ });
+          const tokenResponse = await fetch("https://oauth2.googleapis.com/token", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              client_id: Deno.env.get("GOOGLE_CLIENT_ID"),
+              client_secret: Deno.env.get("GOOGLE_CLIENT_SECRET"),
+              refresh_token: refreshToken,
+              grant_type: "refresh_token",
+            }),
+          });
+
           if (!tokenResponse.ok) {
             const errorBody = await tokenResponse.json();
             throw new Error(`Falha ao renovar o token do YouTube: ${errorBody.error_description || 'Erro desconhecido'}`);
@@ -75,10 +87,14 @@ Deno.serve(async (_req) => {
           console.log("Access Token do YouTube renovado com sucesso.");
 
           console.log(`Iniciando upload para o YouTube do vídeo: ${video.title}`);
-          const videoMetadata = { snippet: { title: video.title, description: video.description, categoryId: "22" }, status: { privacyStatus: "private", selfDeclaredMadeForKids: false } };
+          const videoMetadata = {
+            snippet: { title: video.title, description: video.description, categoryId: "22" },
+            status: { privacyStatus: "private", selfDeclaredMadeForKids: false },
+          };
           const videoFileResponse = await fetch(video.video_url);
-          if (!videoFileResponse.ok) throw new Error("Não foi possível buscar o vídeo do Cloudinary.");
-          
+          if (!videoFileResponse.ok) {
+            throw new Error("Não foi possível buscar o vídeo do Cloudinary.");
+          }
           const videoBlob = await videoFileResponse.blob();
           const formData = new FormData();
           formData.append("metadata", new Blob([JSON.stringify(videoMetadata)], { type: "application/json" }));
@@ -87,31 +103,34 @@ Deno.serve(async (_req) => {
           const uploadUrl = "https://www.googleapis.com/upload/youtube/v3/videos?part=snippet,status";
           const uploadResponse = await fetch(uploadUrl, { method: "POST", headers: { Authorization: `Bearer ${accessToken}` }, body: formData });
           const uploadResult = await uploadResponse.json();
-          if (!uploadResponse.ok) throw new Error(`Falha no upload para o YouTube: ${uploadResult.error.message}`);
-          
+          if (!uploadResponse.ok) {
+            throw new Error(`Falha no upload para o YouTube: ${uploadResult.error.message}`);
+          }
+
           const youtubeVideoId = uploadResult.id;
           console.log(`Upload para o YouTube concluído com sucesso! ID do vídeo: ${youtubeVideoId}`);
 
           await supabaseAdmin.from("videos").update({ youtube_video_id: youtubeVideoId }).eq("id", video.id);
+          anyPostSucceeded = true;
           
-          anyPostSucceeded = true; // Marca que o YouTube deu certo
-          // SEU CÓDIGO ORIGINAL E COMPLETO PARA O YOUTUBE TERMINA AQUI
         } catch (e) {
             console.error(`ERRO no fluxo do YouTube (vídeo ID ${video.id}):`, e.message);
             errorMessages.push(`Falha no YouTube: ${e.message}`);
         }
       }
 
-      // --- NOVO BLOCO: VERIFICA SE O DESTINO É INSTAGRAM ---
+      // --- NOVO BLOCO PARA POSTAGEM NO INSTAGRAM ---
       if (video.target_instagram) {
         try {
             console.log(`Processando Instagram para o vídeo ID: ${video.id}`);
             const { data: igConnection } = await supabaseAdmin.from("social_connections").select("access_token").eq("niche_id", video.niche_id).eq("platform", "instagram").single();
-            if (!igConnection?.access_token) throw new Error("Token de acesso do Instagram não encontrado.");
+            if (!igConnection?.access_token) {
+              throw new Error("Token de acesso do Instagram não encontrado.");
+            }
 
-            console.log("Token do Instagram encontrado. A postagem real será implementada aqui.");
+            console.log("Token do Instagram encontrado. Lógica de postagem de Reel (simulada) a seguir.");
             // SIMULAÇÃO DE SUCESSO POR ENQUANTO
-            anyPostSucceeded = true; // Marca que o Instagram deu certo
+            anyPostSucceeded = true;
         } catch(e) {
             console.error(`ERRO no fluxo do Instagram (vídeo ID ${video.id}):`, e.message);
             errorMessages.push(`Falha no Instagram: ${e.message}`);
