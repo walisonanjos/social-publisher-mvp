@@ -18,8 +18,11 @@ export default function NichePageClient({ nicheId }: { nicheId: string }) {
   const [user, setUser] = useState<User | null>(null);
   const [videos, setVideos] = useState<Video[]>([]);
   const [loading, setLoading] = useState(true);
-  const [isYouTubeConnected, setIsYouTubeConnected] = useState(false);
   const [nicheName, setNicheName] = useState("Carregando...");
+
+  // 1. ESTADOS SEPARADOS PARA CADA CONEXÃO
+  const [isYouTubeConnected, setIsYouTubeConnected] = useState(false);
+  const [isInstagramConnected, setIsInstagramConnected] = useState(false);
 
   const groupedVideos = useMemo(() => {
     const sortedVideos = [...videos].sort(
@@ -35,79 +38,68 @@ export default function NichePageClient({ nicheId }: { nicheId: string }) {
   }, [videos]);
 
   const fetchPageData = useCallback(async (userId: string) => {
+    // Para não mostrar o spinner piscando a cada atualização do realtime
+    if (!loading) setLoading(true);
+
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const todayISO = today.toISOString();
 
-    const { data: videosData, error: videosError } = await supabase
+    const { data: videosData } = await supabase
       .from("videos").select<"*", Video>("*").eq("user_id", userId)
       .eq("niche_id", nicheId).gte('scheduled_at', todayISO)
       .order("scheduled_at", { ascending: true });
-
-    if (videosError) {
-      console.error("Erro ao buscar agendamentos:", videosError);
-    } else {
-      setVideos(videosData || []);
-    }
+    setVideos(videosData || []);
     
-    const { count } = await supabase
-      .from('social_connections').select('*', { count: 'exact', head: true })
-      .eq('user_id', userId).eq('niche_id', nicheId).eq('platform', 'youtube');
-    setIsYouTubeConnected(!!count && count > 0);
+    // 2. BUSCA TODAS AS CONEXÕES E ATUALIZA OS ESTADOS
+    const { data: connections } = await supabase
+      .from('social_connections')
+      .select('platform')
+      .eq('user_id', userId)
+      .eq('niche_id', nicheId);
+
+    setIsYouTubeConnected(connections?.some(c => c.platform === 'youtube') || false);
+    setIsInstagramConnected(connections?.some(c => c.platform === 'instagram') || false);
 
     const { data: nicheData } = await supabase.from('niches').select('name').eq('id', nicheId).single();
     if (nicheData) setNicheName(nicheData.name);
-  }, [supabase, nicheId]);
+
+    setLoading(false);
+  }, [supabase, nicheId, loading]); // Adicionado 'loading' como dependência
 
   useEffect(() => {
     const setupPage = async () => {
-      setLoading(true);
       const { data: { user } } = await supabase.auth.getUser();
       setUser(user);
       if (user) { 
         await fetchPageData(user.id); 
+      } else {
+        setLoading(false);
       }
-      setLoading(false);
     };
     setupPage();
-  }, [fetchPageData, supabase]);
+  }, [fetchPageData, supabase.auth]);
   
-  // --- NOVO BLOCO DE CÓDIGO PARA REALTIME ---
+  // Realtime para a lista de vídeos
   useEffect(() => {
-    if (!user) return; // Só ativa o listener se o usuário estiver logado
-
-    console.log("Iniciando listener de Realtime para a tabela de vídeos...");
-
+    if (!user) return;
     const channel = supabase
-      .channel('videos-niche-channel')
+      .channel(`videos-niche-${nicheId}`)
       .on(
         'postgres_changes',
-        { 
-          event: '*', // Ouvir INSERT, UPDATE, DELETE
-          schema: 'public',
-          table: 'videos',
-          filter: `niche_id=eq.${nicheId}` // Só ouvir mudanças para o nicho atual
-        },
+        { event: '*', schema: 'public', table: 'videos', filter: `niche_id=eq.${nicheId}`},
         (payload) => {
-          console.log('Mudança recebida do Supabase Realtime!', payload);
-          // A forma mais simples de atualizar a UI é chamar a função de busca novamente.
+          console.log('Mudança nos vídeos recebida!', payload);
           fetchPageData(user.id);
         }
       )
       .subscribe();
-
-    // Função de "limpeza": quando o componente for desmontado, remove o listener
-    // para evitar vazamentos de memória.
     return () => {
-      console.log("Removendo listener de Realtime.");
       supabase.removeChannel(channel);
     };
-  }, [user, nicheId, supabase, fetchPageData]); // Dependências do useEffect
-  // --- FIM DO NOVO BLOCO DE CÓDIGO ---
+  }, [user, nicheId, supabase, fetchPageData]);
 
   const handleScheduleSuccess = (newVideo: Video) => {
-    // A atualização agora será tratada pelo listener do Realtime, 
-    // mas podemos manter esta para uma reatividade instantânea no agendamento.
     setVideos(currentVideos => [...currentVideos, newVideo]);
   };
 
@@ -117,17 +109,25 @@ export default function NichePageClient({ nicheId }: { nicheId: string }) {
     if (error) {
       alert("Não foi possível excluir o agendamento.");
     }
-    // A atualização da UI após deletar também será tratada pelo Realtime.
   };
 
-  const handleDisconnectYouTube = async () => {
+  // 3. FUNÇÃO DE DESCONECTAR AGORA É GENÉRICA
+  const handleDisconnect = async (platform: 'youtube' | 'instagram') => {
     if (!user) return;
-    const { error } = await supabase.from('social_connections')
-      .delete().match({ user_id: user.id, niche_id: nicheId, platform: 'youtube' });
-    if (error) alert("Erro ao desconectar a conta.");
-    else {
-      setIsYouTubeConnected(false);
-      alert("Conta do YouTube desconectada com sucesso deste workspace.");
+    const platformName = platform === 'youtube' ? 'YouTube' : 'Instagram';
+    if (!window.confirm(`Tem certeza que deseja desconectar a conta do ${platformName}?`)) return;
+
+    const { error } = await supabase
+      .from('social_connections')
+      .delete()
+      .match({ user_id: user.id, niche_id: nicheId, platform: platform });
+    
+    if (error) {
+      alert(`Erro ao desconectar a conta.`);
+    } else {
+      alert(`Conta do ${platformName} desconectada com sucesso!`);
+      if (platform === 'youtube') setIsYouTubeConnected(false);
+      if (platform === 'instagram') setIsInstagramConnected(false);
     }
   };
 
@@ -143,10 +143,12 @@ export default function NichePageClient({ nicheId }: { nicheId: string }) {
           <UploadForm nicheId={nicheId} onScheduleSuccess={handleScheduleSuccess} />
         </div>
         <div className="mt-8">
+          {/* 4. PASSANDO AS NOVAS PROPRIEDADES PARA O COMPONENTE FILHO */}
           <AccountConnection 
-            isYouTubeConnected={isYouTubeConnected}
-            onDisconnectYouTube={handleDisconnectYouTube}
             nicheId={nicheId}
+            isYouTubeConnected={isYouTubeConnected}
+            isInstagramConnected={isInstagramConnected}
+            onDisconnect={handleDisconnect}
           />
         </div>
         <hr className="my-8 border-gray-700" />

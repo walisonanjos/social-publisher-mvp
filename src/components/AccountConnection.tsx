@@ -1,43 +1,59 @@
+// src/components/AccountConnection.tsx
+
 "use client";
 import { useState } from "react";
-import { Youtube, CheckCircle } from "lucide-react";
+import { Youtube, Instagram, CheckCircle } from "lucide-react";
 import { createClient } from "../lib/supabaseClient";
 
 interface AccountConnectionProps {
-  isYouTubeConnected: boolean;
-  onDisconnectYouTube: () => void;
   nicheId: string;
+  isYouTubeConnected: boolean;
+  isInstagramConnected: boolean;
+  onDisconnect: (platform: 'youtube' | 'instagram') => void;
 }
 
+// Pequeno componente para reutilizar o status de 'conectado'
+const ConnectionStatus = ({ platformName, onDisconnect }: { platformName: string, onDisconnect: () => void }) => (
+  <div className="p-4 bg-green-900/50 border border-green-500/30 rounded-lg flex items-center justify-between">
+    <div className="flex items-center gap-3">
+      <CheckCircle className="text-green-400" size={24} />
+      <span className="font-medium text-green-300">{platformName} Conectado</span>
+    </div>
+    <button
+      onClick={onDisconnect}
+      className="text-xs text-red-400 hover:text-red-300 hover:underline"
+    >
+      Desconectar
+    </button>
+  </div>
+);
+
 export default function AccountConnection({
-  isYouTubeConnected,
-  onDisconnectYouTube,
   nicheId,
+  isYouTubeConnected,
+  isInstagramConnected,
+  onDisconnect,
 }: AccountConnectionProps) {
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState<null | 'youtube' | 'instagram'>(null);
   const supabase = createClient();
 
-  const handleConnect = async () => {
-    setIsLoading(true);
+  const handleConnect = async (platform: 'youtube' | 'instagram') => {
+    setIsLoading(platform);
+    // Escolhe qual função de backend chamar baseado na plataforma
+    const functionName = platform === 'youtube' ? 'generate-youtube-auth-url' : 'generate-facebook-auth-url';
+    
     try {
-      const { data, error } = await supabase.functions.invoke(
-        "generate-youtube-auth-url",
-        { body: { nicheId } },
-      );
+      const { data, error } = await supabase.functions.invoke(functionName, { body: { nicheId } });
       if (error) throw error;
       if (data.authUrl) {
         window.location.href = data.authUrl;
       } else {
-        throw new Error(
-          "A função de backend não retornou uma URL de autorização.",
-        );
+        throw new Error("A função de backend não retornou uma URL de autorização.");
       }
     } catch (error) {
-      console.error("Erro ao gerar URL de autorização:", error);
-      alert(
-        "Não foi possível iniciar a conexão com o YouTube. Tente novamente.",
-      );
-      setIsLoading(false);
+      console.error(`Erro ao gerar URL de autorização para ${platform}:`, error);
+      alert(`Não foi possível iniciar a conexão com ${platform}. Tente novamente.`);
+      setIsLoading(null);
     }
   };
 
@@ -45,35 +61,37 @@ export default function AccountConnection({
     <div className="bg-gray-800 p-8 rounded-lg shadow-lg border border-gray-700">
       <h2 className="text-xl font-bold text-white mb-4">Conectar Contas</h2>
       <p className="text-gray-400 mb-6">
-        {isYouTubeConnected
-          ? "Sua conta do YouTube está pronta para postagens neste workspace."
-          : "Conecte suas contas de redes sociais para começar a agendar."}
+        Conecte suas contas de redes sociais para começar a agendar.
       </p>
-      {isYouTubeConnected ? (
-        <div className="p-4 bg-green-900/50 border border-green-500/30 rounded-lg flex items-center justify-between">
-          <div className="flex items-center gap-3">
-            <CheckCircle className="text-green-400" size={24} />
-            <span className="font-medium text-green-300">
-              YouTube Conectado
-            </span>
-          </div>
+      <div className="space-y-4">
+        {/* Bloco para o YouTube */}
+        {isYouTubeConnected ? (
+          <ConnectionStatus platformName="YouTube" onDisconnect={() => onDisconnect('youtube')} />
+        ) : (
           <button
-            onClick={onDisconnectYouTube}
-            className="text-xs text-red-400 hover:text-red-300 hover:underline"
+            onClick={() => handleConnect('youtube')}
+            disabled={isLoading !== null}
+            className="w-full flex items-center justify-center gap-3 py-3 px-4 border border-red-600/50 bg-red-600/20 hover:bg-red-600/30 text-white font-bold rounded-lg transition-colors disabled:opacity-50"
           >
-            Desconectar
+            <Youtube size={20} />
+            <span>{isLoading === 'youtube' ? "Aguarde..." : "Conectar com YouTube"}</span>
           </button>
-        </div>
-      ) : (
-        <button
-          onClick={handleConnect}
-          disabled={isLoading}
-          className="w-full flex items-center justify-center gap-3 py-3 px-4 border border-red-600/50 bg-red-600/20 hover:bg-red-600/30 text-white font-bold rounded-lg transition-colors disabled:opacity-50"
-        >
-          <Youtube size={20} />
-          <span>{isLoading ? "Aguarde..." : "Conectar com YouTube"}</span>
-        </button>
-      )}
+        )}
+
+        {/* Bloco para o Instagram/Facebook */}
+        {isInstagramConnected ? (
+          <ConnectionStatus platformName="Instagram" onDisconnect={() => onDisconnect('instagram')} />
+        ) : (
+          <button
+            onClick={() => handleConnect('instagram')}
+            disabled={isLoading !== null}
+            className="w-full flex items-center justify-center gap-3 py-3 px-4 border border-purple-600/50 bg-purple-600/20 hover:bg-purple-600/30 text-white font-bold rounded-lg transition-colors disabled:opacity-50"
+          >
+            <Instagram size={20} />
+            <span>{isLoading === 'instagram' ? "Aguarde..." : "Conectar com Instagram / Facebook"}</span>
+          </button>
+        )}
+      </div>
     </div>
   );
 }
