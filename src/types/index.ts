@@ -21,5 +21,6 @@ export type Video = {
   youtube_video_id: string | null;
   post_error: string | null;
   target_youtube: boolean | null;
+  target_instagram: boolean | null; // <-- ADICIONE ESTA LINHA
   niche_id: string;
 };
