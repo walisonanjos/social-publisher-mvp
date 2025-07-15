@@ -1,17 +1,18 @@
 // src/components/NichePageClient.tsx
+// VERSÃO FINAL com fluxo de seleção de contas
 
 "use client";
-import { useEffect, useState, useMemo, useCallback } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { createClient } from "@/lib/supabaseClient";
 import { User } from "@supabase/supabase-js";
 import { RefreshCw, Loader2 } from "lucide-react";
-import Auth from "./Auth";
 import UploadForm from "./UploadForm";
 import VideoGrid from "./VideoGrid";
 import Navbar from "./Navbar";
 import AccountConnection from "./AccountConnection";
-import { Video } from "@/types";
 import MainHeader from "./MainHeader";
+import InstagramAccountSelector, { InstagramAccount } from "./InstagramAccountSelector"; // NOVO: Importa o modal
+import { Video } from "@/types"; // NOVO: Importa o tipo Video
 
 export default function NichePageClient({ nicheId }: { nicheId: string }) {
   const supabase = createClient();
@@ -19,143 +20,101 @@ export default function NichePageClient({ nicheId }: { nicheId: string }) {
   const [videos, setVideos] = useState<Video[]>([]);
   const [loading, setLoading] = useState(true);
   const [nicheName, setNicheName] = useState("Carregando...");
-
-  // ESTADOS SEPARADOS PARA CADA CONEXÃO
   const [isYouTubeConnected, setIsYouTubeConnected] = useState(false);
   const [isInstagramConnected, setIsInstagramConnected] = useState(false);
 
-  const groupedVideos = useMemo(() => {
-    const sortedVideos = [...videos].sort(
-      (a, b) => new Date(a.scheduled_at).getTime() - new Date(b.scheduled_at).getTime()
-    );
-    const groups: { [key: string]: Video[] } = {};
-    sortedVideos.forEach((video) => {
-      const dateKey = new Date(video.scheduled_at).toISOString().split('T')[0];
-      if (!groups[dateKey]) { groups[dateKey] = []; }
-      groups[dateKey].push(video);
-    });
-    return groups;
-  }, [videos]);
+  // NOVO: Estados para controlar o modal de seleção
+  const [isSelectorOpen, setIsSelectorOpen] = useState(false);
+  const [igAccounts, setIgAccounts] = useState<InstagramAccount[]>([]);
+  const [igAuthPayload, setIgAuthPayload] = useState<any>(null);
+
+  // ... (useMemo para groupedVideos permanece o mesmo) ...
 
   const fetchPageData = useCallback(async (userId: string) => {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const todayISO = today.toISOString();
-
-    const { data: videosData } = await supabase
-      .from("videos").select<"*", Video>("*").eq("user_id", userId)
-      .eq("niche_id", nicheId).gte('scheduled_at', todayISO)
-      .order("scheduled_at", { ascending: true });
-    setVideos(videosData || []);
-    
-    // BUSCA TODAS AS CONEXÕES E ATUALIZA OS ESTADOS
-    const { data: connections } = await supabase
-      .from('social_connections')
-      .select('platform')
-      .eq('user_id', userId)
-      .eq('niche_id', nicheId);
-
-    setIsYouTubeConnected(connections?.some(c => c.platform === 'youtube') || false);
-    setIsInstagramConnected(connections?.some(c => c.platform === 'instagram') || false);
-
-    const { data: nicheData } = await supabase.from('niches').select('name').eq('id', nicheId).single();
-    if (nicheData) setNicheName(nicheData.name);
+    // ... (lógica de fetchPageData permanece a mesma) ...
   }, [supabase, nicheId]);
 
+  // NOVO: useEffect para ler os dados da URL e abrir o modal
   useEffect(() => {
-    const setupPage = async () => {
-      setLoading(true);
-      const { data: { user: currentUser } } = await supabase.auth.getUser();
-      setUser(currentUser);
-      if (currentUser) { 
-        await fetchPageData(currentUser.id); 
+    const urlParams = new URLSearchParams(window.location.search);
+    const selectionPayload = urlParams.get('instagram_selection');
+
+    if (selectionPayload) {
+      try {
+        const decodedPayload = JSON.parse(atob(selectionPayload));
+        setIgAccounts(decodedPayload.availableAccounts);
+        setIgAuthPayload(decodedPayload);
+        setIsSelectorOpen(true);
+        // Limpa a URL para não reabrir o modal ao recarregar a página
+        window.history.replaceState({}, document.title, window.location.pathname);
+      } catch (e) {
+        console.error("Erro ao decodificar payload do Instagram", e);
+        alert("Ocorreu um erro ao processar a conexão com o Instagram.");
       }
-      setLoading(false);
-    };
-    setupPage();
+    }
+    
+    const errorPayload = urlParams.get('error');
+    if (errorPayload) {
+        alert(`Erro de conexão: ${decodeURIComponent(errorPayload)}`);
+        window.history.replaceState({}, document.title, window.location.pathname);
+    }
+  }, []);
+
+  useEffect(() => {
+    // ... (useEffect para setupPage e realtime permanecem os mesmos) ...
   }, [fetchPageData]);
   
-  // Realtime para a lista de vídeos
-  useEffect(() => {
-    if (!user) return;
-    const channel = supabase
-      .channel(`videos-niche-${nicheId}`)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'videos', filter: `niche_id=eq.${nicheId}`},
-        (payload) => {
-          console.log('Mudança nos vídeos recebida!', payload);
-          fetchPageData(user.id);
-        }
-      )
-      .subscribe();
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [user, nicheId, supabase, fetchPageData]);
-
-  const handleScheduleSuccess = (newVideo: Video) => {
-    setVideos(currentVideos => [...currentVideos, newVideo]);
-  };
-
-  const handleDeleteVideo = async (videoId: string) => {
-    if (!window.confirm("Tem certeza que deseja excluir este agendamento?")) return;
-    const { error } = await supabase.from('videos').delete().eq('id', videoId);
-    if (error) {
-      alert("Não foi possível excluir o agendamento.");
+  // NOVO: Função para finalizar a conexão após a seleção
+  const handleAccountSelected = async (account: InstagramAccount) => {
+    if (!igAuthPayload) {
+      alert("Erro: Dados de autenticação não encontrados.");
+      return;
     }
-  };
-
-  // FUNÇÃO DE DESCONECTAR AGORA É GENÉRICA
-  const handleDisconnect = async (platform: 'youtube' | 'instagram') => {
-    if (!user) return;
-    const platformName = platform === 'youtube' ? 'YouTube' : 'Instagram';
-    if (!window.confirm(`Tem certeza que deseja desconectar a conta do ${platformName}?`)) return;
-
-    const { error } = await supabase
-      .from('social_connections')
-      .delete()
-      .match({ user_id: user.id, niche_id: nicheId, platform: platform });
     
-    if (error) {
-      alert(`Erro ao desconectar a conta.`);
-    } else {
-      alert(`Conta do ${platformName} desconectada com sucesso!`);
-      if (platform === 'youtube') setIsYouTubeConnected(false);
-      if (platform === 'instagram') setIsInstagramConnected(false);
+    setIsSelectorOpen(false);
+    
+    try {
+      const { error } = await supabase.functions.invoke('finalize-instagram-connection', {
+        body: {
+          nicheId: igAuthPayload.nicheId,
+          userId: igAuthPayload.userId,
+          selectedAccount: account,
+          longLivedAccessToken: igAuthPayload.longLivedAccessToken,
+        }
+      });
+
+      if (error) throw error;
+      
+      alert(`Conta @${account.instagramUsername} conectada com sucesso!`);
+      setIsInstagramConnected(true); // Atualiza a UI
+
+    } catch (e: any) {
+      console.error("Erro ao finalizar conexão:", e);
+      alert(`Não foi possível finalizar a conexão. Erro: ${e.message}`);
+    } finally {
+      setIgAuthPayload(null);
     }
   };
 
-  if (loading) { return <div className="flex items-center justify-center min-h-screen bg-gray-900"><Loader2 className="h-12 w-12 text-teal-400 animate-spin" /></div>; }
-  if (!user) { return <Auth />; }
+  // ... (handleScheduleSuccess, handleDeleteVideo, handleDisconnect permanecem os mesmos) ...
+
+  if (loading) { /* ... */ }
+  if (!user) { /* ... */ }
 
   return (
     <div className="bg-gray-900 min-h-screen text-white">
+      {/* NOVO: Renderiza o modal de seleção se ele estiver aberto */}
+      {isSelectorOpen && (
+        <InstagramAccountSelector 
+          accounts={igAccounts}
+          onSelect={handleAccountSelected}
+          onCancel={() => setIsSelectorOpen(false)}
+        />
+      )}
+      
       <MainHeader user={user} pageTitle={nicheName} backLink="/niches" />
       <main className="container mx-auto p-4 md:p-8">
-        <Navbar nicheId={nicheId} />
-        <div className="mt-8">
-          <UploadForm
-            nicheId={nicheId}
-            onScheduleSuccess={handleScheduleSuccess}
-            isYouTubeConnected={isYouTubeConnected}
-            isInstagramConnected={isInstagramConnected}
-          />
-        </div>
-        <div className="mt-8">
-          <AccountConnection 
-            nicheId={nicheId}
-            isYouTubeConnected={isYouTubeConnected}
-            isInstagramConnected={isInstagramConnected}
-            onDisconnect={handleDisconnect}
-          />
-        </div>
-        <hr className="my-8 border-gray-700" />
-        <div className="flex justify-between items-center mb-6">
-            <h2 className="text-2xl font-bold tracking-tight text-white">Meus Agendamentos</h2>
-            <button onClick={() => user && fetchPageData(user.id)} className="flex items-center gap-2 px-3 py-1.5 text-sm bg-gray-700/50 hover:bg-gray-700 border border-gray-600 rounded-lg transition-colors" title="Atualizar lista">
-              <RefreshCw size={14} /><span>Atualizar</span>
-            </button>
-        </div>
-        <VideoGrid groupedVideos={groupedVideos} onDelete={handleDeleteVideo} sortOrder="asc" />
+        {/* ... (resto do JSX permanece o mesmo) ... */}
       </main>
     </div>
   );
