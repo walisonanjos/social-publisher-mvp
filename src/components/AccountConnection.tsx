@@ -1,4 +1,5 @@
 // src/components/AccountConnection.tsx
+// VERSÃO CORRIGIDA
 
 "use client";
 import { useState } from "react";
@@ -12,7 +13,6 @@ interface AccountConnectionProps {
   onDisconnect: (platform: 'youtube' | 'instagram') => void;
 }
 
-// Pequeno componente para reutilizar o status de 'conectado'
 const ConnectionStatus = ({ platformName, onDisconnect }: { platformName: string, onDisconnect: () => void }) => (
   <div className="p-4 bg-green-900/50 border border-green-500/30 rounded-lg flex items-center justify-between">
     <div className="flex items-center gap-3">
@@ -37,22 +37,40 @@ export default function AccountConnection({
   const [isLoading, setIsLoading] = useState<null | 'youtube' | 'instagram'>(null);
   const supabase = createClient();
 
+  // --- FUNÇÃO CORRIGIDA ---
   const handleConnect = async (platform: 'youtube' | 'instagram') => {
     setIsLoading(platform);
-    // Escolhe qual função de backend chamar baseado na plataforma
-    const functionName = platform === 'youtube' ? 'generate-youtube-auth-url' : 'generate-facebook-auth-url';
     
     try {
-      const { data, error } = await supabase.functions.invoke(functionName, { body: { nicheId } });
+      // 1. Buscamos o usuário logado para garantir que temos o ID
+      const { data: { user } } = await supabase.auth.getUser();
+
+      // 2. Verificação de segurança
+      if (!user) {
+        throw new Error("Usuário não autenticado. Por favor, faça login novamente.");
+      }
+
+      const functionName = platform === 'youtube' ? 'generate-youtube-auth-url' : 'generate-facebook-auth-url';
+      
+      // 3. Enviamos AMBOS os IDs no corpo da requisição
+      const { data, error } = await supabase.functions.invoke(functionName, {
+        method: 'POST',
+        body: {
+          nicheId: nicheId,
+          userId: user.id
+        }
+      });
+      
       if (error) throw error;
+      
       if (data.authUrl) {
         window.location.href = data.authUrl;
       } else {
         throw new Error("A função de backend não retornou uma URL de autorização.");
       }
-    } catch (error) {
+    } catch (error: any) {
       console.error(`Erro ao gerar URL de autorização para ${platform}:`, error);
-      alert(`Não foi possível iniciar a conexão com ${platform}. Tente novamente.`);
+      alert(`Não foi possível iniciar a conexão com ${platform}. Erro: ${error.message}`);
       setIsLoading(null);
     }
   };

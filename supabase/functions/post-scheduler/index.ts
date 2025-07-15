@@ -1,4 +1,5 @@
 // supabase/functions/post-scheduler/index.ts
+// VERSÃO 100% COMPLETA E CORRIGIDA - 11/Jul/2025
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
@@ -8,7 +9,61 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type",
 };
 
-// Função auxiliar para gerar o hash SHA1 usando a API Web Crypto (método moderno)
+// --- FUNÇÕES HELPER PARA A API DO INSTAGRAM ---
+const GRAPH_API_VERSION = "v20.0";
+const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+
+async function startMediaContainer(accessToken: string, instagramUserId: string, videoUrl: string, caption: string): Promise<string> {
+  const mediaUrl = `https://graph.facebook.com/${GRAPH_API_VERSION}/${instagramUserId}/media`;
+  const params = new URLSearchParams({
+    media_type: "REELS",
+    video_url: videoUrl,
+    caption: caption,
+    access_token: accessToken,
+  });
+  const response = await fetch(mediaUrl, { method: "POST", body: params });
+  const data = await response.json();
+  if (!response.ok) {
+    throw new Error(`Falha ao iniciar container: ${data.error?.message || "Erro desconhecido"}`);
+  }
+  console.log(`Container de mídia iniciado com ID: ${data.id}`);
+  return data.id;
+}
+
+async function pollContainerStatus(accessToken: string, creationId: string) {
+  const MAX_RETRIES = 24; // Tenta por 120s
+  const POLL_INTERVAL_MS = 5000;
+  for (let i = 0; i < MAX_RETRIES; i++) {
+    console.log(`Verificando status do container (tentativa ${i + 1}/${MAX_RETRIES})...`);
+    const statusUrl = `https://graph.facebook.com/${GRAPH_API_VERSION}/${creationId}`;
+    const params = new URLSearchParams({ fields: "status_code", access_token: accessToken });
+    const response = await fetch(`${statusUrl}?${params.toString()}`);
+    const data = await response.json();
+    if (!response.ok) throw new Error(`Erro ao verificar status: ${data.error?.message}`);
+    const status = data.status_code;
+    if (status === "FINISHED") {
+      console.log("Container processado com sucesso!");
+      return;
+    }
+    if (status === "ERROR" || status === "EXPIRED") {
+      throw new Error(`Processamento do container falhou com status: ${status}`);
+    }
+    await sleep(POLL_INTERVAL_MS);
+  }
+  throw new Error("Tempo limite excedido ao esperar pelo processamento do vídeo.");
+}
+
+async function publishMediaContainer(accessToken: string, instagramUserId: string, creationId: string) {
+  const publishUrl = `https://graph.facebook.com/${GRAPH_API_VERSION}/${instagramUserId}/media_publish`;
+  const params = new URLSearchParams({ creation_id: creationId, access_token: accessToken });
+  const response = await fetch(publishUrl, { method: "POST", body: params });
+  const data = await response.json();
+  if (!response.ok) {
+    throw new Error(`Falha ao publicar container: ${data.error?.message}`);
+  }
+  console.log(`Mídia publicada com sucesso! ID do post: ${data.id}`);
+}
+
 async function sha1(str: string): Promise<string> {
     const data = new TextEncoder().encode(str);
     const hashBuffer = await crypto.subtle.digest('SHA-1', data);
@@ -17,7 +72,7 @@ async function sha1(str: string): Promise<string> {
     return hashHex;
 }
 
-// Função principal do agendador
+// --- FUNÇÃO PRINCIPAL DO AGENDADOR ---
 Deno.serve(async (_req) => {
   try {
     const supabaseAdmin = createClient(
@@ -28,29 +83,23 @@ Deno.serve(async (_req) => {
     const now = new Date().toISOString();
     const { data: scheduledVideos, error: fetchError } = await supabaseAdmin
       .from("videos")
-      .select("*")
+      .select("*, niches(social_connections(*))") // CORREÇÃO APLICADA AQUI
       .eq("status", "agendado")
       .lte("scheduled_at", now);
 
     if (fetchError) throw fetchError;
     if (!scheduledVideos || scheduledVideos.length === 0) {
-      return new Response(
-        JSON.stringify({ message: "Nenhum vídeo para processar." }),
-        { headers: corsHeaders },
-      );
+      return new Response(JSON.stringify({ message: "Nenhum vídeo para processar." }), { headers: corsHeaders });
     }
 
     for (const video of scheduledVideos) {
-      // Variáveis para rastrear o sucesso e erros de cada plataforma
       let anyPostSucceeded = false;
       const errorMessages = [];
-
-      // --- ESTRUTURA PARA MÚLTIPLAS PLATAFORMAS ---
-      // A lógica original do YouTube foi mantida, mas agora dentro de uma condição.
 
       // --- TENTATIVA DE POSTAGEM NO YOUTUBE ---
       if (video.target_youtube) {
         try {
+          // Lógica completa do YouTube (preservada do seu código)
           console.log(`Processando YouTube para o vídeo ID: ${video.id}`);
           const { data: connection, error: connError } = await supabaseAdmin
             .from("social_connections")
@@ -119,18 +168,24 @@ Deno.serve(async (_req) => {
         }
       }
 
-      // --- NOVO BLOCO PARA POSTAGEM NO INSTAGRAM ---
+      // --- BLOCO PREENCHIDO PARA POSTAGEM NO INSTAGRAM ---
       if (video.target_instagram) {
         try {
             console.log(`Processando Instagram para o vídeo ID: ${video.id}`);
-            const { data: igConnection } = await supabaseAdmin.from("social_connections").select("access_token").eq("niche_id", video.niche_id).eq("platform", "instagram").single();
-            if (!igConnection?.access_token) {
-              throw new Error("Token de acesso do Instagram não encontrado.");
-            }
+            const igConnection = video.niches?.social_connections.find((c: any) => c.platform === 'instagram');
 
-            console.log("Token do Instagram encontrado. Lógica de postagem de Reel (simulada) a seguir.");
-            // SIMULAÇÃO DE SUCESSO POR ENQUANTO
+            if (!igConnection?.access_token || !igConnection?.provider_user_id) {
+              throw new Error("Credenciais do Instagram (token ou user ID) não encontradas.");
+            }
+            
+            const { access_token, provider_user_id: instagramUserId } = igConnection;
+            const creationId = await startMediaContainer(access_token, instagramUserId, video.video_url, video.description || video.title);
+            await pollContainerStatus(access_token, creationId);
+            await publishMediaContainer(access_token, instagramUserId, creationId);
+            
+            console.log(`Postagem no Instagram para o vídeo ${video.id} concluída.`);
             anyPostSucceeded = true;
+
         } catch(e) {
             console.error(`ERRO no fluxo do Instagram (vídeo ID ${video.id}):`, e.message);
             errorMessages.push(`Falha no Instagram: ${e.message}`);
@@ -141,11 +196,11 @@ Deno.serve(async (_req) => {
       if (anyPostSucceeded) {
         console.log(`Marcando vídeo ${video.id} como 'postado'.`);
         await supabaseAdmin.from("videos")
-            .update({ status: "postado", post_error: errorMessages.join(' | ') || null })
-            .eq("id", video.id);
+          .update({ status: "postado", post_error: errorMessages.join(' | ') || null })
+          .eq("id", video.id);
         
-        // A sua lógica de exclusão do Cloudinary continua aqui, inalterada
         if (video.cloudinary_public_id) {
+          // Lógica de exclusão do Cloudinary (preservada do seu código)
           console.log(`Iniciando exclusão do vídeo no Cloudinary: ${video.cloudinary_public_id}`);
           const apiKey = Deno.env.get('CLOUDINARY_API_KEY')!;
           const apiSecret = Deno.env.get('CLOUDINARY_API_SECRET')!;
@@ -167,10 +222,9 @@ Deno.serve(async (_req) => {
           }
         }
       } else {
-        // Se nenhuma plataforma deu certo, marca como falha geral
         await supabaseAdmin.from("videos")
-            .update({ status: "falhou", post_error: errorMessages.join(' | ') })
-            .eq("id", video.id);
+          .update({ status: "falhou", post_error: errorMessages.join(' | ') })
+          .eq("id", video.id);
       }
     }
 
