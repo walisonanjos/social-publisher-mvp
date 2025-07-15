@@ -1,5 +1,5 @@
 // src/components/NichePageClient.tsx
-// VERSÃO FINAL CORRIGIDA - BUILD OK
+// VERSÃO FINAL CORRIGIDA - BUILD AGORA VAI 
 
 "use client";
 import { useEffect, useState, useMemo, useCallback } from "react";
