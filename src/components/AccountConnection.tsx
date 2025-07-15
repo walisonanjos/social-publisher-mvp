@@ -1,5 +1,5 @@
 // src/components/AccountConnection.tsx
-// VERSÃO CORRIGIDA
+// VERSÃO CORRIGIDA COM TRATAMENTO DE ERRO TYPE-SAFE
 
 "use client";
 import { useState } from "react";
@@ -37,22 +37,18 @@ export default function AccountConnection({
   const [isLoading, setIsLoading] = useState<null | 'youtube' | 'instagram'>(null);
   const supabase = createClient();
 
-  // --- FUNÇÃO CORRIGIDA ---
   const handleConnect = async (platform: 'youtube' | 'instagram') => {
     setIsLoading(platform);
     
     try {
-      // 1. Buscamos o usuário logado para garantir que temos o ID
       const { data: { user } } = await supabase.auth.getUser();
 
-      // 2. Verificação de segurança
       if (!user) {
         throw new Error("Usuário não autenticado. Por favor, faça login novamente.");
       }
 
       const functionName = platform === 'youtube' ? 'generate-youtube-auth-url' : 'generate-facebook-auth-url';
       
-      // 3. Enviamos AMBOS os IDs no corpo da requisição
       const { data, error } = await supabase.functions.invoke(functionName, {
         method: 'POST',
         body: {
@@ -68,9 +64,16 @@ export default function AccountConnection({
       } else {
         throw new Error("A função de backend não retornou uma URL de autorização.");
       }
-    } catch (error: any) {
+    } catch (error: unknown) { // <-- CORREÇÃO #1: Usamos 'unknown'
       console.error(`Erro ao gerar URL de autorização para ${platform}:`, error);
-      alert(`Não foi possível iniciar a conexão com ${platform}. Erro: ${error.message}`);
+      
+      // CORREÇÃO #2: Verificamos o tipo do erro antes de usar a mensagem
+      let errorMessage = `Não foi possível iniciar a conexão com ${platform}. Tente novamente.`;
+      if (error instanceof Error) {
+        errorMessage = `Não foi possível iniciar a conexão com ${platform}. Erro: ${error.message}`;
+      }
+      
+      alert(errorMessage);
       setIsLoading(null);
     }
   };
