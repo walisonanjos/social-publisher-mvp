@@ -1,5 +1,5 @@
 // supabase/functions/generate-facebook-auth-url/index.ts
-// VERSÃO CORRIGIDA - COM TODAS AS PERMISSÕES (SCOPES)
+// VERSÃO FINAL - Adiciona a permissão 'read_insights'
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
@@ -24,7 +24,6 @@ Deno.serve(async (req) => {
     // String de estado para segurança e para passar dados
     const state = btoa(JSON.stringify({ nicheId, userId }));
 
-    // --- CORREÇÃO PRINCIPAL AQUI ---
     // Definimos todas as permissões que nosso aplicativo precisa.
     const scope = [
       'public_profile',
@@ -32,7 +31,8 @@ Deno.serve(async (req) => {
       'pages_read_engagement',
       'instagram_basic',
       'instagram_content_publish',
-      'business_management'
+      'business_management',
+      'read_insights' // <-- PERMISSÃO ADICIONADA
     ].join(',');
 
     const params = new URLSearchParams({
@@ -40,7 +40,7 @@ Deno.serve(async (req) => {
       redirect_uri: Deno.env.get("META_REDIRECT_URI")!,
       response_type: 'code',
       state: state,
-      scope: scope, // Adicionamos as permissões à URL
+      scope: scope, // Adicionamos a lista completa de permissões à URL
     });
 
     const finalAuthUrl = `${authUrl}?${params.toString()}`;
