@@ -12,7 +12,7 @@ import {
   CheckCircle,
   XCircle,
   Clock,
-  PlusCircle, // <-- Importar novo ícone
+  PlusCircle,
 } from "lucide-react";
 import { useState } from "react";
 import Link from "next/link";
@@ -23,10 +23,12 @@ import { Tooltip } from "react-tooltip";
 interface VideoGridProps {
   groupedVideos: { [key: string]: Video[] };
   onDelete: (videoId: string) => void;
+  // 1. Adicionamos a nova propriedade onEdit na interface principal
+  onEdit: (video: Video) => void;
   sortOrder?: "asc" | "desc";
 }
 
-// ... (As funções auxiliares PlatformStatus e VideoCard permanecem exatamente as mesmas)
+// Funções auxiliares (PlatformStatus) permanecem as mesmas
 const getPlatformError = (fullError: string | null, platform: string): string | null => {
   if (!fullError) return null;
   const errorSegment = fullError.split(' | ').find(e => e.startsWith(`Falha no ${platform}:`));
@@ -48,13 +50,39 @@ const PlatformStatus = ({ platformName, status, error }: { platformName: 'YouTub
   );
 };
 
-function VideoCard({ video, onDelete, }: { video: Video; onDelete: (id: string) => void; }) {
-  const isAnyTargetSelected = video.target_youtube || video.target_instagram || video.target_facebook;
+// Componente VideoCard atualizado
+function VideoCard({
+  video,
+  onDelete,
+  onEdit, // Recebe a nova propriedade
+}: {
+  video: Video;
+  onDelete: (id: string) => void;
+  onEdit: (video: Video) => void; // Propriedade definida aqui
+}) {
+  const isScheduled = video.youtube_status === 'agendado' || video.instagram_status === 'agendado' || video.facebook_status === 'agendado';
+
   return (
     <div className="bg-gray-800/50 p-4 rounded-lg flex flex-col justify-between gap-3 border border-gray-700/80 h-full">
       <div className="flex justify-between items-start">
-        <span className="font-medium text-white break-all pr-2">{video.title}</span>
-        <div className={`text-xs font-bold px-2 py-1 rounded-full border whitespace-nowrap ${video.youtube_status === 'falhou' || video.instagram_status === 'falhou' || video.facebook_status === 'falhou' ? "bg-red-500/20 text-red-300 border-red-500/30" : video.youtube_status === 'publicado' || video.instagram_status === 'publicado' || video.facebook_status === 'publicado' ? "bg-green-500/20 text-green-300 border-green-500/30" : "bg-blue-500/20 text-blue-300 border-blue-500/30"}`}>{video.youtube_status === 'falhou' || video.instagram_status === 'falhou' || video.facebook_status === 'falhou' ? "Falhou" : video.youtube_status === 'publicado' || video.instagram_status === 'publicado' || video.facebook_status === 'publicado' ? "Publicado" : "Agendado"}</div>
+        <span className="font-medium text-white break-all pr-2">
+          {video.title}
+        </span>
+        <div className={`text-xs font-bold px-2 py-1 rounded-full border whitespace-nowrap ${
+          video.youtube_status === 'falhou' || video.instagram_status === 'falhou' || video.facebook_status === 'falhou' 
+          ? "bg-red-500/20 text-red-300 border-red-500/30"
+          : video.youtube_status === 'publicado' || video.instagram_status === 'publicado' || video.facebook_status === 'publicado'
+          ? "bg-green-500/20 text-green-300 border-green-500/30"
+          : "bg-blue-500/20 text-blue-300 border-blue-500/30"
+        }`}>
+          {
+            video.youtube_status === 'falhou' || video.instagram_status === 'falhou' || video.facebook_status === 'falhou'
+            ? "Falhou"
+            : video.youtube_status === 'publicado' || video.instagram_status === 'publicado' || video.facebook_status === 'publicado'
+            ? "Publicado"
+            : "Agendado"
+          }
+        </div>
       </div>
       <div className="flex justify-between items-end mt-auto">
         <div className="flex items-center gap-3 text-gray-400 text-sm">
@@ -66,18 +94,32 @@ function VideoCard({ video, onDelete, }: { video: Video; onDelete: (id: string) 
           </div>
         </div>
         <div className="flex items-center gap-3">
-          {video.youtube_status === "publicado" && video.youtube_video_id && (<Link href={`https://www.youtube.com/watch?v=${video.youtube_video_id}`} target="_blank" rel="noopener noreferrer" className="text-gray-400 hover:text-white transition-colors" title="Ver no YouTube"><LinkIcon size={16} /></Link>)}
-          {isAnyTargetSelected && video.youtube_status === "agendado" && (<button onClick={() => onDelete(video.id)} className="text-xs text-red-500 hover:text-red-400">Excluir</button>)}
+          {video.youtube_status === "publicado" && video.youtube_video_id && (
+            <Link href={`https://www.youtube.com/watch?v=${video.youtube_video_id}`} target="_blank" rel="noopener noreferrer" className="text-gray-400 hover:text-white transition-colors" title="Ver no YouTube">
+              <LinkIcon size={16} />
+            </Link>
+          )}
+          
+          {isScheduled && (
+            <div className="flex items-center gap-3 text-xs">
+              <button onClick={() => onEdit(video)} className="text-blue-400 hover:text-blue-300">
+                Editar
+              </button>
+              <button onClick={() => onDelete(video.id)} className="text-red-500 hover:text-red-400">
+                Excluir
+              </button>
+            </div>
+          )}
         </div>
       </div>
     </div>
   );
 }
 
-
 export default function VideoGrid({
   groupedVideos,
   onDelete,
+  onEdit, // 2. Recebemos a propriedade aqui
   sortOrder = "desc",
 }: VideoGridProps) {
   const [openGroups, setOpenGroups] = useState<{ [key: string]: boolean }>({});
@@ -93,10 +135,8 @@ export default function VideoGrid({
     setOpenGroups((prev) => ({ ...prev, [key]: !prev[key] }));
   };
 
-  // --- MUDANÇA PRINCIPAL AQUI ---
   if (sortedGroupKeys.length === 0) {
     if (sortOrder === "desc") {
-      // Para a aba "Histórico", mantemos a mensagem simples.
       return (
         <div className="text-center py-10 bg-gray-800/30 rounded-lg">
           <p className="text-gray-400">Nenhum post no histórico.</p>
@@ -104,7 +144,6 @@ export default function VideoGrid({
       );
     }
 
-    // Para a aba "Agendamentos", mostramos o novo componente com CTA.
     return (
       <div className="text-center py-12 bg-gray-800/30 rounded-lg border-2 border-dashed border-gray-700/80">
         <h3 className="text-lg font-medium text-white">
@@ -123,7 +162,6 @@ export default function VideoGrid({
       </div>
     );
   }
-  // --- FIM DA MUDANÇA ---
 
   return (
     <div className="space-y-6">
@@ -150,7 +188,8 @@ export default function VideoGrid({
             {isGroupOpen && (
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                 {groupedVideos[dateKey].map((video) => (
-                  <VideoCard key={video.id} video={video} onDelete={onDelete} />
+                  // 3. Passamos a função onEdit para cada VideoCard
+                  <VideoCard key={video.id} video={video} onDelete={onDelete} onEdit={onEdit} />
                 ))}
               </div>
             )}
