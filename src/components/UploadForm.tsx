@@ -8,7 +8,7 @@ import "react-day-picker/dist/style.css";
 import { addDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Video } from "@/types";
-import { toast } from "sonner"; // Importação correta
+import { toast } from "sonner";
 
 interface UploadFormProps {
   nicheId: string;
@@ -31,8 +31,6 @@ export default function UploadForm({
   );
   const [scheduleTime, setScheduleTime] = useState("09:00");
   const [isUploading, setIsUploading] = useState(false);
-  // REMOVIDO: const [error, setError] = useState("");
-  // REMOVIDO: const [successMessage, setSuccessMessage] = useState("");
 
   const [postToYouTube, setPostToYouTube] = useState(true);
   const [postToInstagram, setPostToInstagram] = useState(true);
@@ -169,7 +167,7 @@ export default function UploadForm({
   };
 
   return (
-    <div className="bg-gray-800 p-8 rounded-lg shadow-lg border border-gray-700">
+    <div id="upload-form" className="bg-gray-800 p-8 rounded-lg shadow-lg border border-gray-700">
       <h2 className="text-xl font-bold text-white mb-6">Novo Agendamento</h2>
       <form onSubmit={handleSubmit} className="space-y-6">
         <div>
@@ -313,7 +311,6 @@ export default function UploadForm({
             {isUploading ? "Agendando..." : "Agendar Post"}
           </button>
         </div>
-        {/* REMOVIDO: Os blocos de erro e sucesso que ficavam aqui foram removidos. */}
       </form>
     </div>
   );
