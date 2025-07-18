@@ -8,7 +8,7 @@ import "react-day-picker/dist/style.css";
 import { addDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Video } from "@/types";
-import { toast } from "sonner"; // <-- MUDANÇA #1
+import { toast } from "sonner"; // Importação correta
 
 interface UploadFormProps {
   nicheId: string;
@@ -31,9 +31,8 @@ export default function UploadForm({
   );
   const [scheduleTime, setScheduleTime] = useState("09:00");
   const [isUploading, setIsUploading] = useState(false);
-  // MUDANÇA #2: Linhas removidas
-  // const [error, setError] = useState("");
-  // const [successMessage, setSuccessMessage] = useState("");
+  // REMOVIDO: const [error, setError] = useState("");
+  // REMOVIDO: const [successMessage, setSuccessMessage] = useState("");
 
   const [postToYouTube, setPostToYouTube] = useState(true);
   const [postToInstagram, setPostToInstagram] = useState(true);
@@ -54,7 +53,6 @@ export default function UploadForm({
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     if (!file || !title || !scheduleDate) {
-      // MUDANÇA #3: Substituição do setError
       toast.error("Por favor, preencha todos os campos obrigatórios.");
       return;
     }
@@ -64,9 +62,6 @@ export default function UploadForm({
     }
 
     setIsUploading(true);
-    // MUDANÇA: Não precisamos mais limpar os estados
-    // setError("");
-    // setSuccessMessage("");
 
     try {
       if (!nicheId) throw new Error("O ID do workspace é inválido.");
@@ -119,7 +114,7 @@ export default function UploadForm({
         data: { user },
       } = await supabase.auth.getUser();
       if (!user) throw new Error("Usuário não autenticado.");
-
+      
       const { data: newVideo, error: insertError } = await supabase
         .from("videos")
         .insert({
@@ -151,7 +146,6 @@ export default function UploadForm({
           "Não foi possível obter os dados do agendamento criado.",
         );
 
-      // MUDANÇA #4: Substituição do setSuccessMessage
       toast.success("Seu vídeo foi agendado com sucesso!");
 
       setFile(null);
@@ -164,7 +158,6 @@ export default function UploadForm({
 
       onScheduleSuccess(newVideo as Video);
     } catch (err) {
-        // MUDANÇA #5: Substituição do setError no catch
         if (err instanceof Error) {
             toast.error(`Ocorreu um erro: ${err.message}`);
         } else {
@@ -280,16 +273,13 @@ export default function UploadForm({
             </select>
           </div>
         </div>
-        
         <div>
           <h3 className="text-sm font-medium text-gray-300 mb-2">Postar em:</h3>
           <div className="flex flex-wrap gap-x-6 gap-y-2">
-            
             <label className={`flex items-center gap-2 ${isInstagramConnected ? 'cursor-pointer text-white' : 'cursor-not-allowed text-gray-500'}`}>
               <input type="checkbox" className="h-4 w-4 rounded bg-gray-700 border-gray-500 text-teal-600 focus:ring-teal-500 disabled:opacity-50" checked={postToInstagram} onChange={(e) => setPostToInstagram(e.target.checked)} disabled={!isInstagramConnected}/>
               Instagram
             </label>
-            
             <label className={`flex items-center gap-2 ${isInstagramConnected ? 'cursor-pointer text-white' : 'cursor-not-allowed text-gray-500'}`}>
               <input
                 type="checkbox"
@@ -300,25 +290,20 @@ export default function UploadForm({
               />
               Facebook
             </label>
-            
             <label className={`flex items-center gap-2 ${isYouTubeConnected ? 'cursor-pointer text-white' : 'cursor-not-allowed text-gray-500'}`}>
               <input type="checkbox" className="h-4 w-4 rounded bg-gray-700 border-gray-500 text-teal-600 focus:ring-teal-500 disabled:opacity-50" checked={postToYouTube} onChange={(e) => setPostToYouTube(e.target.checked)} disabled={!isYouTubeConnected}/>
               YouTube
             </label>
-
             <label className="flex items-center gap-2 cursor-pointer text-gray-500">
               <input type="checkbox" className="h-4 w-4 rounded bg-gray-700 border-gray-500 text-teal-600 focus:ring-teal-500" disabled/>
               Tiktok
             </label>
-
             <label className="flex items-center gap-2 cursor-pointer text-gray-500">
               <input type="checkbox" className="h-4 w-4 rounded bg-gray-700 border-gray-500 text-teal-600 focus:ring-teal-500" disabled/>
               Kwai
             </label>
-
           </div>
         </div>
-        
         <div>
           <button
             type="submit"
@@ -328,7 +313,7 @@ export default function UploadForm({
             {isUploading ? "Agendando..." : "Agendar Post"}
           </button>
         </div>
-        {/* MUDANÇA #6: Os divs que ficavam aqui foram removidos */}
+        {/* REMOVIDO: Os blocos de erro e sucesso que ficavam aqui foram removidos. */}
       </form>
     </div>
   );
