@@ -1,5 +1,5 @@
 // src/components/VideoGrid.tsx
-// VERSÃO FINAL CORRIGIDA - Tipagem do getOverallStatus
+// CORREÇÃO: Utiliza a interface VideoGridProps
 
 "use client";
 
@@ -41,7 +41,6 @@ const PlatformStatusIcon = ({ platform, status }: { platform: 'youtube' | 'insta
   );
 };
 
-// ALTERADO: Corrigimos o tipo de retorno da função
 const getOverallStatus = (video: Video): 'publicado' | 'falhou' | 'falha_parcial' | 'agendado' => {
     const targets: Array<'youtube' | 'instagram' | 'facebook'> = [];
     if (video.target_youtube) targets.push('youtube');
@@ -108,15 +107,12 @@ function VideoCard({
   );
 }
 
+// ALTERADO: Usando a interface VideoGridProps em vez de tipos inline
 export default function VideoGrid({
   groupedVideos,
   onDelete,
   sortOrder = "desc",
-}: {
-    groupedVideos: { [key: string]: Video[] };
-    onDelete: (videoId: string, cloudinaryPublicId: string | null) => void;
-    sortOrder?: "asc" | "desc";
-}) {
+}: VideoGridProps) {
   const [openGroups, setOpenGroups] = useState<{ [key: string]: boolean }>({});
 
   const sortedGroupKeys = Object.keys(groupedVideos).sort((a, b) => {
