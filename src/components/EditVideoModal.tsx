@@ -5,11 +5,11 @@ import { useState, FormEvent, useEffect } from "react";
 import { Video } from "@/types";
 import { DayPicker } from "react-day-picker";
 import "react-day-picker/dist/style.css";
-import { addDays, format, parse } from "date-fns";
+// A CORREÇÃO ESTÁ AQUI: a palavra 'parse' foi removida
+import { addDays, format } from "date-fns"; 
 import { ptBR } from "date-fns/locale";
 import { X } from "lucide-react";
 
-// 1. Definimos as propriedades que o modal vai receber
 interface EditVideoModalProps {
   video: Video;
   onClose: () => void;
@@ -21,11 +21,9 @@ interface EditVideoModalProps {
 }
 
 export default function EditVideoModal({ video, onClose, onSave }: EditVideoModalProps) {
-  // 2. Criamos um estado local para o formulário, inicializado com os dados do vídeo
   const [title, setTitle] = useState(video.title);
   const [description, setDescription] = useState(video.description);
   
-  // Convertemos a data ISO para um objeto Date para o DayPicker e para o estado do tempo
   const initialDate = new Date(video.scheduled_at);
   const [scheduleDate, setScheduleDate] = useState<Date | undefined>(initialDate);
   const [scheduleTime, setScheduleTime] = useState(format(initialDate, "HH:mm"));
@@ -37,19 +35,16 @@ export default function EditVideoModal({ video, onClose, onSave }: EditVideoModa
   const tenDaysFromNow = addDays(today, 9);
   const availableTimes = ["09:00", "11:00", "13:00", "15:00", "17:00"];
 
-  // 3. Função para lidar com o envio do formulário de edição
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     if (!scheduleDate) return;
 
     setIsSaving(true);
     
-    // Combina a data e a hora selecionadas em um único objeto Date
     const [hours, minutes] = scheduleTime.split(":").map(Number);
     const finalScheduleDate = new Date(scheduleDate);
     finalScheduleDate.setHours(hours, minutes, 0, 0);
     
-    // Passa os dados atualizados para a função onSave (que está no NichePageClient)
     await onSave({
       title,
       description,
@@ -59,7 +54,6 @@ export default function EditVideoModal({ video, onClose, onSave }: EditVideoModa
     setIsSaving(false);
   };
 
-  // Efeito para fechar o modal com a tecla 'Esc'
   useEffect(() => {
     const handleEsc = (event: KeyboardEvent) => {
       if (event.key === 'Escape') {
@@ -72,16 +66,14 @@ export default function EditVideoModal({ video, onClose, onSave }: EditVideoModa
     };
   }, [onClose]);
 
-
-  // 4. O JSX do modal: um fundo escuro e a caixa do formulário no centro
   return (
     <div 
       className="fixed inset-0 bg-black bg-opacity-70 z-50 flex justify-center items-center p-4"
-      onClick={onClose} // Fecha ao clicar no fundo
+      onClick={onClose}
     >
       <div 
         className="bg-gray-800 p-8 rounded-lg shadow-lg border border-gray-700 w-full max-w-2xl relative"
-        onClick={(e) => e.stopPropagation()} // Impede que o clique no modal feche-o
+        onClick={(e) => e.stopPropagation()}
       >
         <button onClick={onClose} className="absolute top-4 right-4 text-gray-400 hover:text-white">
           <X size={24} />
@@ -89,7 +81,6 @@ export default function EditVideoModal({ video, onClose, onSave }: EditVideoModa
 
         <h2 className="text-xl font-bold text-white mb-6">Editar Agendamento</h2>
         <form onSubmit={handleSubmit} className="space-y-6">
-          {/* Campos do formulário, muito similares ao UploadForm */}
           <div>
             <label htmlFor="title" className="block text-sm font-medium text-gray-300">Título</label>
             <input type="text" id="title" value={title} onChange={(e) => setTitle(e.target.value)} className="mt-1 block w-full bg-gray-900 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-teal-500 focus:border-teal-500" required />
