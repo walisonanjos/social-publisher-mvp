@@ -7,7 +7,7 @@ import { Loader2 } from "lucide-react";
 import { Video } from "@/types";
 import MainHeader from "./MainHeader";
 import Navbar from "./Navbar";
-import VideoGrid from "./VideoGrid"; // Usando o componente renomeado
+import VideoGrid from "./VideoGrid";
 import Auth from "./Auth";
 
 export default function HistoryPageClient({ nicheId }: { nicheId: string }) {
@@ -84,7 +84,8 @@ export default function HistoryPageClient({ nicheId }: { nicheId: string }) {
           </h2>
           <VideoGrid
             groupedVideos={groupedVideos}
-            onDelete={() => {}}
+            onDelete={() => {}} // Na página de histórico, não permitimos exclusão.
+            onEdit={() => {}}   // <-- A CORREÇÃO ESTÁ AQUI. Passamos uma função vazia.
             sortOrder="desc"
           />
         </div>
