@@ -35,7 +35,6 @@ export default function UploadForm({
 
   const [postToYouTube, setPostToYouTube] = useState(true);
   const [postToInstagram, setPostToInstagram] = useState(true);
-  // NOVO: Estado para o checkbox do Facebook
   const [postToFacebook, setPostToFacebook] = useState(true);
 
   const supabase = createClient();
@@ -56,7 +55,6 @@ export default function UploadForm({
       setError("Por favor, preencha todos os campos obrigatórios.");
       return;
     }
-    // ALTERADO: Verificamos se pelo menos uma plataforma foi selecionada
     if (!postToYouTube && !postToInstagram && !postToFacebook) {
       setError("Por favor, selecione pelo menos uma rede social para postar.");
       return;
@@ -118,7 +116,8 @@ export default function UploadForm({
       } = await supabase.auth.getUser();
       if (!user) throw new Error("Usuário não autenticado.");
 
-      // ALTERADO: Adicionamos 'target_facebook' ao objeto de inserção
+      // --- ALTERAÇÃO PRINCIPAL AQUI ---
+      // Removemos o 'status' antigo e adicionamos os status individuais.
       const { data: newVideo, error: insertError } = await supabase
         .from("videos")
         .insert({
@@ -131,8 +130,11 @@ export default function UploadForm({
           scheduled_at: scheduled_at_iso,
           target_youtube: postToYouTube,
           target_instagram: postToInstagram,
-          target_facebook: postToFacebook, // Salvando o estado do Facebook
-          status: "agendado",
+          target_facebook: postToFacebook,
+          // Define o status inicial para cada plataforma alvo
+          youtube_status: postToYouTube ? 'agendado' : null,
+          instagram_status: postToInstagram ? 'agendado' : null,
+          facebook_status: postToFacebook ? 'agendado' : null,
         })
         .select()
         .single();
@@ -158,7 +160,7 @@ export default function UploadForm({
       ) as HTMLInputElement;
       if (fileInput) fileInput.value = "";
 
-      onScheduleSuccess(newVideo);
+      onScheduleSuccess(newVideo as Video);
     } catch (err) {
       if (err instanceof Error) setError(`Ocorreu um erro: ${err.message}`);
       else setError("Ocorreu um erro inesperado.");
@@ -273,7 +275,6 @@ export default function UploadForm({
           </div>
         </div>
         
-        {/* Seção dos checkboxes atualizada */}
         <div>
           <h3 className="text-sm font-medium text-gray-300 mb-2">Postar em:</h3>
           <div className="flex flex-wrap gap-x-6 gap-y-2">
@@ -283,7 +284,6 @@ export default function UploadForm({
               Instagram
             </label>
             
-            {/* NOVO CHECKBOX PARA O FACEBOOK */}
             <label className={`flex items-center gap-2 ${isInstagramConnected ? 'cursor-pointer text-white' : 'cursor-not-allowed text-gray-500'}`}>
               <input
                 type="checkbox"
