@@ -1,16 +1,15 @@
 // src/components/VideoGrid.tsx
-
 "use client";
 
 import { Video } from "@/types";
-// ALTERADO: Adicionamos o import do Instagram
 import {
   ChevronUp,
   ChevronDown,
   Link as LinkIcon,
   AlertTriangle,
   Youtube,
-  Instagram, // NOVO
+  Instagram,
+  Facebook, // Ícone importado
 } from "lucide-react";
 import { useState } from "react";
 import Link from "next/link";
@@ -49,19 +48,19 @@ function VideoCard({
         </div>
       </div>
       <div className="flex justify-between items-end mt-auto">
-        
-        {/* ALTERADO: Adicionamos a lógica do Instagram aqui */}
         <div className="flex items-center gap-3 text-gray-400 text-sm">
           <span>{format(new Date(video.scheduled_at), "HH:mm")}</span>
           
-          {/* Ícones das plataformas */}
           <div className="flex items-center gap-2">
             {video.target_youtube && (
               <Youtube size={16} className="text-red-500" />
             )}
-            {/* NOVO: Ícone do Instagram */}
             {video.target_instagram && (
               <Instagram size={15} className="text-pink-500" />
+            )}
+            {/* NOVO: Ícone do Facebook */}
+            {video.target_facebook && (
+                <Facebook size={15} className="text-blue-500" />
             )}
           </div>
         </div>
@@ -78,7 +77,6 @@ function VideoCard({
               <LinkIcon size={16} />
             </Link>
           )}
-          {/* TODO: Adicionar link para o post do Instagram quando tivermos o ID/URL */}
           
           {video.status === "falhou" && video.post_error && (
             <div
@@ -102,7 +100,6 @@ function VideoCard({
   );
 }
 
-// O restante do componente VideoGrid permanece inalterado
 export default function VideoGrid({
   groupedVideos,
   onDelete,

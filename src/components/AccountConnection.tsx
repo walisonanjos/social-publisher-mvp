@@ -1,9 +1,8 @@
 // src/components/AccountConnection.tsx
-// VERSÃO CORRIGIDA COM TRATAMENTO DE ERRO TYPE-SAFE
 
 "use client";
 import { useState } from "react";
-import { Youtube, Instagram, CheckCircle } from "lucide-react";
+import { Youtube, Instagram, Facebook, CheckCircle } from "lucide-react";
 import { createClient } from "../lib/supabaseClient";
 
 interface AccountConnectionProps {
@@ -13,10 +12,10 @@ interface AccountConnectionProps {
   onDisconnect: (platform: 'youtube' | 'instagram') => void;
 }
 
-const ConnectionStatus = ({ platformName, onDisconnect }: { platformName: string, onDisconnect: () => void }) => (
-  <div className="p-4 bg-green-900/50 border border-green-500/30 rounded-lg flex items-center justify-between">
+const ConnectionStatus = ({ icon: Icon, platformName, onDisconnect, iconColorClass }: { icon: React.ElementType, platformName: string, onDisconnect: () => void, iconColorClass: string }) => (
+  <div className={`p-4 bg-green-900/50 border ${iconColorClass}/30 rounded-lg flex items-center justify-between`}>
     <div className="flex items-center gap-3">
-      <CheckCircle className="text-green-400" size={24} />
+      <Icon className={`${iconColorClass}`} size={24} />
       <span className="font-medium text-green-300">{platformName} Conectado</span>
     </div>
     <button
@@ -64,10 +63,9 @@ export default function AccountConnection({
       } else {
         throw new Error("A função de backend não retornou uma URL de autorização.");
       }
-    } catch (error: unknown) { // <-- CORREÇÃO #1: Usamos 'unknown'
+    } catch (error: unknown) {
       console.error(`Erro ao gerar URL de autorização para ${platform}:`, error);
       
-      // CORREÇÃO #2: Verificamos o tipo do erro antes de usar a mensagem
       let errorMessage = `Não foi possível iniciar a conexão com ${platform}. Tente novamente.`;
       if (error instanceof Error) {
         errorMessage = `Não foi possível iniciar a conexão com ${platform}. Erro: ${error.message}`;
@@ -87,7 +85,7 @@ export default function AccountConnection({
       <div className="space-y-4">
         {/* Bloco para o YouTube */}
         {isYouTubeConnected ? (
-          <ConnectionStatus platformName="YouTube" onDisconnect={() => onDisconnect('youtube')} />
+          <ConnectionStatus icon={Youtube} platformName="YouTube" onDisconnect={() => onDisconnect('youtube')} iconColorClass="text-red-500" />
         ) : (
           <button
             onClick={() => handleConnect('youtube')}
@@ -101,7 +99,10 @@ export default function AccountConnection({
 
         {/* Bloco para o Instagram/Facebook */}
         {isInstagramConnected ? (
-          <ConnectionStatus platformName="Instagram" onDisconnect={() => onDisconnect('instagram')} />
+          <>
+            <ConnectionStatus icon={Instagram} platformName="Instagram" onDisconnect={() => onDisconnect('instagram')} iconColorClass="text-pink-500" />
+            <ConnectionStatus icon={Facebook} platformName="Facebook" onDisconnect={() => onDisconnect('instagram')} iconColorClass="text-blue-500" />
+          </>
         ) : (
           <button
             onClick={() => handleConnect('instagram')}
