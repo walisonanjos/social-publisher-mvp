@@ -8,6 +8,7 @@ import "react-day-picker/dist/style.css";
 import { addDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Video } from "@/types";
+import { toast } from "sonner"; // <-- MUDANÇA #1
 
 interface UploadFormProps {
   nicheId: string;
@@ -30,8 +31,9 @@ export default function UploadForm({
   );
   const [scheduleTime, setScheduleTime] = useState("09:00");
   const [isUploading, setIsUploading] = useState(false);
-  const [error, setError] = useState("");
-  const [successMessage, setSuccessMessage] = useState("");
+  // MUDANÇA #2: Linhas removidas
+  // const [error, setError] = useState("");
+  // const [successMessage, setSuccessMessage] = useState("");
 
   const [postToYouTube, setPostToYouTube] = useState(true);
   const [postToInstagram, setPostToInstagram] = useState(true);
@@ -52,17 +54,19 @@ export default function UploadForm({
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     if (!file || !title || !scheduleDate) {
-      setError("Por favor, preencha todos os campos obrigatórios.");
+      // MUDANÇA #3: Substituição do setError
+      toast.error("Por favor, preencha todos os campos obrigatórios.");
       return;
     }
     if (!postToYouTube && !postToInstagram && !postToFacebook) {
-      setError("Por favor, selecione pelo menos uma rede social para postar.");
+      toast.error("Por favor, selecione pelo menos uma rede social para postar.");
       return;
     }
 
     setIsUploading(true);
-    setError("");
-    setSuccessMessage("");
+    // MUDANÇA: Não precisamos mais limpar os estados
+    // setError("");
+    // setSuccessMessage("");
 
     try {
       if (!nicheId) throw new Error("O ID do workspace é inválido.");
@@ -116,8 +120,6 @@ export default function UploadForm({
       } = await supabase.auth.getUser();
       if (!user) throw new Error("Usuário não autenticado.");
 
-      // --- ALTERAÇÃO PRINCIPAL AQUI ---
-      // Removemos o 'status' antigo e adicionamos os status individuais.
       const { data: newVideo, error: insertError } = await supabase
         .from("videos")
         .insert({
@@ -131,7 +133,6 @@ export default function UploadForm({
           target_youtube: postToYouTube,
           target_instagram: postToInstagram,
           target_facebook: postToFacebook,
-          // Define o status inicial para cada plataforma alvo
           youtube_status: postToYouTube ? 'agendado' : null,
           instagram_status: postToInstagram ? 'agendado' : null,
           facebook_status: postToFacebook ? 'agendado' : null,
@@ -150,7 +151,8 @@ export default function UploadForm({
           "Não foi possível obter os dados do agendamento criado.",
         );
 
-      setSuccessMessage("Seu vídeo foi agendado com sucesso!");
+      // MUDANÇA #4: Substituição do setSuccessMessage
+      toast.success("Seu vídeo foi agendado com sucesso!");
 
       setFile(null);
       setTitle("");
@@ -162,8 +164,12 @@ export default function UploadForm({
 
       onScheduleSuccess(newVideo as Video);
     } catch (err) {
-      if (err instanceof Error) setError(`Ocorreu um erro: ${err.message}`);
-      else setError("Ocorreu um erro inesperado.");
+        // MUDANÇA #5: Substituição do setError no catch
+        if (err instanceof Error) {
+            toast.error(`Ocorreu um erro: ${err.message}`);
+        } else {
+            toast.error("Ocorreu um erro inesperado.");
+        }
     } finally {
       setIsUploading(false);
     }
@@ -322,16 +328,7 @@ export default function UploadForm({
             {isUploading ? "Agendando..." : "Agendar Post"}
           </button>
         </div>
-        {error && (
-          <div className="bg-red-500/20 text-red-300 p-3 rounded-md text-sm">
-            {error}
-          </div>
-        )}
-        {successMessage && (
-          <div className="bg-green-500/20 text-green-300 p-3 rounded-md text-sm">
-            {successMessage}
-          </div>
-        )}
+        {/* MUDANÇA #6: Os divs que ficavam aqui foram removidos */}
       </form>
     </div>
   );

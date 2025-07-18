@@ -1,8 +1,10 @@
 // src/app/layout.tsx
+
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import Footer from "../components/Footer";
+import { Toaster } from 'sonner'; // <-- 1. IMPORTAR O TOASTER
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -26,7 +28,6 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="pt-br">
-      {/* O segredo está aqui, no className do body */}
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased flex flex-col min-h-screen bg-gray-900`}
       >
@@ -34,6 +35,8 @@ export default function RootLayout({
           {children}
         </main>
         <Footer />
+        {/* 2. ADICIONAR O COMPONENTE AQUI */}
+        <Toaster theme="dark" richColors position="bottom-right" />
       </body>
     </html>
   );
