@@ -1,5 +1,5 @@
 // supabase/functions/post-scheduler/index.ts
-// VERSÃO REATORADA COM STATUS INDIVIDUAIS
+// VERSÃO COM FACEBOOK REELS HABILITADO
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
@@ -160,7 +160,16 @@ Deno.serve(async (_req) => {
             if (!linkedPage?.id) throw new Error(`Nenhuma Página do Facebook encontrada.`);
             const { id: facebookPageId, access_token: facebookPageAccessToken } = linkedPage;
             const postUrl = `https://graph-video.facebook.com/${GRAPH_API_VERSION}/${facebookPageId}/videos`;
-            const postParams = new URLSearchParams({ file_url: video.video_url, description: `${video.title}\n\n${video.description}`, access_token: facebookPageAccessToken });
+
+            // --- A MUDANÇA ESTÁ AQUI ---
+            const postParams = new URLSearchParams({
+              file_url: video.video_url,
+              description: `${video.title}\n\n${video.description}`,
+              access_token: facebookPageAccessToken,
+              video_type: 'REEL' // Adicionado para publicar como Reel
+            });
+            // --- FIM DA MUDANÇA ---
+
             const postResponse = await fetch(postUrl, { method: 'POST', body: postParams });
             if (!postResponse.ok) { const postData = await postResponse.json(); throw new Error(postData.error?.message); }
             updatePayload.facebook_status = 'publicado';
