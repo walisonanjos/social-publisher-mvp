@@ -12,9 +12,15 @@ import { toast } from "sonner";
 
 interface UploadFormProps {
   nicheId: string;
-  onScheduleSuccess: (newVideo: Video) => void;
+  // Alterado: onScheduleSuccess agora recebe um callback para limpar o arquivo
+  onScheduleSuccess: (newVideo: Video, clearFileCallback: () => void) => void;
   isYouTubeConnected: boolean;
   isInstagramConnected: boolean;
+  // Novas props para tornar o formulário "controlado"
+  title: string;
+  setTitle: (title: string) => void;
+  description: string;
+  setDescription: (description: string) => void;
 }
 
 export default function UploadForm({
@@ -22,10 +28,14 @@ export default function UploadForm({
   onScheduleSuccess,
   isYouTubeConnected,
   isInstagramConnected,
+  // Recebendo as novas props
+  title,
+  setTitle,
+  description,
+  setDescription,
 }: UploadFormProps) {
   const [file, setFile] = useState<File | null>(null);
-  const [title, setTitle] = useState("");
-  const [description, setDescription] = useState("");
+  // O estado de title e description foi movido para o NichePageClient
   const [scheduleDate, setScheduleDate] = useState<Date | undefined>(
     new Date(),
   );
@@ -46,6 +56,13 @@ export default function UploadForm({
     if (e.target.files && e.target.files[0]) {
       setFile(e.target.files[0]);
     }
+  };
+
+  // Função para o pai poder limpar o campo de arquivo
+  const clearFile = () => {
+    setFile(null);
+    const fileInput = document.getElementById("file-upload") as HTMLInputElement;
+    if (fileInput) fileInput.value = "";
   };
 
   const handleSubmit = async (e: FormEvent) => {
@@ -145,16 +162,10 @@ export default function UploadForm({
         );
 
       toast.success("Seu vídeo foi agendado com sucesso!");
-
-      setFile(null);
-      setTitle("");
-      setDescription("");
-      const fileInput = document.getElementById(
-        "file-upload",
-      ) as HTMLInputElement;
-      if (fileInput) fileInput.value = "";
-
-      onScheduleSuccess(newVideo as Video);
+      
+      // A limpeza de title/description agora é feita no NichePageClient
+      onScheduleSuccess(newVideo as Video, clearFile);
+      
     } catch (err) {
         if (err instanceof Error) {
             toast.error(`Ocorreu um erro: ${err.message}`);
@@ -228,26 +239,7 @@ export default function UploadForm({
               locale={ptBR}
               disabled={{ before: today, after: tenDaysFromNow }}
               className="bg-gray-900 p-2 rounded-md"
-              classNames={{
-                caption: "flex justify-center py-2 mb-2 relative items-center",
-                caption_label: "text-sm font-medium text-white",
-                nav: "flex items-center",
-                nav_button:
-                  "h-6 w-6 bg-transparent hover:bg-gray-700 p-1 rounded-full",
-                nav_button_previous: "absolute left-1",
-                nav_button_next: "absolute right-1",
-                table: "w-full border-collapse",
-                head_row: "flex font-medium text-gray-400",
-                head_cell: "w-8 font-normal text-xs",
-                row: "flex w-full mt-2",
-                cell: "text-white h-8 w-8 text-center text-sm p-0 relative [&:has([aria-selected])]:bg-teal-500/20 rounded-full",
-                day: "h-8 w-8 p-0 font-normal hover:bg-teal-500/30 rounded-full transition-colors",
-                day_selected:
-                  "bg-teal-600 text-white hover:bg-teal-700 rounded-full",
-                day_today: "text-teal-400",
-                day_outside: "text-gray-500 opacity-50",
-                day_disabled: "text-gray-600 opacity-50",
-              }}
+              classNames={{ caption: "flex justify-center py-2 mb-2 relative items-center", caption_label: "text-sm font-medium text-white", nav: "flex items-center", nav_button: "h-6 w-6 bg-transparent hover:bg-gray-700 p-1 rounded-full", nav_button_previous: "absolute left-1", nav_button_next: "absolute right-1", table: "w-full border-collapse", head_row: "flex font-medium text-gray-400", head_cell: "w-8 font-normal text-xs", row: "flex w-full mt-2", cell: "text-white h-8 w-8 text-center text-sm p-0 relative [&:has([aria-selected])]:bg-teal-500/20 rounded-full", day: "h-8 w-8 p-0 font-normal hover:bg-teal-500/30 rounded-full transition-colors", day_selected: "bg-teal-600 text-white hover:bg-teal-700 rounded-full", day_today: "text-teal-400", day_outside: "text-gray-500 opacity-50", day_disabled: "text-gray-600 opacity-50" }}
             />
           </div>
           <div>
@@ -274,32 +266,11 @@ export default function UploadForm({
         <div>
           <h3 className="text-sm font-medium text-gray-300 mb-2">Postar em:</h3>
           <div className="flex flex-wrap gap-x-6 gap-y-2">
-            <label className={`flex items-center gap-2 ${isInstagramConnected ? 'cursor-pointer text-white' : 'cursor-not-allowed text-gray-500'}`}>
-              <input type="checkbox" className="h-4 w-4 rounded bg-gray-700 border-gray-500 text-teal-600 focus:ring-teal-500 disabled:opacity-50" checked={postToInstagram} onChange={(e) => setPostToInstagram(e.target.checked)} disabled={!isInstagramConnected}/>
-              Instagram
-            </label>
-            <label className={`flex items-center gap-2 ${isInstagramConnected ? 'cursor-pointer text-white' : 'cursor-not-allowed text-gray-500'}`}>
-              <input
-                type="checkbox"
-                className="h-4 w-4 rounded bg-gray-700 border-gray-500 text-teal-600 focus:ring-teal-500 disabled:opacity-50"
-                checked={postToFacebook}
-                onChange={(e) => setPostToFacebook(e.target.checked)}
-                disabled={!isInstagramConnected}
-              />
-              Facebook
-            </label>
-            <label className={`flex items-center gap-2 ${isYouTubeConnected ? 'cursor-pointer text-white' : 'cursor-not-allowed text-gray-500'}`}>
-              <input type="checkbox" className="h-4 w-4 rounded bg-gray-700 border-gray-500 text-teal-600 focus:ring-teal-500 disabled:opacity-50" checked={postToYouTube} onChange={(e) => setPostToYouTube(e.target.checked)} disabled={!isYouTubeConnected}/>
-              YouTube
-            </label>
-            <label className="flex items-center gap-2 cursor-pointer text-gray-500">
-              <input type="checkbox" className="h-4 w-4 rounded bg-gray-700 border-gray-500 text-teal-600 focus:ring-teal-500" disabled/>
-              Tiktok
-            </label>
-            <label className="flex items-center gap-2 cursor-pointer text-gray-500">
-              <input type="checkbox" className="h-4 w-4 rounded bg-gray-700 border-gray-500 text-teal-600 focus:ring-teal-500" disabled/>
-              Kwai
-            </label>
+            <label className={`flex items-center gap-2 ${isInstagramConnected ? 'cursor-pointer text-white' : 'cursor-not-allowed text-gray-500'}`}><input type="checkbox" className="h-4 w-4 rounded bg-gray-700 border-gray-500 text-teal-600 focus:ring-teal-500 disabled:opacity-50" checked={postToInstagram} onChange={(e) => setPostToInstagram(e.target.checked)} disabled={!isInstagramConnected}/>Instagram</label>
+            <label className={`flex items-center gap-2 ${isInstagramConnected ? 'cursor-pointer text-white' : 'cursor-not-allowed text-gray-500'}`}><input type="checkbox" className="h-4 w-4 rounded bg-gray-700 border-gray-500 text-teal-600 focus:ring-teal-500 disabled:opacity-50" checked={postToFacebook} onChange={(e) => setPostToFacebook(e.target.checked)} disabled={!isInstagramConnected}/>Facebook</label>
+            <label className={`flex items-center gap-2 ${isYouTubeConnected ? 'cursor-pointer text-white' : 'cursor-not-allowed text-gray-500'}`}><input type="checkbox" className="h-4 w-4 rounded bg-gray-700 border-gray-500 text-teal-600 focus:ring-teal-500 disabled:opacity-50" checked={postToYouTube} onChange={(e) => setPostToYouTube(e.target.checked)} disabled={!isYouTubeConnected}/>YouTube</label>
+            <label className="flex items-center gap-2 cursor-pointer text-gray-500"><input type="checkbox" className="h-4 w-4 rounded bg-gray-700 border-gray-500 text-teal-600 focus:ring-teal-500" disabled/>Tiktok</label>
+            <label className="flex items-center gap-2 cursor-pointer text-gray-500"><input type="checkbox" className="h-4 w-4 rounded bg-gray-700 border-gray-500 text-teal-600 focus:ring-teal-500" disabled/>Kwai</label>
           </div>
         </div>
         <div>

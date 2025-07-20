@@ -1,4 +1,3 @@
-// src/components/VideoGrid.tsx
 "use client";
 
 import { Video } from "@/types";
@@ -13,6 +12,7 @@ import {
   XCircle,
   Clock,
   PlusCircle,
+  Copy, // <-- ADICIONADO
 } from "lucide-react";
 import { useState } from "react";
 import Link from "next/link";
@@ -23,8 +23,8 @@ import { Tooltip } from "react-tooltip";
 interface VideoGridProps {
   groupedVideos: { [key: string]: Video[] };
   onDelete: (videoId: string) => void;
-  // 1. Adicionamos a nova propriedade onEdit na interface principal
   onEdit: (video: Video) => void;
+  onDuplicate: (video: Video) => void; // <-- ADICIONADO
   sortOrder?: "asc" | "desc";
 }
 
@@ -54,11 +54,13 @@ const PlatformStatus = ({ platformName, status, error }: { platformName: 'YouTub
 function VideoCard({
   video,
   onDelete,
-  onEdit, // Recebe a nova propriedade
+  onEdit,
+  onDuplicate, // <-- ADICIONADO
 }: {
   video: Video;
   onDelete: (id: string) => void;
-  onEdit: (video: Video) => void; // Propriedade definida aqui
+  onEdit: (video: Video) => void;
+  onDuplicate: (video: Video) => void; // <-- ADICIONADO
 }) {
   const isScheduled = video.youtube_status === 'agendado' || video.instagram_status === 'agendado' || video.facebook_status === 'agendado';
 
@@ -94,6 +96,11 @@ function VideoCard({
           </div>
         </div>
         <div className="flex items-center gap-3">
+          {/* BOTÃO DUPLICAR ADICIONADO AQUI */}
+          <button onClick={() => onDuplicate(video)} title="Duplicar Post" className="text-gray-400 hover:text-white transition-colors">
+            <Copy size={14} />
+          </button>
+
           {video.youtube_status === "publicado" && video.youtube_video_id && (
             <Link href={`https://www.youtube.com/watch?v=${video.youtube_video_id}`} target="_blank" rel="noopener noreferrer" className="text-gray-400 hover:text-white transition-colors" title="Ver no YouTube">
               <LinkIcon size={16} />
@@ -119,7 +126,8 @@ function VideoCard({
 export default function VideoGrid({
   groupedVideos,
   onDelete,
-  onEdit, // 2. Recebemos a propriedade aqui
+  onEdit,
+  onDuplicate, // <-- ADICIONADO
   sortOrder = "desc",
 }: VideoGridProps) {
   const [openGroups, setOpenGroups] = useState<{ [key: string]: boolean }>({});
@@ -188,8 +196,7 @@ export default function VideoGrid({
             {isGroupOpen && (
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                 {groupedVideos[dateKey].map((video) => (
-                  // 3. Passamos a função onEdit para cada VideoCard
-                  <VideoCard key={video.id} video={video} onDelete={onDelete} onEdit={onEdit} />
+                  <VideoCard key={video.id} video={video} onDelete={onDelete} onEdit={onEdit} onDuplicate={onDuplicate} /> // <-- ADICIONADO
                 ))}
               </div>
             )}
