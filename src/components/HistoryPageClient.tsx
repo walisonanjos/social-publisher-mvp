@@ -9,9 +9,11 @@ import MainHeader from "./MainHeader";
 import Navbar from "./Navbar";
 import VideoGrid from "./VideoGrid";
 import Auth from "./Auth";
+import { useRouter } from "next/navigation"; // 1. IMPORTAR O ROUTER
 
 export default function HistoryPageClient({ nicheId }: { nicheId: string }) {
   const supabase = createClient();
+  const router = useRouter(); // 2. INICIALIZAR O ROUTER
   const [user, setUser] = useState<User | null>(null);
   const [videos, setVideos] = useState<Video[]>([]);
   const [loading, setLoading] = useState(true);
@@ -59,6 +61,15 @@ export default function HistoryPageClient({ nicheId }: { nicheId: string }) {
     };
     fetchPageData();
   }, [supabase, nicheId]);
+  
+  // 3. NOVA FUNÇÃO PARA DUPLICAR VIA URL
+  const handleDuplicate = (video: Video) => {
+    const params = new URLSearchParams({
+      title: video.title,
+      description: video.description || '',
+    });
+    router.push(`/niche/${nicheId}?${params.toString()}`);
+  };
 
   if (loading) {
     return (
@@ -73,7 +84,7 @@ export default function HistoryPageClient({ nicheId }: { nicheId: string }) {
 
   return (
     <div className="bg-gray-900 min-h-screen text-white">
-      <MainHeader user={user} pageTitle={nicheName} backLink="/niches" />
+      <MainHeader user={user} pageTitle={nicheName} backLink={`/niche/${nicheId}`} />
 
       <main className="container mx-auto p-4 md:p-8">
         <Navbar nicheId={nicheId} />
@@ -84,8 +95,9 @@ export default function HistoryPageClient({ nicheId }: { nicheId: string }) {
           </h2>
           <VideoGrid
             groupedVideos={groupedVideos}
-            onDelete={() => {}} // Na página de histórico, não permitimos exclusão.
-            onEdit={() => {}}   // <-- A CORREÇÃO ESTÁ AQUI. Passamos uma função vazia.
+            onDelete={() => {}}
+            onEdit={() => {}}
+            onDuplicate={handleDuplicate} // 4. PASSAR A NOVA FUNÇÃO
             sortOrder="desc"
           />
         </div>

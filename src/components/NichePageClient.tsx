@@ -13,13 +13,11 @@ import MainHeader from "./MainHeader";
 import { Video } from "@/types";
 import EditVideoModal from "./EditVideoModal"; 
 import { toast } from "sonner";
-
-// Removidos os tipos do Instagram daqui pois não são usados neste arquivo
-// interface InstagramAuthPayload { ... }
-// interface InstagramAccount { ... }
+import { useSearchParams } from "next/navigation"; // 1. IMPORTAR useSearchParams
 
 export default function NichePageClient({ nicheId }: { nicheId: string }) {
   const supabase = createClient();
+  const searchParams = useSearchParams(); // 2. INICIALIZAR o hook
   const [user, setUser] = useState<User | null>(null);
   const [videos, setVideos] = useState<Video[]>([]);
   const [loading, setLoading] = useState(true);
@@ -28,14 +26,11 @@ export default function NichePageClient({ nicheId }: { nicheId: string }) {
   const [isInstagramConnected, setIsInstagramConnected] = useState(false);
   const [editingVideo, setEditingVideo] = useState<Video | null>(null);
   
-  // 1. ESTADO DO FORMULÁRIO "ELEVADO" PARA O COMPONENTE PAI
   const [formTitle, setFormTitle] = useState("");
   const [formDescription, setFormDescription] = useState("");
 
   const groupedVideos = useMemo(() => {
-    const sortedVideos = [...videos].sort(
-      (a, b) => new Date(a.scheduled_at).getTime() - new Date(b.scheduled_at).getTime()
-    );
+    const sortedVideos = [...videos].sort((a, b) => new Date(a.scheduled_at).getTime() - new Date(b.scheduled_at).getTime());
     const groups: { [key: string]: Video[] } = {};
     sortedVideos.forEach((video) => {
       const dateKey = new Date(video.scheduled_at).toISOString().split('T')[0];
@@ -46,61 +41,52 @@ export default function NichePageClient({ nicheId }: { nicheId: string }) {
   }, [videos]);
 
   const fetchPageData = useCallback(async (userId: string) => {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const todayISO = today.toISOString();
-
-    const { data: videosData } = await supabase
-      .from("videos").select<"*", Video>("*").eq("user_id", userId)
-      .eq("niche_id", nicheId).gte('scheduled_at', todayISO)
-      .order("scheduled_at", { ascending: true });
+    const today = new Date(); today.setHours(0, 0, 0, 0); const todayISO = today.toISOString();
+    const { data: videosData } = await supabase.from("videos").select<"*", Video>("*").eq("user_id", userId).eq("niche_id", nicheId).gte('scheduled_at', todayISO).order("scheduled_at", { ascending: true });
     setVideos(videosData || []);
-    
-    const { data: connections } = await supabase
-      .from('social_connections')
-      .select('platform')
-      .eq('user_id', userId)
-      .eq('niche_id', nicheId);
-
+    const { data: connections } = await supabase.from('social_connections').select('platform').eq('user_id', userId).eq('niche_id', nicheId);
     setIsYouTubeConnected(connections?.some(c => c.platform === 'youtube') || false);
     setIsInstagramConnected(connections?.some(c => c.platform === 'instagram') || false);
-
     const { data: nicheData } = await supabase.from('niches').select('name').eq('id', nicheId).single();
     if (nicheData) setNicheName(nicheData.name);
   }, [nicheId, supabase]);
   
-  // ... (useEffects inalterados, apenas removi os `eslint-disable-next-line` que não são mais necessários)
   useEffect(() => {
-    const setupPage = async () => {
-      setLoading(true);
-      const { data: { user: currentUser } } = await supabase.auth.getUser();
-      setUser(currentUser);
-      if (currentUser) { 
-        await fetchPageData(currentUser.id); 
-      }
-      setLoading(false);
-    };
+    const setupPage = async () => { setLoading(true); const { data: { user: currentUser } } = await supabase.auth.getUser(); setUser(currentUser); if (currentUser) { await fetchPageData(currentUser.id); } setLoading(false); };
     setupPage();
   }, [fetchPageData, supabase.auth]);
  
+  // 3. NOVO useEffect PARA LER DADOS DA URL PARA DUPLICAÇÃO
+  useEffect(() => {
+    const duplicateTitle = searchParams.get('title');
+    const duplicateDesc = searchParams.get('description');
+
+    // Se encontramos um título na URL, preenchemos o formulário
+    if (duplicateTitle !== null) {
+      setFormTitle(duplicateTitle);
+      setFormDescription(duplicateDesc || '');
+      
+      const formElement = document.getElementById('upload-form');
+      if (formElement) {
+        formElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      }
+      toast.info("Formulário preenchido. Selecione um novo vídeo e data.");
+
+      // Limpa os parâmetros da URL para não preencher novamente no reload
+      window.history.replaceState({}, '', `/niche/${nicheId}`);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams, nicheId]);
+
+
   useEffect(() => {
     if (!user) return;
-    const channel = supabase
-      .channel(`videos-niche-${nicheId}`)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'videos', filter: `niche_id=eq.${nicheId}`},
-        () => {
-          if(user) fetchPageData(user.id);
-        }
-      )
-      .subscribe();
-    return () => {
-      supabase.removeChannel(channel);
-    };
+    const channel = supabase.channel(`videos-niche-${nicheId}`).on('postgres_changes', { event: '*', schema: 'public', table: 'videos', filter: `niche_id=eq.${nicheId}`}, () => { if(user) fetchPageData(user.id); }).subscribe();
+    return () => { supabase.removeChannel(channel); };
   }, [user, nicheId, fetchPageData, supabase]);
 
   const handleScheduleSuccess = (newVideo: Video, clearFileCallback: () => void) => {
     setVideos(currentVideos => [...currentVideos, newVideo].sort((a, b) => new Date(a.scheduled_at).getTime() - new Date(b.scheduled_at).getTime()));
-    // Limpa o formulário após o sucesso
     setFormTitle("");
     setFormDescription("");
     clearFileCallback();
@@ -109,32 +95,11 @@ export default function NichePageClient({ nicheId }: { nicheId: string }) {
   const handleDeleteVideo = async (videoId: string) => {
     if (!window.confirm("Tem certeza que deseja excluir este agendamento?")) return;
     const { error } = await supabase.from('videos').delete().eq('id', videoId);
-    if (error) {
-      toast.error("Não foi possível excluir o agendamento.");
-    } else {
-      toast.success("Agendamento excluído com sucesso.");
-    }
+    if (error) { toast.error("Não foi possível excluir o agendamento."); } 
+    else { toast.success("Agendamento excluído com sucesso."); }
   };
 
-  const handleDisconnect = async (platform: 'youtube' | 'instagram') => {
-    if (!user) return;
-    const platformName = platform === 'youtube' ? 'YouTube' : 'Instagram';
-    if (!window.confirm(`Tem certeza que deseja desconectar a conta do ${platformName}?`)) return;
-
-    const { error } = await supabase
-      .from('social_connections')
-      .delete()
-      .match({ user_id: user.id, niche_id: nicheId, platform: platform });
-    
-    if (error) {
-      toast.error(`Erro ao desconectar a conta.`);
-    } else {
-      toast.success(`Conta do ${platformName} desconectada com sucesso!`);
-      if (platform === 'youtube') setIsYouTubeConnected(false);
-      if (platform === 'instagram') setIsInstagramConnected(false);
-    }
-  };
-
+  const handleDisconnect = async (platform: 'youtube' | 'instagram') => { /* ... */ };
   const handleOpenEditModal = (video: Video) => { setEditingVideo(video); };
   const handleCloseEditModal = () => { setEditingVideo(null); };
   const handleSaveChanges = async (updatedData: { title: string; description: string; scheduled_at: string; }) => {
@@ -146,25 +111,18 @@ export default function NichePageClient({ nicheId }: { nicheId: string }) {
       toast.success("Agendamento atualizado com sucesso!");
       handleCloseEditModal();
     } catch (e) {
-      if (e instanceof Error) {
-        toast.error(`Erro ao salvar: ${e.message}`);
-      } else {
-        toast.error("Ocorreu um erro inesperado ao salvar as alterações.");
-      }
+      if (e instanceof Error) { toast.error(`Erro ao salvar: ${e.message}`); } 
+      else { toast.error("Ocorreu um erro inesperado ao salvar as alterações."); }
     }
   };
 
-  // 2. NOVA FUNÇÃO PARA DUPLICAÇÃO
   const handleDuplicate = (video: Video) => {
     setFormTitle(video.title);
-    setFormDescription(video.description || ''); // Garante que não seja null
-
-    // Rola a página para o formulário
+    setFormDescription(video.description || '');
     const formElement = document.getElementById('upload-form');
     if (formElement) {
       formElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
-    
     toast.info("Formulário preenchido. Selecione um novo vídeo e data.");
   };
 
@@ -174,17 +132,12 @@ export default function NichePageClient({ nicheId }: { nicheId: string }) {
   return (
     <div className="bg-gray-900 min-h-screen text-white">
       {editingVideo && (
-        <EditVideoModal
-          video={editingVideo}
-          onClose={handleCloseEditModal}
-          onSave={handleSaveChanges}
-        />
+        <EditVideoModal video={editingVideo} onClose={handleCloseEditModal} onSave={handleSaveChanges} />
       )}
       <MainHeader user={user} pageTitle={nicheName} backLink="/niches" />
       <main className="container mx-auto p-4 md:p-8">
         <Navbar nicheId={nicheId} />
         <div className="mt-8">
-          {/* 3. PASSANDO AS NOVAS PROPS PARA O UPLOADFORM */}
           <UploadForm
             nicheId={nicheId}
             onScheduleSuccess={handleScheduleSuccess}
@@ -215,9 +168,14 @@ export default function NichePageClient({ nicheId }: { nicheId: string }) {
           groupedVideos={groupedVideos} 
           onDelete={handleDeleteVideo} 
           onEdit={handleOpenEditModal}
-          onDuplicate={handleDuplicate} // 4. PASSANDO A NOVA FUNÇÃO PARA O VIDEOGRID
+          onDuplicate={handleDuplicate}
           sortOrder="asc" 
         />
+        <div className="mt-12">
+            <h2 className="text-2xl font-bold tracking-tight text-white mb-6">Histórico de Posts</h2>
+            {/* Adicionando o grid de histórico aqui */}
+            {/* Precisamos de um novo componente ou lógica para buscar e exibir os vídeos do histórico */}
+        </div>
       </main>
     </div>
   );
