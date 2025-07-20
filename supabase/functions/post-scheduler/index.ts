@@ -1,5 +1,5 @@
 // supabase/functions/post-scheduler/index.ts
-// VERSÃO COM FACEBOOK REELS HABILITADO
+// VERSÃO COM SISTEMA DE RETENTATIVAS (RETRY)
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
@@ -8,6 +8,9 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 const GRAPH_API_VERSION = "v20.0";
+const MAX_RETRIES = 1; // Permitiremos 1 retentativa (total de 2 tentativas)
+const RETRY_DELAY_MINUTES = 15; // A retentativa acontecerá após 15 minutos
+
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 async function startMediaContainer(accessToken: string, instagramUserId: string, videoUrl: string, caption: string): Promise<string> {
@@ -20,9 +23,9 @@ async function startMediaContainer(accessToken: string, instagramUserId: string,
   return data.id;
 }
 async function pollContainerStatus(accessToken: string, creationId: string) {
-  const MAX_RETRIES = 24; const POLL_INTERVAL_MS = 5000;
-  for (let i = 0; i < MAX_RETRIES; i++) {
-    console.log(`Verificando status do container (tentativa ${i + 1}/${MAX_RETRIES})...`);
+  const MAX_POLL_RETRIES = 24; const POLL_INTERVAL_MS = 5000;
+  for (let i = 0; i < MAX_POLL_RETRIES; i++) {
+    console.log(`Verificando status do container (tentativa ${i + 1}/${MAX_POLL_RETRIES})...`);
     const statusUrl = `https://graph.facebook.com/${GRAPH_API_VERSION}/${creationId}`;
     const params = new URLSearchParams({ fields: "status_code", access_token: accessToken });
     const response = await fetch(`${statusUrl}?${params.toString()}`);
@@ -68,7 +71,7 @@ Deno.serve(async (_req) => {
     }
 
     for (const video of scheduledVideos) {
-      const updatePayload: { [key: string]: string | null } = {};
+      const updatePayload: { [key: string]: any } = {};
       const errorMessages: string[] = [];
       let successfulPlatforms = 0;
 
@@ -121,8 +124,17 @@ Deno.serve(async (_req) => {
           successfulPlatforms++;
         } catch (e) {
           console.error(`ERRO no fluxo do YouTube (vídeo ID ${video.id}):`, e.message);
-          updatePayload.youtube_status = 'falhou';
           errorMessages.push(`YouTube: ${e.message}`);
+          
+          if (video.retry_count < MAX_RETRIES) {
+            const newScheduledAt = new Date(Date.now() + RETRY_DELAY_MINUTES * 60 * 1000).toISOString();
+            updatePayload.retry_count = video.retry_count + 1;
+            updatePayload.scheduled_at = newScheduledAt;
+            console.log(`Falha no YouTube. Reagendando post ${video.id} para ${newScheduledAt}. Tentativa ${updatePayload.retry_count}.`);
+          } else {
+            updatePayload.youtube_status = 'falhou';
+            console.log(`Máximo de tentativas atingido para o YouTube no post ${video.id}.`);
+          }
         }
       }
 
@@ -140,8 +152,17 @@ Deno.serve(async (_req) => {
           successfulPlatforms++;
         } catch(e) {
           console.error(`ERRO no fluxo do Instagram (vídeo ID ${video.id}):`, e.message);
-          updatePayload.instagram_status = 'falhou';
           errorMessages.push(`Instagram: ${e.message}`);
+
+          if (video.retry_count < MAX_RETRIES) {
+            const newScheduledAt = new Date(Date.now() + RETRY_DELAY_MINUTES * 60 * 1000).toISOString();
+            updatePayload.retry_count = video.retry_count + 1;
+            updatePayload.scheduled_at = newScheduledAt;
+            console.log(`Falha no Instagram. Reagendando post ${video.id} para ${newScheduledAt}. Tentativa ${updatePayload.retry_count}.`);
+          } else {
+            updatePayload.instagram_status = 'falhou';
+            console.log(`Máximo de tentativas atingido para o Instagram no post ${video.id}.`);
+          }
         }
       }
       
@@ -160,24 +181,29 @@ Deno.serve(async (_req) => {
             if (!linkedPage?.id) throw new Error(`Nenhuma Página do Facebook encontrada.`);
             const { id: facebookPageId, access_token: facebookPageAccessToken } = linkedPage;
             const postUrl = `https://graph-video.facebook.com/${GRAPH_API_VERSION}/${facebookPageId}/videos`;
-
-            // --- A MUDANÇA ESTÁ AQUI ---
             const postParams = new URLSearchParams({
               file_url: video.video_url,
-              description: `${video.title}\n\n${video.description}`,
+              description: `${video.title}\n\n${video.description || ''}`,
               access_token: facebookPageAccessToken,
-              video_type: 'REEL' // Adicionado para publicar como Reel
+              video_type: 'REEL'
             });
-            // --- FIM DA MUDANÇA ---
-
             const postResponse = await fetch(postUrl, { method: 'POST', body: postParams });
             if (!postResponse.ok) { const postData = await postResponse.json(); throw new Error(postData.error?.message); }
             updatePayload.facebook_status = 'publicado';
             successfulPlatforms++;
         } catch(e) {
             console.error(`ERRO no fluxo do Facebook (vídeo ID ${video.id}):`, e.message);
-            updatePayload.facebook_status = 'falhou';
             errorMessages.push(`Facebook: ${e.message}`);
+          
+            if (video.retry_count < MAX_RETRIES) {
+              const newScheduledAt = new Date(Date.now() + RETRY_DELAY_MINUTES * 60 * 1000).toISOString();
+              updatePayload.retry_count = video.retry_count + 1;
+              updatePayload.scheduled_at = newScheduledAt;
+              console.log(`Falha no Facebook. Reagendando post ${video.id} para ${newScheduledAt}. Tentativa ${updatePayload.retry_count}.`);
+            } else {
+              updatePayload.facebook_status = 'falhou';
+              console.log(`Máximo de tentativas atingido para o Facebook no post ${video.id}.`);
+            }
         }
       }
 
