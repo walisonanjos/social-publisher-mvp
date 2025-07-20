@@ -13,11 +13,11 @@ import MainHeader from "./MainHeader";
 import { Video } from "@/types";
 import EditVideoModal from "./EditVideoModal"; 
 import { toast } from "sonner";
-import { useSearchParams } from "next/navigation"; // 1. IMPORTAR useSearchParams
+import { useSearchParams } from "next/navigation";
 
 export default function NichePageClient({ nicheId }: { nicheId: string }) {
   const supabase = createClient();
-  const searchParams = useSearchParams(); // 2. INICIALIZAR o hook
+  const searchParams = useSearchParams();
   const [user, setUser] = useState<User | null>(null);
   const [videos, setVideos] = useState<Video[]>([]);
   const [loading, setLoading] = useState(true);
@@ -56,12 +56,10 @@ export default function NichePageClient({ nicheId }: { nicheId: string }) {
     setupPage();
   }, [fetchPageData, supabase.auth]);
  
-  // 3. NOVO useEffect PARA LER DADOS DA URL PARA DUPLICAÇÃO
   useEffect(() => {
     const duplicateTitle = searchParams.get('title');
     const duplicateDesc = searchParams.get('description');
 
-    // Se encontramos um título na URL, preenchemos o formulário
     if (duplicateTitle !== null) {
       setFormTitle(duplicateTitle);
       setFormDescription(duplicateDesc || '');
@@ -72,10 +70,8 @@ export default function NichePageClient({ nicheId }: { nicheId: string }) {
       }
       toast.info("Formulário preenchido. Selecione um novo vídeo e data.");
 
-      // Limpa os parâmetros da URL para não preencher novamente no reload
       window.history.replaceState({}, '', `/niche/${nicheId}`);
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams, nicheId]);
 
 
@@ -99,7 +95,27 @@ export default function NichePageClient({ nicheId }: { nicheId: string }) {
     else { toast.success("Agendamento excluído com sucesso."); }
   };
 
-  const handleDisconnect = async (platform: 'youtube' | 'instagram') => { /* ... */ };
+  // --- CORREÇÃO AQUI ---
+  const handleDisconnect = async (platform: 'youtube' | 'instagram') => {
+    if (!user) return;
+    const platformName = platform === 'youtube' ? 'YouTube' : 'Instagram';
+    if (!window.confirm(`Tem certeza que deseja desconectar a conta do ${platformName}?`)) return;
+
+    const { error } = await supabase
+      .from('social_connections')
+      .delete()
+      // A variável 'platform' agora é usada corretamente aqui
+      .match({ user_id: user.id, niche_id: nicheId, platform: platform }); 
+    
+    if (error) {
+      toast.error(`Erro ao desconectar a conta.`);
+    } else {
+      toast.success(`Conta do ${platformName} desconectada com sucesso!`);
+      if (platform === 'youtube') setIsYouTubeConnected(false);
+      if (platform === 'instagram') setIsInstagramConnected(false);
+    }
+  };
+
   const handleOpenEditModal = (video: Video) => { setEditingVideo(video); };
   const handleCloseEditModal = () => { setEditingVideo(null); };
   const handleSaveChanges = async (updatedData: { title: string; description: string; scheduled_at: string; }) => {
@@ -171,11 +187,7 @@ export default function NichePageClient({ nicheId }: { nicheId: string }) {
           onDuplicate={handleDuplicate}
           sortOrder="asc" 
         />
-        <div className="mt-12">
-            <h2 className="text-2xl font-bold tracking-tight text-white mb-6">Histórico de Posts</h2>
-            {/* Adicionando o grid de histórico aqui */}
-            {/* Precisamos de um novo componente ou lógica para buscar e exibir os vídeos do histórico */}
-        </div>
+        {/* O código que você tinha para o histórico foi removido pois esta é a página de agendamentos */}
       </main>
     </div>
   );
