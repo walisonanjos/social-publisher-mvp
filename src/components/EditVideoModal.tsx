@@ -5,8 +5,7 @@ import { useState, FormEvent, useEffect } from "react";
 import { Video } from "@/types";
 import { DayPicker } from "react-day-picker";
 import "react-day-picker/dist/style.css";
-// A CORREÇÃO ESTÁ AQUI: a palavra 'parse' foi removida
-import { addDays, format } from "date-fns"; 
+import { addDays, format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { X } from "lucide-react";
 
@@ -47,7 +46,9 @@ export default function EditVideoModal({ video, onClose, onSave }: EditVideoModa
     
     await onSave({
       title,
-      description,
+      // --- CORREÇÃO AQUI ---
+      // Garante que nunca passaremos 'null', e sim uma string vazia.
+      description: description ?? '', 
       scheduled_at: finalScheduleDate.toISOString(),
     });
 
@@ -87,7 +88,7 @@ export default function EditVideoModal({ video, onClose, onSave }: EditVideoModa
           </div>
           <div>
             <label htmlFor="description" className="block text-sm font-medium text-gray-300">Descrição</label>
-            <textarea id="description" value={description} onChange={(e) => setDescription(e.target.value)} rows={3} className="mt-1 block w-full bg-gray-900 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-teal-500 focus:border-teal-500" />
+            <textarea id="description" value={description || ''} onChange={(e) => setDescription(e.target.value)} rows={3} className="mt-1 block w-full bg-gray-900 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-teal-500 focus:border-teal-500" />
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
             <div>
