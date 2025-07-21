@@ -1,4 +1,3 @@
-// src/components/NichePageClient.tsx
 "use client";
 import { useEffect, useState, useMemo, useCallback } from "react";
 import { createClient } from "@/lib/supabaseClient";
@@ -12,6 +11,7 @@ import AccountConnection from "./AccountConnection";
 import MainHeader from "./MainHeader";
 import { Video } from "@/types";
 import EditVideoModal from "./EditVideoModal"; 
+import ViewLogsModal from "./ViewLogsModal"; // Alteração 1
 import { toast } from "sonner";
 import { useSearchParams } from "next/navigation";
 
@@ -25,6 +25,9 @@ export default function NichePageClient({ nicheId }: { nicheId: string }) {
   const [isYouTubeConnected, setIsYouTubeConnected] = useState(false);
   const [isInstagramConnected, setIsInstagramConnected] = useState(false);
   const [editingVideo, setEditingVideo] = useState<Video | null>(null);
+  
+  // Alteração 2
+  const [viewingLogsForVideo, setViewingLogsForVideo] = useState<Video | null>(null);
   
   const [formTitle, setFormTitle] = useState("");
   const [formDescription, setFormDescription] = useState("");
@@ -72,6 +75,7 @@ export default function NichePageClient({ nicheId }: { nicheId: string }) {
 
       window.history.replaceState({}, '', `/niche/${nicheId}`);
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchParams, nicheId]);
 
 
@@ -94,8 +98,7 @@ export default function NichePageClient({ nicheId }: { nicheId: string }) {
     if (error) { toast.error("Não foi possível excluir o agendamento."); } 
     else { toast.success("Agendamento excluído com sucesso."); }
   };
-
-  // --- CORREÇÃO AQUI ---
+  
   const handleDisconnect = async (platform: 'youtube' | 'instagram') => {
     if (!user) return;
     const platformName = platform === 'youtube' ? 'YouTube' : 'Instagram';
@@ -104,7 +107,6 @@ export default function NichePageClient({ nicheId }: { nicheId: string }) {
     const { error } = await supabase
       .from('social_connections')
       .delete()
-      // A variável 'platform' agora é usada corretamente aqui
       .match({ user_id: user.id, niche_id: nicheId, platform: platform }); 
     
     if (error) {
@@ -142,6 +144,11 @@ export default function NichePageClient({ nicheId }: { nicheId: string }) {
     toast.info("Formulário preenchido. Selecione um novo vídeo e data.");
   };
 
+  // Alteração 3
+  const handleViewLogs = (video: Video) => {
+    setViewingLogsForVideo(video);
+  };
+
   if (loading) { return <div className="flex items-center justify-center min-h-screen bg-gray-900"><Loader2 className="h-12 w-12 text-teal-400 animate-spin" /></div>; }
   if (!user) { return <Auth />; }
 
@@ -150,6 +157,15 @@ export default function NichePageClient({ nicheId }: { nicheId: string }) {
       {editingVideo && (
         <EditVideoModal video={editingVideo} onClose={handleCloseEditModal} onSave={handleSaveChanges} />
       )}
+
+      {/* Alteração 4A */}
+      {viewingLogsForVideo && (
+        <ViewLogsModal 
+          video={viewingLogsForVideo} 
+          onClose={() => setViewingLogsForVideo(null)} 
+        />
+      )}
+
       <MainHeader user={user} pageTitle={nicheName} backLink="/niches" />
       <main className="container mx-auto p-4 md:p-8">
         <Navbar nicheId={nicheId} />
@@ -185,9 +201,9 @@ export default function NichePageClient({ nicheId }: { nicheId: string }) {
           onDelete={handleDeleteVideo} 
           onEdit={handleOpenEditModal}
           onDuplicate={handleDuplicate}
+          onViewLogs={handleViewLogs} // Alteração 4B
           sortOrder="asc" 
         />
-        {/* O código que você tinha para o histórico foi removido pois esta é a página de agendamentos */}
       </main>
     </div>
   );
