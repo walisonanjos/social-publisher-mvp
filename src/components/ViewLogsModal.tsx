@@ -7,6 +7,7 @@ import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabaseClient";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { toast } from "sonner"; // <-- A CORREÇÃO ESTÁ AQUI
 
 interface PostLog {
   id: number;
@@ -53,7 +54,6 @@ export default function ViewLogsModal({ video, onClose }: ViewLogsModalProps) {
     fetchLogs();
   }, [video.id, supabase]);
   
-  // Efeito para fechar o modal com a tecla 'Esc'
   useEffect(() => {
     const handleEsc = (event: KeyboardEvent) => {
       if (event.key === 'Escape') onClose();
@@ -96,7 +96,7 @@ export default function ViewLogsModal({ video, onClose }: ViewLogsModalProps) {
                 <div key={log.id} className="bg-gray-900/70 p-4 rounded-lg">
                   <div className="flex justify-between items-center">
                     <div className="flex items-center gap-3">
-                      <span className={`text-xs font-bold px-2 py-1 rounded-full ${statusStyles[log.status]}`}>
+                      <span className={`text-xs font-bold px-2 py-1 rounded-full ${statusStyles[log.status as keyof typeof statusStyles]}`}>
                         {log.status.toUpperCase()}
                       </span>
                       <span className="font-semibold text-white capitalize">{log.platform}</span>
