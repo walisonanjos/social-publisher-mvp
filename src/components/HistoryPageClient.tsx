@@ -9,15 +9,19 @@ import MainHeader from "./MainHeader";
 import Navbar from "./Navbar";
 import VideoGrid from "./VideoGrid";
 import Auth from "./Auth";
-import { useRouter } from "next/navigation"; // 1. IMPORTAR O ROUTER
+import { useRouter } from "next/navigation";
+import ViewLogsModal from "./ViewLogsModal"; // 1. IMPORTAR O MODAL DE LOGS
 
 export default function HistoryPageClient({ nicheId }: { nicheId: string }) {
   const supabase = createClient();
-  const router = useRouter(); // 2. INICIALIZAR O ROUTER
+  const router = useRouter();
   const [user, setUser] = useState<User | null>(null);
   const [videos, setVideos] = useState<Video[]>([]);
   const [loading, setLoading] = useState(true);
   const [nicheName, setNicheName] = useState("Carregando...");
+  
+  // 2. ADICIONAR ESTADO PARA CONTROLAR O MODAL
+  const [viewingLogsForVideo, setViewingLogsForVideo] = useState<Video | null>(null);
 
   const groupedVideos = useMemo(() => {
     const groups: { [key: string]: Video[] } = {};
@@ -62,13 +66,17 @@ export default function HistoryPageClient({ nicheId }: { nicheId: string }) {
     fetchPageData();
   }, [supabase, nicheId]);
   
-  // 3. NOVA FUNÇÃO PARA DUPLICAR VIA URL
   const handleDuplicate = (video: Video) => {
     const params = new URLSearchParams({
       title: video.title,
       description: video.description || '',
     });
     router.push(`/niche/${nicheId}?${params.toString()}`);
+  };
+
+  // 3. ADICIONAR FUNÇÃO PARA ABRIR O MODAL
+  const handleViewLogs = (video: Video) => {
+    setViewingLogsForVideo(video);
   };
 
   if (loading) {
@@ -84,7 +92,15 @@ export default function HistoryPageClient({ nicheId }: { nicheId: string }) {
 
   return (
     <div className="bg-gray-900 min-h-screen text-white">
-      <MainHeader user={user} pageTitle={nicheName} backLink={`/niche/${nicheId}`} />
+      {/* 4. RENDERIZAR O MODAL QUANDO UM VÍDEO FOR SELECIONADO */}
+      {viewingLogsForVideo && (
+        <ViewLogsModal 
+          video={viewingLogsForVideo} 
+          onClose={() => setViewingLogsForVideo(null)} 
+        />
+      )}
+
+      <MainHeader user={user} pageTitle={`${nicheName} - Histórico`} backLink={`/niche/${nicheId}`} />
 
       <main className="container mx-auto p-4 md:p-8">
         <Navbar nicheId={nicheId} />
@@ -97,7 +113,8 @@ export default function HistoryPageClient({ nicheId }: { nicheId: string }) {
             groupedVideos={groupedVideos}
             onDelete={() => {}}
             onEdit={() => {}}
-            onDuplicate={handleDuplicate} // 4. PASSAR A NOVA FUNÇÃO
+            onDuplicate={handleDuplicate}
+            onViewLogs={handleViewLogs} // 5. PASSAR A NOVA FUNÇÃO
             sortOrder="desc"
           />
         </div>
