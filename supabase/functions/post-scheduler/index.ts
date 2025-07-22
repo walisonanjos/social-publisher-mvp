@@ -69,7 +69,6 @@ async function publishMediaContainer(accessToken: string, instagramUserId: strin
   console.log(`Mídia do Instagram publicada com sucesso! ID do post: ${data.id}`);
   return data.id; // <-- ADICIONE ESTA LINHA
 }
-}
 async function sha1(str: string): Promise<string> {
     const data = new TextEncoder().encode(str);
     const hashBuffer = await crypto.subtle.digest('SHA-1', data);
