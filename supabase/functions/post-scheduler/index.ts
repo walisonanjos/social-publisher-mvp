@@ -1,5 +1,5 @@
 // supabase/functions/post-scheduler/index.ts
-// VERSÃO FINAL COM LOGS NO BANCO DE DADOS E RETRY
+// VERSÃO FINAL COM AUTO-DESCONEXÃO DE TOKENS REVOGADOS
 
 import { createClient, SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2";
 
@@ -10,7 +10,6 @@ const corsHeaders = {
 const GRAPH_API_VERSION = "v20.0";
 const MAX_RETRIES = 1;
 const RETRY_DELAY_MINUTES = 15;
-
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 // --- NOVA FUNÇÃO HELPER PARA LOGGING ---
@@ -26,7 +25,7 @@ async function logAttempt(
       video_id,
       platform,
       status,
-      details: details.substring(0, 500) // Limita os detalhes para evitar erros
+      details: details.substring(0, 500)
     });
     if (error) {
       console.error("!!! Erro ao salvar log no banco de dados:", error.message);
@@ -35,7 +34,6 @@ async function logAttempt(
     console.error("!!! Exceção crítica ao salvar log:", e.message);
   }
 }
-
 
 async function startMediaContainer(accessToken: string, instagramUserId: string, videoUrl: string, caption: string): Promise<string> {
   const mediaUrl = `https://graph.facebook.com/${GRAPH_API_VERSION}/${instagramUserId}/media`;
@@ -83,18 +81,14 @@ Deno.serve(async (_req) => {
     const supabaseAdmin = createClient( Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")! );
 
     const now = new Date().toISOString();
-    const { data: scheduledVideos, error: fetchError } = await supabaseAdmin
-      .from("videos")
-      .select("*, niches(social_connections(*))")
-      .or('youtube_status.eq.agendado,instagram_status.eq.agendado,facebook_status.eq.agendado')
-      .lte("scheduled_at", now);
+    const { data: scheduledVideos, error: fetchError } = await supabaseAdmin.from("videos").select("*, niches(social_connections(*))").or('youtube_status.eq.agendado,instagram_status.eq.agendado,facebook_status.eq.agendado').lte("scheduled_at", now);
 
     if (fetchError) throw fetchError;
     if (!scheduledVideos || scheduledVideos.length === 0) {
       return new Response(JSON.stringify({ message: "Nenhum vídeo para processar." }), { headers: corsHeaders });
     }
 
-    for (const video of scheduledVideos) {
+    for (const video of scheduledVideos){
       const updatePayload: { [key: string]: any } = {};
       const errorMessages: string[] = [];
       let successfulPlatforms = 0;
@@ -107,8 +101,14 @@ Deno.serve(async (_req) => {
           if (!connection?.refresh_token) throw new Error("Refresh token do YouTube não encontrado.");
           
           const tokenResponse = await fetch("https://oauth2.googleapis.com/token", {
-            method: "POST", headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ client_id: Deno.env.get("GOOGLE_CLIENT_ID"), client_secret: Deno.env.get("GOOGLE_CLIENT_SECRET"), refresh_token: connection.refresh_token, grant_type: "refresh_token" }),
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              client_id: Deno.env.get("GOOGLE_CLIENT_ID"),
+              client_secret: Deno.env.get("GOOGLE_CLIENT_SECRET"),
+              refresh_token: connection.refresh_token,
+              grant_type: "refresh_token",
+            }),
           });
           const tokenText = await tokenResponse.text();
           if (!tokenText) throw new Error("A API de tokens do Google retornou uma resposta vazia.");
@@ -116,7 +116,10 @@ Deno.serve(async (_req) => {
           if (!tokenResponse.ok) throw new Error(tokenData.error_description || 'Erro desconhecido ao renovar token.');
           const accessToken = tokenData.access_token;
           
-          const videoMetadata = { snippet: { title: video.title, description: video.description, categoryId: "22" }, status: { privacyStatus: "unlisted" } };
+          const videoMetadata = {
+            snippet: { title: video.title, description: video.description, categoryId: "22" },
+            status: { privacyStatus: "unlisted" },
+          };
           const videoFileResponse = await fetch(video.video_url);
           if (!videoFileResponse.ok) throw new Error("Não foi possível buscar o vídeo do Cloudinary.");
           const videoBlob = await videoFileResponse.blob();
@@ -151,6 +154,16 @@ Deno.serve(async (_req) => {
             updatePayload.youtube_status = 'falhou';
             await logAttempt(supabaseAdmin, video.id, 'youtube', 'falha', e.message);
             console.log(`Máximo de tentativas atingido para o YouTube no post ${video.id}.`);
+
+            const isTokenError = e.message.includes('expired or revoked') || e.message.includes('invalid_grant');
+            if (isTokenError) {
+              console.log(`Token do YouTube revogado detectado para o nicho ${video.niche_id}. Removendo conexão.`);
+              await logAttempt(supabaseAdmin, video.id, 'youtube', 'falha', `Token inválido. Desconectando conta automaticamente.`);
+              await supabaseAdmin
+                .from('social_connections')
+                .delete()
+                .match({ niche_id: video.niche_id, platform: 'youtube' });
+            }
           }
         }
       }
@@ -181,6 +194,16 @@ Deno.serve(async (_req) => {
             updatePayload.instagram_status = 'falhou';
             await logAttempt(supabaseAdmin, video.id, 'instagram', 'falha', e.message);
             console.log(`Máximo de tentativas atingido para o Instagram no post ${video.id}.`);
+            
+            const isTokenError = e.message.toLowerCase().includes('token') || e.message.toLowerCase().includes('session');
+            if (isTokenError) {
+              console.log(`Token do Instagram/Meta revogado detectado para o nicho ${video.niche_id}. Removendo conexão.`);
+              await logAttempt(supabaseAdmin, video.id, 'instagram', 'falha', `Token inválido. Desconectando conta automaticamente.`);
+              await supabaseAdmin
+                .from('social_connections')
+                .delete()
+                .match({ niche_id: video.niche_id, platform: 'instagram' });
+            }
           }
         }
       }
@@ -210,7 +233,6 @@ Deno.serve(async (_req) => {
         } catch(e) {
             console.error(`ERRO no fluxo do Facebook (vídeo ID ${video.id}):`, e.message);
             errorMessages.push(`Facebook: ${e.message}`);
-          
             if (video.retry_count < MAX_RETRIES) {
               const newScheduledAt = new Date(Date.now() + RETRY_DELAY_MINUTES * 60 * 1000).toISOString();
               updatePayload.retry_count = video.retry_count + 1;
@@ -221,6 +243,16 @@ Deno.serve(async (_req) => {
               updatePayload.facebook_status = 'falhou';
               await logAttempt(supabaseAdmin, video.id, 'facebook', 'falha', e.message);
               console.log(`Máximo de tentativas atingido para o Facebook no post ${video.id}.`);
+              
+              const isTokenError = e.message.toLowerCase().includes('token') || e.message.toLowerCase().includes('session');
+              if (isTokenError) {
+                console.log(`Token do Facebook/Meta revogado detectado para o nicho ${video.niche_id}. Removendo conexão.`);
+                await logAttempt(supabaseAdmin, video.id, 'facebook', 'falha', `Token inválido. Desconectando conta automaticamente.`);
+                await supabaseAdmin
+                  .from('social_connections')
+                  .delete()
+                  .match({ niche_id: video.niche_id, platform: 'instagram' });
+              }
             }
         }
       }
