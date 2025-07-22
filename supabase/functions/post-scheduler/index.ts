@@ -60,13 +60,15 @@ async function pollContainerStatus(accessToken: string, creationId: string) {
   }
   throw new Error("Tempo limite excedido ao esperar pelo processamento do vídeo.");
 }
-async function publishMediaContainer(accessToken: string, instagramUserId: string, creationId: string) {
+async function publishMediaContainer(accessToken: string, instagramUserId: string, creationId: string): Promise<string> {
   const publishUrl = `https://graph.facebook.com/${GRAPH_API_VERSION}/${instagramUserId}/media_publish`;
   const params = new URLSearchParams({ creation_id: creationId, access_token: accessToken });
   const response = await fetch(publishUrl, { method: "POST", body: params });
   const data = await response.json();
   if (!response.ok) throw new Error(`Falha ao publicar container do Instagram: ${data.error?.message}`);
   console.log(`Mídia do Instagram publicada com sucesso! ID do post: ${data.id}`);
+  return data.id; // <-- ADICIONE ESTA LINHA
+}
 }
 async function sha1(str: string): Promise<string> {
     const data = new TextEncoder().encode(str);
@@ -177,10 +179,10 @@ Deno.serve(async (_req) => {
           const { access_token, provider_user_id: instagramUserId } = igConnection;
           const creationId = await startMediaContainer(access_token, instagramUserId, video.video_url, video.description || video.title);
           await pollContainerStatus(access_token, creationId);
-          await publishMediaContainer(access_token, instagramUserId, creationId);
-          updatePayload.instagram_status = 'publicado';
-          successfulPlatforms++;
-          await logAttempt(supabaseAdmin, video.id, 'instagram', 'sucesso', `Reel postado com sucesso.`);
+         const instagramPostId = await publishMediaContainer(access_token, instagramUserId, creationId);
+updatePayload.instagram_status = 'publicado';
+successfulPlatforms++;
+await logAttempt(supabaseAdmin, video.id, 'instagram', 'sucesso', `Reel postado com sucesso. ID do post: ${instagramPostId}`);
         } catch(e) {
           console.error(`ERRO no fluxo do Instagram (vídeo ID ${video.id}):`, e.message);
           errorMessages.push(`Instagram: ${e.message}`);
