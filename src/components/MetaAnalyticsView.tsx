@@ -70,8 +70,53 @@ export default function MetaAnalyticsView({ data, nicheId }: { data: MetaAnalyti
         <StatCard icon={ThumbsUp} label="Total de Curtidas" value={summaryStats.totalLikes.toLocaleString('pt-BR')} />
         <StatCard icon={MessageSquare} label="Total de Comentários" value={summaryStats.totalComments.toLocaleString('pt-BR')} />
       </div>
-      <div className="bg-gray-800 rounded-lg border border-gray-700 p-6 mb-8"><ResponsiveContainer width="100%" height={300}><BarChart data={chartData} margin={{ top: 5, right: 20, left: -10, bottom: 5 }}><CartesianGrid strokeDasharray="3 3" stroke="#374151" /><XAxis dataKey="name" stroke="#9ca3af" fontSize={12} tickLine={false} axisLine={false} /><YAxis stroke="#9ca3af" fontSize={12} tickLine={false} axisLine={false} /><Tooltip contentStyle={{ backgroundColor: '#1f2937', border: '1px solid #374151' }} /><Legend wrapperStyle={{ fontSize: '14px' }} /><Bar dataKey="Visualizações" fill="#e1306c" radius={[4, 4, 0, 0]} /><Bar dataKey="Curtidas" fill="#4a90e2" radius={[4, 4, 0, 0]} /></BarChart></ResponsiveContainer></div>
-      <div className="bg-gray-800 rounded-lg border border-gray-700 overflow-hidden"><table className="min-w-full divide-y divide-gray-700"><thead className="bg-gray-800/50"><tr><th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Vídeo</th><th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Plataformas</th><th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Visualizações</th><th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Curtidas</th><th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Comentários</th></tr></thead><tbody className="bg-gray-800 divide-y divide-gray-700">{dataForDisplay.map((video) => (<tr key={video.id} className="hover:bg-gray-700/50"><td className="px-6 py-4 whitespace-nowrap"><div className="text-sm font-medium text-white max-w-xs truncate" title={video.title}>{video.title}</div><div className="text-xs text-gray-400">{new Date(video.scheduled_at).toLocaleDateString('pt-BR')}</div></td><td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300"><div className="flex items-center gap-2">{video.instagram_post_id && <Instagram size={16} className="text-pink-500"/>}{video.facebook_post_id && <Facebook size={16} className="text-blue-500"/>}</div></td><td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">{video.totalViews.toLocaleString('pt-BR')}</td><td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">{video.totalLikes.toLocaleString('pt-BR')}</td><td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">{video.totalComments.toLocaleString('pt-BR')}</td></tr>))}</tbody></table></div>
+      <div className="bg-gray-800 rounded-lg border border-gray-700 p-6 mb-8">
+        <ResponsiveContainer width="100%" height={300}>
+          <BarChart data={chartData} margin={{ top: 5, right: 20, left: -10, bottom: 5 }}>
+            <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
+            <XAxis dataKey="name" stroke="#9ca3af" fontSize={12} tickLine={false} axisLine={false} />
+            <YAxis stroke="#9ca3af" fontSize={12} tickLine={false} axisLine={false} />
+            {/* Correção do any: Adicionado as React.CSSProperties */}
+            <Tooltip contentStyle={{ backgroundColor: '#1f2937', border: '1px solid #374151' } as React.CSSProperties} />
+            {/* Correção do any: Adicionado as React.CSSProperties */}
+            <Legend wrapperStyle={{ fontSize: '14px' } as React.CSSProperties} />
+            <Bar dataKey="Visualizações" fill="#e1306c" radius={[4, 4, 0, 0]} />
+            <Bar dataKey="Curtidas" fill="#4a90e2" radius={[4, 4, 0, 0]} />
+          </BarChart>
+        </ResponsiveContainer>
+      </div>
+      <div className="bg-gray-800 rounded-lg border border-gray-700 overflow-hidden">
+        <table className="min-w-full divide-y divide-gray-700">
+          <thead className="bg-gray-800/50">
+            <tr>
+              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Vídeo</th>
+              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Plataformas</th>
+              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Visualizações</th>
+              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Curtidas</th>
+              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Comentários</th>
+            </tr>
+          </thead>
+          <tbody className="bg-gray-800 divide-y divide-gray-700">
+            {dataForDisplay.map((video) => (
+              <tr key={video.id} className="hover:bg-gray-700/50">
+                <td className="px-6 py-4 whitespace-nowrap">
+                  <div className="text-sm font-medium text-white max-w-xs truncate" title={video.title}>{video.title}</div>
+                  <div className="text-xs text-gray-400">{new Date(video.scheduled_at).toLocaleDateString('pt-BR')}</div>
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
+                  <div className="flex items-center gap-2">
+                    {video.instagram_post_id && <Instagram size={16} className="text-pink-500"/>}
+                    {video.facebook_post_id && <Facebook size={16} className="text-blue-500"/>}
+                  </div>
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">{video.totalViews.toLocaleString('pt-BR')}</td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">{video.totalLikes.toLocaleString('pt-BR')}</td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">{video.totalComments.toLocaleString('pt-BR')}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </>
   );
 }

@@ -14,9 +14,13 @@ import Auth from "@/components/Auth";
 import YouTubeAnalyticsView from "./YouTubeAnalyticsView";
 import MetaAnalyticsView from "./MetaAnalyticsView";
 
-// Tipos
-interface MetaAnalyticsVideo { id: number; title: string; scheduled_at: string; instagram_post_id: string | null; facebook_post_id: string | null; instagram_insights: any | null; facebook_insights: any | null; }
-interface YouTubeAnalyticsVideo { youtube_video_id: string; title: string; thumbnail: string; scheduled_at: string; statistics: any; }
+// Tipos (atualizados para remover 'any' e corresponder aos componentes)
+interface VideoStatistics { viewCount: string; likeCount: string; commentCount: string; } // Tipo movido, mas mantido para referência se ainda usado em AnalyticsPageClient
+interface YouTubeAnalyticsVideo { youtube_video_id: string; title: string; thumbnail: string; scheduled_at: string; statistics: VideoStatistics; }
+
+interface MetaInsightValue { value: number; } // Tipo movido, mas mantido para referência
+interface MetaInsight { name: string; period: string; values: MetaInsightValue[]; } // Tipo movido, mas mantido para referência
+interface MetaAnalyticsVideo { id: number; title: string; scheduled_at: string; instagram_post_id: string | null; facebook_post_id: string | null; instagram_insights: MetaInsight[] | null; facebook_insights: MetaInsight[] | null; }
 
 
 export default function AnalyticsPageClient({ nicheId }: { nicheId: string }) {
@@ -49,10 +53,12 @@ export default function AnalyticsPageClient({ nicheId }: { nicheId: string }) {
       setIsInstagramConnected(igConnected);
 
       // Define a aba inicial com base na conexão
-      if (ytConnected && activeTab !== 'meta') {
+      if (ytConnected && activeTab !== 'meta') { // Se YouTube está conectado e a aba atual não é Meta
         setActiveTab('youtube');
-      } else if (igConnected) {
+      } else if (igConnected) { // Se Instagram está conectado (e YouTube não, ou a aba já era Meta)
         setActiveTab('meta');
+      } else { // Se nenhum está conectado, ou se a aba atual é meta e YouTube não está conectado, default para youtube (será a tela de "não conectado")
+        setActiveTab('youtube');
       }
 
       // Busca os dados para ambas as plataformas em paralelo
@@ -67,11 +73,15 @@ export default function AnalyticsPageClient({ nicheId }: { nicheId: string }) {
         const ytResult = results[resultIndex++];
         if (ytResult?.error) throw new Error(`YouTube Analytics: ${ytResult.error.message}`);
         setYoutubeData(ytResult?.data?.data || []);
+      } else {
+        setYoutubeData([]); // Limpa dados se não estiver conectado
       }
       if (igConnected) {
         const metaResult = results[resultIndex++];
         if (metaResult?.error) throw new Error(`Meta Analytics: ${metaResult.error.message}`);
         setMetaData(metaResult?.data?.data || []);
+      } else {
+        setMetaData([]); // Limpa dados se não estiver conectado
       }
     } catch (e) {
       if (e instanceof Error) setError(e.message);
@@ -96,8 +106,20 @@ export default function AnalyticsPageClient({ nicheId }: { nicheId: string }) {
 
   useEffect(() => {
     if (!user) return;
-    const channel = supabase.channel(`analytics-realtime-${nicheId}`).on('postgres_changes', { event: '*', schema: 'public', table: 'videos', filter: `niche_id=eq.${nicheId}`}, () => { if (user) fetchPageData(user.id); }).subscribe();
-    return () => { supabase.removeChannel(channel); };
+    // Monitora mudanças na tabela de 'videos'
+    const videosChannel = supabase.channel(`analytics-realtime-videos-${nicheId}`).on('postgres_changes', { event: '*', schema: 'public', table: 'videos', filter: `niche_id=eq.${nicheId}`}, () => { 
+      if (user) fetchPageData(user.id); 
+    }).subscribe();
+
+    // Monitora mudanças na tabela de 'social_connections'
+    const connectionsChannel = supabase.channel(`analytics-realtime-connections-${nicheId}`).on('postgres_changes', { event: '*', schema: 'public', table: 'social_connections', filter: `niche_id=eq.${nicheId}`}, () => { 
+      if (user) fetchPageData(user.id); 
+    }).subscribe();
+
+    return () => { 
+      supabase.removeChannel(videosChannel); 
+      supabase.removeChannel(connectionsChannel); 
+    };
   }, [user, nicheId, supabase, fetchPageData]);
 
 

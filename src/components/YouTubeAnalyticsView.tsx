@@ -3,6 +3,7 @@
 
 import { useMemo } from "react";
 import Link from 'next/link';
+import Image from 'next/image'; // Adicionado: Importação do componente Image
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { BarChart2 as ChartIcon, Youtube, Eye, ThumbsUp, MessageSquare, CameraOff } from "lucide-react";
 
@@ -56,8 +57,67 @@ export default function YouTubeAnalyticsView({ data, nicheId }: { data: YouTubeA
         <StatCard icon={ThumbsUp} label="Total de Curtidas" value={summaryStats.totalLikes.toLocaleString('pt-BR')} />
         <StatCard icon={MessageSquare} label="Total de Comentários" value={summaryStats.totalComments.toLocaleString('pt-BR')} />
       </div>
-      <div className="bg-gray-800 rounded-lg border border-gray-700 p-6 mb-8"><ResponsiveContainer width="100%" height={300}><BarChart data={chartData} margin={{ top: 5, right: 20, left: -10, bottom: 5 }}><CartesianGrid strokeDasharray="3 3" stroke="#374151" /><XAxis dataKey="name" stroke="#9ca3af" fontSize={12} tickLine={false} axisLine={false} /><YAxis stroke="#9ca3af" fontSize={12} tickLine={false} axisLine={false} /><Tooltip contentStyle={{ backgroundColor: '#1f2937', border: '1px solid #374151' }} /><Legend wrapperStyle={{ fontSize: '14px' }} /><Bar dataKey="Visualizações" fill="#2dd4bf" radius={[4, 4, 0, 0]} /><Bar dataKey="Curtidas" fill="#818cf8" radius={[4, 4, 0, 0]} /></BarChart></ResponsiveContainer></div>
-      <div className="bg-gray-800 rounded-lg border border-gray-700 overflow-hidden"><table className="min-w-full divide-y divide-gray-700"><thead className="bg-gray-800/50"><tr><th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Vídeo</th><th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Data da Postagem</th><th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Visualizações</th><th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Curtidas</th><th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Comentários</th></tr></thead><tbody className="bg-gray-800 divide-y divide-gray-700">{data.map((video) => (<tr key={video.youtube_video_id} className="hover:bg-gray-700/50"><td className="px-6 py-4 whitespace-nowrap"><div className="flex items-center"><div className="flex-shrink-0 h-10 w-20 bg-gray-700 rounded-md flex items-center justify-center">{video.thumbnail ? (<img src={video.thumbnail} alt={`Thumbnail for ${video.title}`} className="h-full w-full rounded-md object-cover" />) : (<CameraOff className="h-5 w-5 text-gray-500" />)}</div><div className="ml-4 max-w-xs truncate"><a href={`https://www.youtube.com/watch?v=${video.youtube_video_id}`} target="_blank" rel="noopener noreferrer" className="text-sm font-medium text-white hover:text-teal-400 transition-colors">{video.title}</a></div></div></td><td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">{new Date(video.scheduled_at).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' })}</td><td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">{safeParseInt(video.statistics.viewCount).toLocaleString('pt-BR')}</td><td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">{safeParseInt(video.statistics.likeCount).toLocaleString('pt-BR')}</td><td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">{safeParseInt(video.statistics.commentCount).toLocaleString('pt-BR')}</td></tr>))}</tbody></table></div>
+      <div className="bg-gray-800 rounded-lg border border-gray-700 p-6 mb-8">
+        <ResponsiveContainer width="100%" height={300}>
+          <BarChart data={chartData} margin={{ top: 5, right: 20, left: -10, bottom: 5 }}>
+            <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
+            <XAxis dataKey="name" stroke="#9ca3af" fontSize={12} tickLine={false} axisLine={false} />
+            <YAxis stroke="#9ca3af" fontSize={12} tickLine={false} axisLine={false} />
+            {/* Correção do any: Adicionado as React.CSSProperties */}
+            <Tooltip contentStyle={{ backgroundColor: '#1f2937', border: '1px solid #374151' } as React.CSSProperties} />
+            {/* Correção do any: Adicionado as React.CSSProperties */}
+            <Legend wrapperStyle={{ fontSize: '14px' } as React.CSSProperties} />
+            <Bar dataKey="Visualizações" fill="#2dd4bf" radius={[4, 4, 0, 0]} />
+            <Bar dataKey="Curtidas" fill="#818cf8" radius={[4, 4, 0, 0]} />
+          </BarChart>
+        </ResponsiveContainer>
+      </div>
+      <div className="bg-gray-800 rounded-lg border border-gray-700 overflow-hidden">
+        <table className="min-w-full divide-y divide-gray-700">
+          <thead className="bg-gray-800/50">
+            <tr>
+              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Vídeo</th>
+              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Data da Postagem</th>
+              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Visualizações</th>
+              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Curtidas</th>
+              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Comentários</th>
+            </tr>
+          </thead>
+          <tbody className="bg-gray-800 divide-y divide-gray-700">
+            {data.map((video) => (
+              <tr key={video.youtube_video_id} className="hover:bg-gray-700/50">
+                <td className="px-6 py-4 whitespace-nowrap">
+                  <div className="flex items-center">
+                    <div className="flex-shrink-0 h-10 w-20 bg-gray-700 rounded-md flex items-center justify-center relative"> {/* Adicionado 'relative' para o Image fill */}
+                      {video.thumbnail ? (
+                        <Image // Substituído <img> por <Image>
+                            src={video.thumbnail} 
+                            alt={`Thumbnail for ${video.title}`} 
+                            className="rounded-md object-cover" // ClassName para o elemento <img> interno
+                            fill // Faz a imagem preencher o pai (que tem h-10 w-20)
+                            sizes="80px" // Exemplo, ajuste conforme a responsividade
+                            priority // Opcional: para carregar mais rápido se for importante
+                        />
+                      ) : (
+                        <CameraOff className="h-5 w-5 text-gray-500" />
+                      )}
+                    </div>
+                    <div className="ml-4 max-w-xs truncate">
+                      <a href={`https://www.youtube.com/watch?v=${video.youtube_video_id}`} target="_blank" rel="noopener noreferrer" className="text-sm font-medium text-white hover:text-teal-400 transition-colors">
+                        {video.title}
+                      </a>
+                    </div>
+                  </div>
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">{new Date(video.scheduled_at).toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric' })}</td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">{safeParseInt(video.statistics.viewCount).toLocaleString('pt-BR')}</td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">{safeParseInt(video.statistics.likeCount).toLocaleString('pt-BR')}</td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">{safeParseInt(video.statistics.commentCount).toLocaleString('pt-BR')}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </>
   );
 }
