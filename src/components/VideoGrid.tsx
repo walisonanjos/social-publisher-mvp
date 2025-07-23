@@ -13,7 +13,7 @@ import {
   Clock,
   PlusCircle,
   Copy,
-  ScrollText, // 1. IMPORTAR O ÍCONE DE LOGS
+  ScrollText,
 } from "lucide-react";
 import { useState } from "react";
 import Link from "next/link";
@@ -23,10 +23,11 @@ import { Tooltip } from "react-tooltip";
 
 interface VideoGridProps {
   groupedVideos: { [key: string]: Video[] };
-  onDelete: (videoId: string) => void;
+  // CORREÇÃO: Alterado o tipo de videoId de 'string' para 'number'
+  onDelete: (videoId: number) => void; 
   onEdit: (video: Video) => void;
   onDuplicate: (video: Video) => void;
-  onViewLogs: (video: Video) => void; // 2. ADICIONAR NOVA PROPRIEDADE
+  onViewLogs: (video: Video) => void; 
   sortOrder?: "asc" | "desc";
 }
 
@@ -58,13 +59,14 @@ function VideoCard({
   onDelete,
   onEdit,
   onDuplicate,
-  onViewLogs, // 3. RECEBER A NOVA PROPRIEDADE
+  onViewLogs,
 }: {
   video: Video;
-  onDelete: (id: string) => void;
+  // CORREÇÃO: Alterado o tipo de id de 'string' para 'number'
+  onDelete: (id: number) => void; 
   onEdit: (video: Video) => void;
   onDuplicate: (video: Video) => void;
-  onViewLogs: (video: Video) => void; // 3. DEFINIR A PROPRIEDADE
+  onViewLogs: (video: Video) => void;
 }) {
   const isScheduled = video.youtube_status === 'agendado' || video.instagram_status === 'agendado' || video.facebook_status === 'agendado';
 
@@ -100,7 +102,6 @@ function VideoCard({
           </div>
         </div>
         <div className="flex items-center gap-3">
-          {/* 4. ADICIONAR O BOTÃO DE VER LOGS */}
           <button onClick={() => onViewLogs(video)} title="Ver Histórico de Postagem" className="text-gray-400 hover:text-white transition-colors">
             <ScrollText size={14} />
           </button>
@@ -136,7 +137,7 @@ export default function VideoGrid({
   onDelete,
   onEdit,
   onDuplicate,
-  onViewLogs, // 5. RECEBER A PROPRIEDADE
+  onViewLogs,
   sortOrder = "desc",
 }: VideoGridProps) {
   const [openGroups, setOpenGroups] = useState<{ [key: string]: boolean }>({});
@@ -205,7 +206,7 @@ export default function VideoGrid({
             {isGroupOpen && (
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                 {groupedVideos[dateKey].map((video) => (
-                  <VideoCard key={video.id} video={video} onDelete={onDelete} onEdit={onEdit} onDuplicate={onDuplicate} onViewLogs={onViewLogs} /> // 6. PASSAR A PROPRIEDADE
+                  <VideoCard key={video.id} video={video} onDelete={onDelete} onEdit={onEdit} onDuplicate={onDuplicate} onViewLogs={onViewLogs} />
                 ))}
               </div>
             )}
