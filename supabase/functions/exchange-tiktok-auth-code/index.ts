@@ -13,20 +13,16 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const url = new URL(req.url);
-    const code = url.searchParams.get("code");
-    const state = url.searchParams.get("state");
+    const { code, state } = await req.json();
 
-    if (!code) throw new Error("O 'code' de autorização do TikTok não foi encontrado na URL.");
-    if (!state) throw new Error("O 'state' (com niche_id e user_id) não foi encontrado na URL.");
+    if (!code) throw new Error("O 'code' de autorização do TikTok não foi encontrado no body da requisição.");
+    if (!state) throw new Error("O 'state' (com niche_id e user_id) não foi encontrado no body da requisição.");
 
-    // O state é base64 encoded do frontend
     const { nicheId, userId } = JSON.parse(atob(state));
 
-    // Variáveis de ambiente do TikTok
     const TIKTOK_CLIENT_ID = Deno.env.get("TIKTOK_CLIENT_ID");
     const TIKTOK_CLIENT_SECRET = Deno.env.get("TIKTOK_CLIENT_SECRET");
-    const TIKTOK_REDIRECT_URI = Deno.env.get("TIKTOK_REDIRECT_URI"); // Agora aponta para esta Edge Function
+    const TIKTOK_REDIRECT_URI = Deno.env.get("TIKTOK_REDIRECT_URI"); 
 
     if (!TIKTOK_CLIENT_ID || !TIKTOK_CLIENT_SECRET || !TIKTOK_REDIRECT_URI) {
       throw new Error("Variáveis de ambiente TIKTOK_CLIENT_ID, TIKTOK_CLIENT_SECRET ou TIKTOK_REDIRECT_URI não configuradas.");
@@ -35,47 +31,61 @@ Deno.serve(async (req) => {
     // --- Etapa 1: Trocar o código pelo token de acesso do TikTok ---
     const tokenResponse = await fetch("https://www.tiktok.com/v2/oauth/token/", {
       method: "POST",
-      headers: { "Content-Type": "application/x-www-form-urlencoded" }, // TikTok exige form-urlencoded
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
       body: new URLSearchParams({
         client_key: TIKTOK_CLIENT_ID,
         client_secret: TIKTOK_CLIENT_SECRET,
         code: code,
         grant_type: "authorization_code",
-        redirect_uri: TIKTOK_REDIRECT_URI // Deve ser a URL desta Edge Function
+        redirect_uri: TIKTOK_REDIRECT_URI
       }).toString()
     });
 
     if (!tokenResponse.ok) {
-      const errorData = await tokenResponse.json(); // TikTok retorna JSON em caso de erro
-      console.error("Erro na troca de código do TikTok:", errorData);
-      throw new Error(`O TikTok retornou um erro durante a troca de código: ${errorData.message || errorData.error_description || JSON.stringify(errorData)}`);
+      // Capturar e logar mais detalhes do erro da API do TikTok
+      const errorResponseText = await tokenResponse.text();
+      let errorMessageFromTikTok = errorResponseText;
+      try {
+        const errorJson = JSON.parse(errorResponseText);
+        errorMessageFromTikTok = errorJson.message || errorJson.error_description || JSON.stringify(errorJson);
+      } catch (parseError) {
+        // Não foi JSON, usar texto puro
+      }
+      console.error("ERRO API TIKTOK (troca de token):", errorMessageFromTikTok);
+      throw new Error(`TikTok token exchange failed: ${errorMessageFromTikTok} (Status: ${tokenResponse.status})`);
     }
 
     const tokens = await tokenResponse.json();
     console.log("Tokens do TikTok recebidos com sucesso.");
 
     // --- Etapa 2: Usar o access_token para buscar o user_id (open_id) do TikTok ---
-    // A documentação do TikTok indica que o open_id vem na resposta do token endpoint.
-    // Se não vier, uma chamada adicional para /oauth/userinfo/ pode ser necessária.
-    const tiktokOpenId = tokens.open_id; // open_id é o ID do usuário TikTok
+    let tiktokOpenId = tokens.open_id;
     if (!tiktokOpenId) {
       console.warn("Open ID do TikTok não encontrado na resposta do token. Tentando userinfo endpoint.");
-      const userInfoResponse = await fetch("https://open.tiktokapis.com/v2/user/info/", { // Endpoint de userinfo
-        method: "POST", // A documentação indica POST
+      const userInfoResponse = await fetch("https://open.tiktokapis.com/v2/user/info/", {
+        method: "POST",
         headers: {
           "Authorization": `Bearer ${tokens.access_token}`,
           "Content-Type": "application/json"
         },
         body: JSON.stringify({
-          fields: ["open_id", "display_name", "avatar_url"] // Campos que você pode querer, open_id é crucial
+          fields: ["open_id", "display_name", "avatar_url"]
         })
       });
       if (!userInfoResponse.ok) {
-        const userInfoError = await userInfoResponse.json();
-        throw new Error(`Falha ao buscar user info do TikTok: ${userInfoError.data?.error?.message || JSON.stringify(userInfoError)}`);
+        const userInfoErrorResponseText = await userInfoResponse.text();
+        let userInfoErrorMessage = userInfoErrorResponseText;
+        try {
+          const userInfoErrorJson = JSON.parse(userInfoErrorResponseText);
+          userInfoErrorMessage = userInfoErrorJson.data?.error?.message || JSON.stringify(userInfoErrorJson);
+        } catch (parseError) {
+          // Não foi JSON
+        }
+        console.error("ERRO API TIKTOK (user info):", userInfoErrorMessage);
+        throw new Error(`TikTok user info fetch failed: ${userInfoErrorMessage} (Status: ${userInfoResponse.status})`);
       }
       const userInfoData = await userInfoResponse.json();
-      const extractedOpenId = userInfoData.data?.user?.open_id; // Caminho para o open_id na resposta
+      const extractedOpenId = userInfoData.data?.user?.open_id;
       if (!extractedOpenId) {
         throw new Error("Não foi possível extrair o Open ID do TikTok da resposta da API.");
       }
@@ -88,10 +98,10 @@ Deno.serve(async (req) => {
     const { error: dbError } = await supabaseAdmin.from("social_connections").upsert({
       user_id: userId,
       niche_id: nicheId,
-      platform: "tiktok", // Plataforma é 'tiktok'
-      provider_user_id: tiktokOpenId, // O ID único do usuário TikTok
+      platform: "tiktok",
+      provider_user_id: tiktokOpenId,
       access_token: tokens.access_token,
-      refresh_token: tokens.refresh_token || null, // refresh_token pode não vir para todos os grants
+      refresh_token: tokens.refresh_token || null,
       expires_at: new Date(Date.now() + tokens.expires_in * 1000).toISOString()
     }, { 
       onConflict: "niche_id, platform"
@@ -100,13 +110,20 @@ Deno.serve(async (req) => {
     if (dbError) throw dbError;
 
     console.log("Conexão do TikTok salva com sucesso.");
-    const siteUrl = Deno.env.get("SITE_URL") || 'http://localhost:3000';
-    return Response.redirect(`${siteUrl}/niche/${nicheId}`);
+    return new Response(JSON.stringify({ success: true }), { 
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      status: 200 
+    });
 
-  } catch (error: any) { // Adicionado 'any' para o tipo de exceção
-    console.error("ERRO FINAL NA EDGE FUNCTION exchange-tiktok-auth-code:", error.message);
-    const siteUrl = Deno.env.get("SITE_URL") || 'http://localhost:3000';
-    // Redireciona de volta para o frontend com um parâmetro de erro
-    return Response.redirect(`${siteUrl}/niche/${nicheId}?error=tiktok_oauth_failed&message=${encodeURIComponent(error.message)}`, 302);
+  } catch (error: unknown) { // Use 'unknown' para melhor tipagem
+    // Detalhar o erro para o frontend e para os logs do Supabase
+    const detailedErrorMessage = error instanceof Error ? error.message : String(error);
+    console.error("ERRO NA EDGE FUNCTION exchange-tiktok-auth-code:", detailedErrorMessage);
+    
+    // Retorna um erro JSON para a rota de API do Next.js
+    return new Response(JSON.stringify({ error: detailedErrorMessage }), {
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      status: 400
+    });
   }
 });
