@@ -4,11 +4,11 @@ import { NextResponse } from 'next/server';
 const EXCHANGE_TIKTOK_AUTH_CODE_FUNCTION_URL = `https://${process.env.NEXT_PUBLIC_SUPABASE_PROJECT_REF}.supabase.co/functions/v1/exchange-tiktok-auth-code`;
 
 export async function GET(request: Request) {
-  const { searchParams } = new URL(request.url);
+  const { searchParams } = new URL(request.url); // searchParams já é um URLSearchParams
   const code = searchParams.get('code');
-  const state = searchParams.searchParams.get('state');
+  // CORREÇÃO: Removido o ".searchParams" redundante
+  const state = searchParams.get('state'); 
 
-  // CORREÇÃO: Definir siteUrl uma única vez no início da função
   const siteUrl = process.env.SITE_URL || 'http://localhost:3000'; 
 
   if (!code || !state) {
