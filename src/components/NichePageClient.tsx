@@ -15,7 +15,7 @@ import EditVideoModal from "./EditVideoModal";
 import ViewLogsModal from "./ViewLogsModal";
 import { toast } from "sonner";
 import { useSearchParams } from "next/navigation";
-// import Image from "next/image"; // Removido na etapa anterior por não ser utilizado aqui
+// import Image from "next/image"; // Removido por não ser utilizado aqui
 
 export default function NichePageClient({ nicheId }: { nicheId: string }) {
   const supabase = createClient();
@@ -26,6 +26,7 @@ export default function NichePageClient({ nicheId }: { nicheId: string }) {
   const [nicheName, setNicheName] = useState("Carregando...");
   const [isYouTubeConnected, setIsYouTubeConnected] = useState(false);
   const [isInstagramConnected, setIsInstagramConnected] = useState(false);
+  const [isTikTokConnected, setIsTikTokConnected] = useState(false); // <-- NOVO: Estado para a conexão TikTok
   const [editingVideo, setEditingVideo] = useState<Video | null>(null);
   
   const [viewingLogsForVideo, setViewingLogsForVideo] = useState<Video | null>(null);
@@ -49,8 +50,12 @@ export default function NichePageClient({ nicheId }: { nicheId: string }) {
     const { data: videosData } = await supabase.from("videos").select<"*", Video>("*").eq("user_id", userId).eq("niche_id", nicheId).gte('scheduled_at', todayISO).order("scheduled_at", { ascending: true });
     setVideos(videosData || []);
     const { data: connections } = await supabase.from('social_connections').select('platform').eq('user_id', userId).eq('niche_id', nicheId);
+    
+    // ATUALIZADO: Verificação de todas as plataformas conectadas
     setIsYouTubeConnected(connections?.some(c => c.platform === 'youtube') || false);
     setIsInstagramConnected(connections?.some(c => c.platform === 'instagram') || false);
+    setIsTikTokConnected(connections?.some(c => c.platform === 'tiktok') || false); // <-- NOVO: Verifica conexão TikTok
+
     const { data: nicheData } = await supabase.from('niches').select('name').eq('id', nicheId).single();
     if (nicheData) setNicheName(nicheData.name);
   }, [nicheId, supabase]);
@@ -82,10 +87,15 @@ export default function NichePageClient({ nicheId }: { nicheId: string }) {
   useEffect(() => {
     if (!user) return;
     const channel = supabase.channel(`videos-niche-${nicheId}`).on('postgres_changes', { event: '*', schema: 'public', table: 'videos', filter: `niche_id=eq.${nicheId}`}, () => { if(user) fetchPageData(user.id); }).subscribe();
-    return () => { supabase.removeChannel(channel); };
+    // NOVO: Adiciona real-time listening para social_connections também, para refletir desconexões
+    const connectionsChannel = supabase.channel(`connections-niche-${nicheId}`).on('postgres_changes', { event: '*', schema: 'public', table: 'social_connections', filter: `niche_id=eq.${nicheId}`}, () => { if(user) fetchPageData(user.id); }).subscribe();
+
+    return () => { 
+      supabase.removeChannel(channel); 
+      supabase.removeChannel(connectionsChannel); // Limpeza do novo canal
+    };
   }, [user, nicheId, fetchPageData, supabase]);
 
-  // ESSA É A FUNÇÃO QUE ESTAVA "NÃO ENCONTRADA"
   const handleScheduleSuccess = (newVideo: Video, clearFileCallback: () => void) => {
     setVideos(currentVideos => [...currentVideos, newVideo].sort((a, b) => new Date(a.scheduled_at).getTime() - new Date(b.scheduled_at).getTime()));
     setFormTitle("");
@@ -100,9 +110,10 @@ export default function NichePageClient({ nicheId }: { nicheId: string }) {
     else { toast.success("Agendamento excluído com sucesso."); }
   };
   
-  const handleDisconnect = async (platform: 'youtube' | 'instagram') => {
+  // ATUALIZADO: handleDisconnect para incluir 'tiktok'
+  const handleDisconnect = async (platform: 'youtube' | 'instagram' | 'tiktok') => {
     if (!user) return;
-    const platformName = platform === 'youtube' ? 'YouTube' : 'Instagram';
+    const platformName = platform === 'youtube' ? 'YouTube' : (platform === 'instagram' ? 'Instagram/Facebook' : 'TikTok'); // Nome para o toast
     if (!window.confirm(`Tem certeza que deseja desconectar a conta do ${platformName}?`)) return;
 
     const { error } = await supabase
@@ -114,8 +125,10 @@ export default function NichePageClient({ nicheId }: { nicheId: string }) {
       toast.error(`Erro ao desconectar a conta.`);
     } else {
       toast.success(`Conta do ${platformName} desconectada com sucesso!`);
+      // Atualiza os estados de conexão
       if (platform === 'youtube') setIsYouTubeConnected(false);
-      if (platform === 'instagram') setIsInstagramConnected(false);
+      if (platform === 'instagram') setIsInstagramConnected(false); // Desconecta Instagram (que também lida com Facebook)
+      if (platform === 'tiktok') setIsTikTokConnected(false); // <-- NOVO: Desconecta TikTok
     }
   };
 
@@ -181,10 +194,12 @@ export default function NichePageClient({ nicheId }: { nicheId: string }) {
           />
         </div>
         <div className="mt-8">
+          {/* ATUALIZADO: Passa a nova prop isTikTokConnected */}
           <AccountConnection 
             nicheId={nicheId}
             isYouTubeConnected={isYouTubeConnected}
             isInstagramConnected={isInstagramConnected}
+            isTikTokConnected={isTikTokConnected} // <-- NOVO: Passando a prop
             onDisconnect={handleDisconnect}
           />
         </div>
