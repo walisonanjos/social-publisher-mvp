@@ -1,5 +1,5 @@
 // supabase/functions/post-scheduler/index.ts
-// VERSÃO FINAL COM AUTO-DESCONEXÃO DE TOKENS REVOGADOS
+// VERSÃO FINAL COM AUTO-DESCONEXÃO DE TOKENS REVOGADOS E ATUALIZAÇÕES ATÔMICAS DE STATUS/IDs
 
 import { createClient, SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2";
 
@@ -12,7 +12,7 @@ const MAX_RETRIES = 1;
 const RETRY_DELAY_MINUTES = 15;
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
-// --- NOVA FUNÇÃO HELPER PARA LOGGING ---
+// --- FUNÇÃO HELPER PARA LOGGING ---
 async function logAttempt(
   supabaseAdmin: SupabaseClient,
   video_id: number,
@@ -30,7 +30,7 @@ async function logAttempt(
     if (error) {
       console.error("!!! Erro ao salvar log no banco de dados:", error.message);
     }
-  } catch (e) {
+  } catch (e: any) { // Adicionado 'any' para o tipo de exceção
     console.error("!!! Exceção crítica ao salvar log:", e.message);
   }
 }
@@ -67,7 +67,7 @@ async function publishMediaContainer(accessToken: string, instagramUserId: strin
   const data = await response.json();
   if (!response.ok) throw new Error(`Falha ao publicar container do Instagram: ${data.error?.message}`);
   console.log(`Mídia do Instagram publicada com sucesso! ID do post: ${data.id}`);
-  return data.id; // <-- ADICIONE ESTA LINHA
+  return data.id;
 }
 async function sha1(str: string): Promise<string> {
     const data = new TextEncoder().encode(str);
@@ -89,10 +89,11 @@ Deno.serve(async (_req) => {
       return new Response(JSON.stringify({ message: "Nenhum vídeo para processar." }), { headers: corsHeaders });
     }
 
+    // Processa vídeos um por um para isolar erros
     for (const video of scheduledVideos){
-      const updatePayload: { [key: string]: any } = {};
       const errorMessages: string[] = [];
       let successfulPlatforms = 0;
+      let updateRequired = false; // Flag para indicar se alguma atualização é necessária no final
 
       // --- TENTATIVA DE POSTAGEM NO YOUTUBE ---
       if (video.target_youtube && video.youtube_status === 'agendado') {
@@ -137,23 +138,42 @@ Deno.serve(async (_req) => {
           const uploadResult = JSON.parse(uploadText);
           if (!uploadResponse.ok) throw new Error(uploadResult.error.message);
           
-          await supabaseAdmin.from("videos").update({ youtube_video_id: uploadResult.id }).eq("id", video.id);
-          updatePayload.youtube_video_id = uploadResult.id;
-          updatePayload.youtube_status = 'publicado';
+          // ATUALIZAÇÃO ATÔMICA PARA YOUTUBE
+          const { error: ytUpdateError } = await supabaseAdmin.from("videos").update({
+              youtube_video_id: uploadResult.id,
+              youtube_status: 'publicado'
+          }).eq("id", video.id);
+          if (ytUpdateError) console.error("Erro ao atualizar status/ID do YouTube:", ytUpdateError);
+          else updateRequired = true; // Marca que uma atualização de sucesso ocorreu
+
           successfulPlatforms++;
           await logAttempt(supabaseAdmin, video.id, 'youtube', 'sucesso', `Vídeo postado. ID no YouTube: ${uploadResult.id}`);
-        } catch (e) {
+
+        } catch (e: any) { // Adicionado 'any' para o tipo de exceção
           console.error(`ERRO no fluxo do YouTube (vídeo ID ${video.id}):`, e.message);
-          errorMessages.push(`YouTube: ${e.message}`);
+          errorMessages.push(`Falha no YouTube: ${e.message}`);
           
           if (video.retry_count < MAX_RETRIES) {
             const newScheduledAt = new Date(Date.now() + RETRY_DELAY_MINUTES * 60 * 1000).toISOString();
-            updatePayload.retry_count = video.retry_count + 1;
-            updatePayload.scheduled_at = newScheduledAt;
+            // ATUALIZAÇÃO ATÔMICA DE RETENTATIVA PARA YOUTUBE
+            const { error: ytRetryUpdateError } = await supabaseAdmin.from("videos").update({
+              retry_count: video.retry_count + 1,
+              scheduled_at: newScheduledAt,
+              youtube_status: 'agendado' // Mantém o status agendado para nova tentativa
+            }).eq("id", video.id);
+            if (ytRetryUpdateError) console.error("Erro ao atualizar retry YouTube:", ytRetryUpdateError);
+            else updateRequired = true;
+
             await logAttempt(supabaseAdmin, video.id, 'youtube', 'retentativa', e.message);
-            console.log(`Falha no YouTube. Reagendando post ${video.id} para ${newScheduledAt}. Tentativa ${updatePayload.retry_count}.`);
+            console.log(`Falha no YouTube. Reagendando post ${video.id} para ${newScheduledAt}. Tentativa ${video.retry_count + 1}.`);
           } else {
-            updatePayload.youtube_status = 'falhou';
+            // ATUALIZAÇÃO ATÔMICA DE FALHA FINAL PARA YOUTUBE
+            const { error: ytFailUpdateError } = await supabaseAdmin.from("videos").update({
+                youtube_status: 'falhou'
+            }).eq("id", video.id);
+            if (ytFailUpdateError) console.error("Erro ao atualizar falha YouTube:", ytFailUpdateError);
+            else updateRequired = true;
+
             await logAttempt(supabaseAdmin, video.id, 'youtube', 'falha', e.message);
             console.log(`Máximo de tentativas atingido para o YouTube no post ${video.id}.`);
 
@@ -179,22 +199,43 @@ Deno.serve(async (_req) => {
           const { access_token, provider_user_id: instagramUserId } = igConnection;
           const creationId = await startMediaContainer(access_token, instagramUserId, video.video_url, video.description || video.title);
           await pollContainerStatus(access_token, creationId);
-         const instagramPostId = await publishMediaContainer(access_token, instagramUserId, creationId);
-         updatePayload.instagram_post_id = instagramPostId;
-updatePayload.instagram_status = 'publicado';
-successfulPlatforms++;
-await logAttempt(supabaseAdmin, video.id, 'instagram', 'sucesso', `Reel postado com sucesso. ID do post: ${instagramPostId}`);
-        } catch(e) {
+          const instagramPostId = await publishMediaContainer(access_token, instagramUserId, creationId);
+          
+          // ATUALIZAÇÃO ATÔMICA PARA INSTAGRAM
+          const { error: igUpdateError } = await supabaseAdmin.from("videos").update({
+              instagram_post_id: instagramPostId,
+              instagram_status: 'publicado'
+          }).eq("id", video.id);
+          if (igUpdateError) console.error("Erro ao atualizar status/ID do Instagram:", igUpdateError);
+          else updateRequired = true;
+
+          successfulPlatforms++;
+          await logAttempt(supabaseAdmin, video.id, 'instagram', 'sucesso', `Reel postado com sucesso. ID do post: ${instagramPostId}`);
+
+        } catch(e: any) { // Adicionado 'any' para o tipo de exceção
           console.error(`ERRO no fluxo do Instagram (vídeo ID ${video.id}):`, e.message);
-          errorMessages.push(`Instagram: ${e.message}`);
+          errorMessages.push(`Falha no Instagram: ${e.message}`);
           if (video.retry_count < MAX_RETRIES) {
             const newScheduledAt = new Date(Date.now() + RETRY_DELAY_MINUTES * 60 * 1000).toISOString();
-            updatePayload.retry_count = video.retry_count + 1;
-            updatePayload.scheduled_at = newScheduledAt;
+            // ATUALIZAÇÃO ATÔMICA DE RETENTATIVA PARA INSTAGRAM
+            const { error: igRetryUpdateError } = await supabaseAdmin.from("videos").update({
+              retry_count: video.retry_count + 1,
+              scheduled_at: newScheduledAt,
+              instagram_status: 'agendado' // Mantém o status agendado para nova tentativa
+            }).eq("id", video.id);
+            if (igRetryUpdateError) console.error("Erro ao atualizar retry Instagram:", igRetryUpdateError);
+            else updateRequired = true;
+
             await logAttempt(supabaseAdmin, video.id, 'instagram', 'retentativa', e.message);
-            console.log(`Falha no Instagram. Reagendando post ${video.id} para ${newScheduledAt}. Tentativa ${updatePayload.retry_count}.`);
+            console.log(`Falha no Instagram. Reagendando post ${video.id} para ${newScheduledAt}. Tentativa ${video.retry_count + 1}.`);
           } else {
-            updatePayload.instagram_status = 'falhou';
+            // ATUALIZAÇÃO ATÔMICA DE FALHA FINAL PARA INSTAGRAM
+            const { error: igFailUpdateError } = await supabaseAdmin.from("videos").update({
+                instagram_status: 'falhou'
+            }).eq("id", video.id);
+            if (igFailUpdateError) console.error("Erro ao atualizar falha Instagram:", igFailUpdateError);
+            else updateRequired = true;
+            
             await logAttempt(supabaseAdmin, video.id, 'instagram', 'falha', e.message);
             console.log(`Máximo de tentativas atingido para o Instagram no post ${video.id}.`);
             
@@ -215,7 +256,7 @@ await logAttempt(supabaseAdmin, video.id, 'instagram', 'sucesso', `Reel postado 
       if (video.target_facebook && video.facebook_status === 'agendado') {
         try {
             console.log(`Processando Facebook para o vídeo ID: ${video.id}`);
-            const metaConnection = video.niches?.social_connections.find((c: any) => c.platform === 'instagram');
+            const metaConnection = video.niches?.social_connections.find((c: any) => c.platform === 'instagram'); // Usa a conexão 'instagram' para Meta
             if (!metaConnection?.access_token || !metaConnection?.provider_user_id) throw new Error("Credenciais da Meta não encontradas.");
             const { access_token: userAccessToken, provider_user_id: instagramUserId } = metaConnection;
             const accountsUrl = `https://graph.facebook.com/${GRAPH_API_VERSION}/me/accounts?fields=id,name,access_token,instagram_business_account{id}&access_token=${userAccessToken}`;
@@ -230,21 +271,42 @@ await logAttempt(supabaseAdmin, video.id, 'instagram', 'sucesso', `Reel postado 
             const postResponse = await fetch(postUrl, { method: 'POST', body: postParams });
             if (!postResponse.ok) { const postData = await postResponse.json(); throw new Error(postData.error?.message); }
             const finalPostData = await postResponse.json();
-            updatePayload.facebook_post_id = finalPostData.id;
-            updatePayload.facebook_status = 'publicado';
+
+            // ATUALIZAÇÃO ATÔMICA PARA FACEBOOK
+            const { error: fbUpdateError } = await supabaseAdmin.from("videos").update({
+                facebook_post_id: finalPostData.id,
+                facebook_status: 'publicado'
+            }).eq("id", video.id);
+            if (fbUpdateError) console.error("Erro ao atualizar status/ID do Facebook:", fbUpdateError);
+            else updateRequired = true;
+
             successfulPlatforms++;
             await logAttempt(supabaseAdmin, video.id, 'facebook', 'sucesso', `Reel postado com sucesso. ID do post: ${finalPostData.id}`);
-        } catch(e) {
+
+        } catch(e: any) { // Adicionado 'any' para o tipo de exceção
             console.error(`ERRO no fluxo do Facebook (vídeo ID ${video.id}):`, e.message);
-            errorMessages.push(`Facebook: ${e.message}`);
+            errorMessages.push(`Falha no Facebook: ${e.message}`);
             if (video.retry_count < MAX_RETRIES) {
               const newScheduledAt = new Date(Date.now() + RETRY_DELAY_MINUTES * 60 * 1000).toISOString();
-              updatePayload.retry_count = video.retry_count + 1;
-              updatePayload.scheduled_at = newScheduledAt;
+              // ATUALIZAÇÃO ATÔMICA DE RETENTATIVA PARA FACEBOOK
+              const { error: fbRetryUpdateError } = await supabaseAdmin.from("videos").update({
+                retry_count: video.retry_count + 1,
+                scheduled_at: newScheduledAt,
+                facebook_status: 'agendado' // Mantém o status agendado para nova tentativa
+              }).eq("id", video.id);
+              if (fbRetryUpdateError) console.error("Erro ao atualizar retry Facebook:", fbRetryUpdateError);
+              else updateRequired = true;
+
               await logAttempt(supabaseAdmin, video.id, 'facebook', 'retentativa', e.message);
-              console.log(`Falha no Facebook. Reagendando post ${video.id} para ${newScheduledAt}. Tentativa ${updatePayload.retry_count}.`);
+              console.log(`Falha no Facebook. Reagendando post ${video.id} para ${newScheduledAt}. Tentativa ${video.retry_count + 1}.`);
             } else {
-              updatePayload.facebook_status = 'falhou';
+              // ATUALIZAÇÃO ATÔMICA DE FALHA FINAL PARA FACEBOOK
+              const { error: fbFailUpdateError } = await supabaseAdmin.from("videos").update({
+                  facebook_status: 'falhou'
+              }).eq("id", video.id);
+              if (fbFailUpdateError) console.error("Erro ao atualizar falha Facebook:", fbFailUpdateError);
+              else updateRequired = true;
+
               await logAttempt(supabaseAdmin, video.id, 'facebook', 'falha', e.message);
               console.log(`Máximo de tentativas atingido para o Facebook no post ${video.id}.`);
               
@@ -261,11 +323,15 @@ await logAttempt(supabaseAdmin, video.id, 'instagram', 'sucesso', `Reel postado 
         }
       }
 
-      // --- ATUALIZAÇÃO FINAL NO BANCO ---
-      if (Object.keys(updatePayload).length > 0) {
-        updatePayload.post_error = errorMessages.join(' | ') || null;
-        const { error: updateError } = await supabaseAdmin.from("videos").update(updatePayload).eq("id", video.id);
-        if (updateError) console.error("Erro ao atualizar status do vídeo:", updateError);
+      // --- ATUALIZAÇÃO FINAL DO POST_ERROR E CLOUDINARY ---
+      // Apenas atualiza post_error se houver mensagens de erro acumuladas
+      // ou se alguma plataforma foi publicada com sucesso (para garantir o delete do cloudinary)
+      if (errorMessages.length > 0 || successfulPlatforms > 0) {
+        const finalUpdatePayload: { post_error?: string | null } = {
+            post_error: errorMessages.join(' | ') || null
+        };
+        const { error: finalErrorUpdate } = await supabaseAdmin.from("videos").update(finalUpdatePayload).eq("id", video.id);
+        if (finalErrorUpdate) console.error("Erro ao atualizar post_error do vídeo:", finalErrorUpdate);
       }
       
       if (successfulPlatforms > 0 && video.cloudinary_public_id) {
@@ -292,7 +358,7 @@ await logAttempt(supabaseAdmin, video.id, 'instagram', 'sucesso', `Reel postado 
     }
 
     return new Response(JSON.stringify({ message: "Processamento concluído." }), { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 });
-  } catch (e) {
+  } catch (e: any) { // Adicionado 'any' para o tipo de exceção
     console.error("Erro geral no post-scheduler:", e);
     return new Response(JSON.stringify({ error: e.message }), { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 500 });
   }
