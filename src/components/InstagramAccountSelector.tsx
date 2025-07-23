@@ -2,6 +2,8 @@
 
 "use client";
 
+import Image from 'next/image'; // <-- Adicionado: Importação do componente Image
+
 // Define a estrutura de uma conta do Instagram que recebemos do backend
 export interface InstagramAccount {
   pageName: string;
@@ -39,11 +41,17 @@ export default function InstagramAccountSelector({
               onClick={() => onSelect(account)}
               className="w-full flex items-center p-3 rounded-lg bg-gray-900 hover:bg-gray-700/50 border border-gray-700 transition-colors text-left"
             >
-              <img
-                src={account.instagramProfilePicture}
-                alt={account.instagramUsername}
-                className="w-12 h-12 rounded-full object-cover"
-              />
+              {/* Substituído <img> por <Image> */}
+              <div className="w-12 h-12 rounded-full overflow-hidden relative flex-shrink-0">
+                <Image
+                  src={account.instagramProfilePicture}
+                  alt={account.instagramUsername}
+                  className="object-cover"
+                  fill // Permite que a imagem preencha o container div
+                  sizes="48px" // Definindo um tamanho para a imagem
+                  priority // Opcional, para carregar mais rápido se for o caso
+                />
+              </div>
               <div className="ml-4">
                 <p className="font-semibold text-white">@{account.instagramUsername}</p>
                 <p className="text-sm text-gray-400">Página do Facebook: {account.pageName}</p>
@@ -58,7 +66,7 @@ export default function InstagramAccountSelector({
                 onClick={onCancel}
                 className="text-sm text-gray-400 hover:text-white"
             >
-                Cancelar
+              Cancelar
             </button>
         </div>
       </div>
