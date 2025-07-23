@@ -138,6 +138,7 @@ Deno.serve(async (_req) => {
           if (!uploadResponse.ok) throw new Error(uploadResult.error.message);
           
           await supabaseAdmin.from("videos").update({ youtube_video_id: uploadResult.id }).eq("id", video.id);
+          updatePayload.youtube_video_id = uploadResult.id;
           updatePayload.youtube_status = 'publicado';
           successfulPlatforms++;
           await logAttempt(supabaseAdmin, video.id, 'youtube', 'sucesso', `Vídeo postado. ID no YouTube: ${uploadResult.id}`);
@@ -179,6 +180,7 @@ Deno.serve(async (_req) => {
           const creationId = await startMediaContainer(access_token, instagramUserId, video.video_url, video.description || video.title);
           await pollContainerStatus(access_token, creationId);
          const instagramPostId = await publishMediaContainer(access_token, instagramUserId, creationId);
+         updatePayload.instagram_post_id = instagramPostId;
 updatePayload.instagram_status = 'publicado';
 successfulPlatforms++;
 await logAttempt(supabaseAdmin, video.id, 'instagram', 'sucesso', `Reel postado com sucesso. ID do post: ${instagramPostId}`);
@@ -228,6 +230,7 @@ await logAttempt(supabaseAdmin, video.id, 'instagram', 'sucesso', `Reel postado 
             const postResponse = await fetch(postUrl, { method: 'POST', body: postParams });
             if (!postResponse.ok) { const postData = await postResponse.json(); throw new Error(postData.error?.message); }
             const finalPostData = await postResponse.json();
+            updatePayload.facebook_post_id = finalPostData.id;
             updatePayload.facebook_status = 'publicado';
             successfulPlatforms++;
             await logAttempt(supabaseAdmin, video.id, 'facebook', 'sucesso', `Reel postado com sucesso. ID do post: ${finalPostData.id}`);
