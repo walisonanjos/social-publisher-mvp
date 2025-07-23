@@ -23,17 +23,19 @@ Deno.serve(async (req) => {
     const TIKTOK_REDIRECT_URI = Deno.env.get("TIKTOK_REDIRECT_URI");
 
     if (!TIKTOK_CLIENT_ID || !TIKTOK_REDIRECT_URI) {
+      // Esta mensagem seria retornada se as variáveis estivessem vazias ou não configuradas
       throw new Error("Variáveis de ambiente TIKTOK_CLIENT_ID ou TIKTOK_REDIRECT_URI não configuradas.");
     }
 
     // Gerar um estado seguro para CSRF e para carregar nicheId/userId de volta
     const state = btoa(JSON.stringify({ nicheId, userId, csrf: Math.random().toString(36).substring(2) }));
 
+    // URL de autorização do TikTok para Web Apps (sem PKCE)
     const tiktokAuthUrl = `https://www.tiktok.com/v2/auth/authorize?` +
       `client_key=${TIKTOK_CLIENT_ID}&` +
       `redirect_uri=${encodeURIComponent(TIKTOK_REDIRECT_URI)}&` +
       `response_type=code&` +
-      `scope=user.info.basic,video.publish,video.upload&` + // Escopos confirmados pelas suas imagens
+      `scope=user.info.basic,video.publish,video.upload&` + 
       `state=${encodeURIComponent(state)}`;
 
     return new Response(JSON.stringify({ authUrl: tiktokAuthUrl }), {

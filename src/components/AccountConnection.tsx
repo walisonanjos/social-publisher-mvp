@@ -70,6 +70,7 @@ export default function AccountConnection({
       if (error) throw error;
       
       if (data && data.authUrl) {
+        console.log("TikTok Auth URL gerada:", data.authUrl); // <-- AJUSTE ADICIONADO AQUI
         window.location.href = data.authUrl;
       } else {
         throw new Error("A função de backend não retornou uma URL de autorização.");
