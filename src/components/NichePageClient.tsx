@@ -12,10 +12,10 @@ import AccountConnection from "./AccountConnection";
 import MainHeader from "./MainHeader";
 import { Video } from "@/types";
 import EditVideoModal from "./EditVideoModal";
-import ViewLogsModal from "./ViewLogsModal"; // Alteração 1
+import ViewLogsModal from "./ViewLogsModal";
 import { toast } from "sonner";
 import { useSearchParams } from "next/navigation";
-import Image from "next/image"; // <-- Adicionado: Importação do componente Image para futuras otimizações se houver <img>
+// import Image from "next/image"; // <-- REMOVIDO: Importação não utilizada
 
 export default function NichePageClient({ nicheId }: { nicheId: string }) {
   const supabase = createClient();
@@ -28,7 +28,6 @@ export default function NichePageClient({ nicheId }: { nicheId: string }) {
   const [isInstagramConnected, setIsInstagramConnected] = useState(false);
   const [editingVideo, setEditingVideo] = useState<Video | null>(null);
   
-  // Alteração 2
   const [viewingLogsForVideo, setViewingLogsForVideo] = useState<Video | null>(null);
   
   const [formTitle, setFormTitle] = useState("");
@@ -77,8 +76,7 @@ export default function NichePageClient({ nicheId }: { nicheId: string }) {
 
       window.history.replaceState({}, '', `/niche/${nicheId}`);
     }
-  // Removido: eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchParams, nicheId]); // Dependências ajustadas, diretiva removida
+  }, [searchParams, nicheId]);
 
 
   useEffect(() => {
@@ -87,7 +85,6 @@ export default function NichePageClient({ nicheId }: { nicheId: string }) {
     return () => { supabase.removeChannel(channel); };
   }, [user, nicheId, fetchPageData, supabase]);
 
-  // CORREÇÃO: Alterado o tipo de videoId de 'string' para 'number'
   const handleDeleteVideo = async (videoId: number) => { 
     if (!window.confirm("Tem certeza que deseja excluir este agendamento?")) return;
     const { error } = await supabase.from('videos').delete().eq('id', videoId);
@@ -140,7 +137,6 @@ export default function NichePageClient({ nicheId }: { nicheId: string }) {
     toast.info("Formulário preenchido. Selecione um novo vídeo e data.");
   };
 
-  // Alteração 3
   const handleViewLogs = (video: Video) => {
     setViewingLogsForVideo(video);
   };
@@ -154,7 +150,6 @@ export default function NichePageClient({ nicheId }: { nicheId: string }) {
         <EditVideoModal video={editingVideo} onClose={handleCloseEditModal} onSave={handleSaveChanges} />
       )}
 
-      {/* Alteração 4A */}
       {viewingLogsForVideo && (
         <ViewLogsModal 
           video={viewingLogsForVideo} 
@@ -197,7 +192,7 @@ export default function NichePageClient({ nicheId }: { nicheId: string }) {
           onDelete={handleDeleteVideo} 
           onEdit={handleOpenEditModal}
           onDuplicate={handleDuplicate}
-          onViewLogs={handleViewLogs} // Alteração 4B
+          onViewLogs={handleViewLogs}
           sortOrder="asc" 
         />
       </main>
