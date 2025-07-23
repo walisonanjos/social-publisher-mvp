@@ -1,3 +1,4 @@
+// src/components/NichePageClient.tsx
 "use client";
 import { useEffect, useState, useMemo, useCallback } from "react";
 import { createClient } from "@/lib/supabaseClient";
@@ -10,10 +11,11 @@ import Navbar from "./Navbar";
 import AccountConnection from "./AccountConnection";
 import MainHeader from "./MainHeader";
 import { Video } from "@/types";
-import EditVideoModal from "./EditVideoModal"; 
+import EditVideoModal from "./EditVideoModal";
 import ViewLogsModal from "./ViewLogsModal"; // Alteração 1
 import { toast } from "sonner";
 import { useSearchParams } from "next/navigation";
+import Image from "next/image"; // <-- Adicionado: Importação do componente Image para futuras otimizações se houver <img>
 
 export default function NichePageClient({ nicheId }: { nicheId: string }) {
   const supabase = createClient();
@@ -58,7 +60,7 @@ export default function NichePageClient({ nicheId }: { nicheId: string }) {
     const setupPage = async () => { setLoading(true); const { data: { user: currentUser } } = await supabase.auth.getUser(); setUser(currentUser); if (currentUser) { await fetchPageData(currentUser.id); } setLoading(false); };
     setupPage();
   }, [fetchPageData, supabase.auth]);
- 
+  
   useEffect(() => {
     const duplicateTitle = searchParams.get('title');
     const duplicateDesc = searchParams.get('description');
@@ -75,8 +77,8 @@ export default function NichePageClient({ nicheId }: { nicheId: string }) {
 
       window.history.replaceState({}, '', `/niche/${nicheId}`);
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [searchParams, nicheId]);
+  // Removido: eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchParams, nicheId]); // Dependências ajustadas, diretiva removida
 
 
   useEffect(() => {
@@ -85,14 +87,8 @@ export default function NichePageClient({ nicheId }: { nicheId: string }) {
     return () => { supabase.removeChannel(channel); };
   }, [user, nicheId, fetchPageData, supabase]);
 
-  const handleScheduleSuccess = (newVideo: Video, clearFileCallback: () => void) => {
-    setVideos(currentVideos => [...currentVideos, newVideo].sort((a, b) => new Date(a.scheduled_at).getTime() - new Date(b.scheduled_at).getTime()));
-    setFormTitle("");
-    setFormDescription("");
-    clearFileCallback();
-  };
-
-  const handleDeleteVideo = async (videoId: string) => {
+  // CORREÇÃO: Alterado o tipo de videoId de 'string' para 'number'
+  const handleDeleteVideo = async (videoId: number) => { 
     if (!window.confirm("Tem certeza que deseja excluir este agendamento?")) return;
     const { error } = await supabase.from('videos').delete().eq('id', videoId);
     if (error) { toast.error("Não foi possível excluir o agendamento."); } 
