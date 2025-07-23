@@ -15,7 +15,7 @@ import EditVideoModal from "./EditVideoModal";
 import ViewLogsModal from "./ViewLogsModal";
 import { toast } from "sonner";
 import { useSearchParams } from "next/navigation";
-// import Image from "next/image"; // <-- REMOVIDO: Importação não utilizada
+// import Image from "next/image"; // Removido na etapa anterior por não ser utilizado aqui
 
 export default function NichePageClient({ nicheId }: { nicheId: string }) {
   const supabase = createClient();
@@ -85,6 +85,14 @@ export default function NichePageClient({ nicheId }: { nicheId: string }) {
     return () => { supabase.removeChannel(channel); };
   }, [user, nicheId, fetchPageData, supabase]);
 
+  // ESSA É A FUNÇÃO QUE ESTAVA "NÃO ENCONTRADA"
+  const handleScheduleSuccess = (newVideo: Video, clearFileCallback: () => void) => {
+    setVideos(currentVideos => [...currentVideos, newVideo].sort((a, b) => new Date(a.scheduled_at).getTime() - new Date(b.scheduled_at).getTime()));
+    setFormTitle("");
+    setFormDescription("");
+    clearFileCallback();
+  };
+  
   const handleDeleteVideo = async (videoId: number) => { 
     if (!window.confirm("Tem certeza que deseja excluir este agendamento?")) return;
     const { error } = await supabase.from('videos').delete().eq('id', videoId);
