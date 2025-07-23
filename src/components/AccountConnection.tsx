@@ -2,7 +2,6 @@
 
 "use client";
 import { useState } from "react";
-// ALTERADO: Adicionado Globe (placeholder para TikTok)
 import { Youtube, Instagram, Facebook, Globe } from "lucide-react"; 
 import { createClient } from "../lib/supabaseClient";
 
@@ -10,8 +9,8 @@ interface AccountConnectionProps {
   nicheId: string;
   isYouTubeConnected: boolean;
   isInstagramConnected: boolean;
-  isTikTokConnected: boolean; // <-- Adicionado: Nova prop para o status da conexão TikTok
-  onDisconnect: (platform: 'youtube' | 'instagram' | 'tiktok') => void; // <-- Alterado: Adicionado 'tiktok' ao tipo
+  isTikTokConnected: boolean; // Prop para o status da conexão TikTok
+  onDisconnect: (platform: 'youtube' | 'instagram' | 'tiktok') => void; // Adicionado 'tiktok' ao tipo
 }
 
 const ConnectionStatus = ({ icon: Icon, platformName, onDisconnect, iconColorClass }: { icon: React.ElementType, platformName: string, onDisconnect: () => void, iconColorClass: string }) => (
@@ -34,14 +33,12 @@ export default function AccountConnection({
   nicheId,
   isYouTubeConnected,
   isInstagramConnected,
-  isTikTokConnected, // <-- Usado aqui
+  isTikTokConnected, // Usado aqui
   onDisconnect,
 }: AccountConnectionProps) {
-  // ALTERADO: Adicionado 'tiktok' aos tipos de isLoading
   const [isLoading, setIsLoading] = useState<null | 'youtube' | 'instagram' | 'tiktok'>(null);
   const supabase = createClient();
 
-  // ALTERADO: Lógica de handleConnect para incluir 'tiktok'
   const handleConnect = async (platform: 'youtube' | 'instagram' | 'tiktok') => {
     setIsLoading(platform);
     try {
@@ -55,10 +52,10 @@ export default function AccountConnection({
         case 'youtube':
           functionName = 'generate-youtube-auth-url';
           break;
-        case 'instagram': // Instagram e Facebook usam a mesma conexão inicial
+        case 'instagram': 
           functionName = 'generate-facebook-auth-url';
           break;
-        case 'tiktok': // Nova função para TikTok
+        case 'tiktok': 
           functionName = 'generate-tiktok-auth-url';
           break;
         default:
@@ -88,7 +85,7 @@ export default function AccountConnection({
     }
   };
 
-  return (
+  return ( 
     <div className="bg-gray-800 p-8 rounded-lg shadow-lg border border-gray-700">
       <h2 className="text-xl font-bold text-white mb-4">Conectar Contas</h2>
       <p className="text-gray-400 mb-6">
@@ -107,7 +104,7 @@ export default function AccountConnection({
         {isInstagramConnected ? (
           <>
             <ConnectionStatus icon={Instagram} platformName="Instagram" onDisconnect={() => onDisconnect('instagram')} iconColorClass="text-pink-500" />
-            <ConnectionStatus icon={Facebook} platformName="Facebook" onDisconnect={() => onDisconnect('instagram')} iconColorClass="text-blue-500" /> {/* Facebook é desconectado via 'instagram' platform */}
+            <ConnectionStatus icon={Facebook} platformName="Facebook" onDisconnect={() => onDisconnect('instagram')} iconColorClass="text-blue-500" /> 
           </>
         ) : (
           <button onClick={() => handleConnect('instagram')} disabled={isLoading !== null} className="w-full flex items-center justify-center gap-3 py-3 px-4 border border-purple-600/50 bg-purple-600/20 hover:bg-purple-600/30 text-white font-bold rounded-lg transition-colors disabled:opacity-50">
@@ -116,12 +113,11 @@ export default function AccountConnection({
           </button>
         )}
 
-        {/* NOVO: Botão de Conexão com TikTok */}
         {isTikTokConnected ? (
-          <ConnectionStatus icon={Globe} platformName="TikTok" onDisconnect={() => onDisconnect('tiktok')} iconColorClass="text-gray-400" /> {/* Ajuste a cor conforme desejar */}
+          <ConnectionStatus icon={Globe} platformName="TikTok" onDisconnect={() => onDisconnect('tiktok')} iconColorClass="text-gray-400" />
         ) : (
           <button onClick={() => handleConnect('tiktok')} disabled={isLoading !== null} className="w-full flex items-center justify-center gap-3 py-3 px-4 border border-gray-600/50 bg-gray-600/20 hover:bg-gray-600/30 text-white font-bold rounded-lg transition-colors disabled:opacity-50">
-            <Globe size={20} /> {/* Placeholder para o ícone do TikTok */}
+            <Globe size={20} />
             <span>{isLoading === 'tiktok' ? "Aguarde..." : "Conectar com TikTok"}</span>
           </button>
         )}
