@@ -23,7 +23,6 @@ Deno.serve(async (req) => {
     const TIKTOK_REDIRECT_URI = Deno.env.get("TIKTOK_REDIRECT_URI");
 
     if (!TIKTOK_CLIENT_ID || !TIKTOK_REDIRECT_URI) {
-      // Esta mensagem seria retornada se as variáveis estivessem vazias ou não configuradas
       throw new Error("Variáveis de ambiente TIKTOK_CLIENT_ID ou TIKTOK_REDIRECT_URI não configuradas.");
     }
 
@@ -35,7 +34,7 @@ Deno.serve(async (req) => {
       `client_key=${TIKTOK_CLIENT_ID}&` +
       `redirect_uri=${encodeURIComponent(TIKTOK_REDIRECT_URI)}&` +
       `response_type=code&` +
-      `scope=user.info.basic,video.publish,video.upload&` + 
+      `scope=user.info.basic&` + // <-- ALTERADO: Escopo limitado a user.info.basic
       `state=${encodeURIComponent(state)}`;
 
     return new Response(JSON.stringify({ authUrl: tiktokAuthUrl }), {
