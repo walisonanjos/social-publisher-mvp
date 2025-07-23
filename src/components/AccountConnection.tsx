@@ -1,20 +1,19 @@
 // src/components/AccountConnection.tsx
-// CORREÇÃO: Removido o import do 'CheckCircle' que não era utilizado
 
 "use client";
 import { useState } from "react";
-// ALTERADO: CheckCircle foi removido da linha abaixo
-import { Youtube, Instagram, Facebook } from "lucide-react";
+// ALTERADO: Adicionado Globe (placeholder para TikTok)
+import { Youtube, Instagram, Facebook, Globe } from "lucide-react"; 
 import { createClient } from "../lib/supabaseClient";
 
 interface AccountConnectionProps {
   nicheId: string;
   isYouTubeConnected: boolean;
   isInstagramConnected: boolean;
-  onDisconnect: (platform: 'youtube' | 'instagram') => void;
+  isTikTokConnected: boolean; // <-- Adicionado: Nova prop para o status da conexão TikTok
+  onDisconnect: (platform: 'youtube' | 'instagram' | 'tiktok') => void; // <-- Alterado: Adicionado 'tiktok' ao tipo
 }
 
-// ALTERADO: O ícone agora é passado como prop, por isso não precisamos do CheckCircle aqui
 const ConnectionStatus = ({ icon: Icon, platformName, onDisconnect, iconColorClass }: { icon: React.ElementType, platformName: string, onDisconnect: () => void, iconColorClass: string }) => (
   <div className={`p-4 bg-green-900/50 border ${iconColorClass}/30 rounded-lg flex items-center justify-between`}>
     <div className="flex items-center gap-3">
@@ -35,25 +34,45 @@ export default function AccountConnection({
   nicheId,
   isYouTubeConnected,
   isInstagramConnected,
+  isTikTokConnected, // <-- Usado aqui
   onDisconnect,
 }: AccountConnectionProps) {
-  const [isLoading, setIsLoading] = useState<null | 'youtube' | 'instagram'>(null);
+  // ALTERADO: Adicionado 'tiktok' aos tipos de isLoading
+  const [isLoading, setIsLoading] = useState<null | 'youtube' | 'instagram' | 'tiktok'>(null);
   const supabase = createClient();
 
-  const handleConnect = async (platform: 'youtube' | 'instagram') => {
+  // ALTERADO: Lógica de handleConnect para incluir 'tiktok'
+  const handleConnect = async (platform: 'youtube' | 'instagram' | 'tiktok') => {
     setIsLoading(platform);
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
         throw new Error("Usuário não autenticado. Por favor, faça login novamente.");
       }
-      const functionName = platform === 'youtube' ? 'generate-youtube-auth-url' : 'generate-facebook-auth-url';
+
+      let functionName: string;
+      switch (platform) {
+        case 'youtube':
+          functionName = 'generate-youtube-auth-url';
+          break;
+        case 'instagram': // Instagram e Facebook usam a mesma conexão inicial
+          functionName = 'generate-facebook-auth-url';
+          break;
+        case 'tiktok': // Nova função para TikTok
+          functionName = 'generate-tiktok-auth-url';
+          break;
+        default:
+          throw new Error("Plataforma desconhecida.");
+      }
+
       const { data, error } = await supabase.functions.invoke(functionName, {
         method: 'POST',
         body: { nicheId: nicheId, userId: user.id }
       });
+
       if (error) throw error;
-      if (data.authUrl) {
+      
+      if (data && data.authUrl) {
         window.location.href = data.authUrl;
       } else {
         throw new Error("A função de backend não retornou uma URL de autorização.");
@@ -88,12 +107,22 @@ export default function AccountConnection({
         {isInstagramConnected ? (
           <>
             <ConnectionStatus icon={Instagram} platformName="Instagram" onDisconnect={() => onDisconnect('instagram')} iconColorClass="text-pink-500" />
-            <ConnectionStatus icon={Facebook} platformName="Facebook" onDisconnect={() => onDisconnect('instagram')} iconColorClass="text-blue-500" />
+            <ConnectionStatus icon={Facebook} platformName="Facebook" onDisconnect={() => onDisconnect('instagram')} iconColorClass="text-blue-500" /> {/* Facebook é desconectado via 'instagram' platform */}
           </>
         ) : (
           <button onClick={() => handleConnect('instagram')} disabled={isLoading !== null} className="w-full flex items-center justify-center gap-3 py-3 px-4 border border-purple-600/50 bg-purple-600/20 hover:bg-purple-600/30 text-white font-bold rounded-lg transition-colors disabled:opacity-50">
             <Instagram size={20} />
             <span>{isLoading === 'instagram' ? "Aguarde..." : "Conectar com Instagram / Facebook"}</span>
+          </button>
+        )}
+
+        {/* NOVO: Botão de Conexão com TikTok */}
+        {isTikTokConnected ? (
+          <ConnectionStatus icon={Globe} platformName="TikTok" onDisconnect={() => onDisconnect('tiktok')} iconColorClass="text-gray-400" /> {/* Ajuste a cor conforme desejar */}
+        ) : (
+          <button onClick={() => handleConnect('tiktok')} disabled={isLoading !== null} className="w-full flex items-center justify-center gap-3 py-3 px-4 border border-gray-600/50 bg-gray-600/20 hover:bg-gray-600/30 text-white font-bold rounded-lg transition-colors disabled:opacity-50">
+            <Globe size={20} /> {/* Placeholder para o ícone do TikTok */}
+            <span>{isLoading === 'tiktok' ? "Aguarde..." : "Conectar com TikTok"}</span>
           </button>
         )}
       </div>
