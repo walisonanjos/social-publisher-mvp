@@ -2,6 +2,7 @@
 // VERSÃO FINAL COM AUTO-DESCONEXÃO DE TOKENS REVOGADOS E ATUALIZAÇÕES ATÔMICAS DE STATUS/IDs
 // AGORA COM LÓGICA DE POSTAGEM PARA TIKTOK USANDO UPLOAD DIRETO
 
+// CORREÇÃO: Renomeado createClient para supabaseCreateClient
 import { createClient as supabaseCreateClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
@@ -10,14 +11,14 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type",
 };
 const GRAPH_API_VERSION = "v20.0";
-const TIKTOK_API_VERSION = "v2"; // Versão da API do TikTok
+const TIKTOK_API_VERSION = "v2"; // <-- NOVO: Versão da API do TikTok
 const MAX_RETRIES = 1;
 const RETRY_DELAY_MINUTES = 15;
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 // --- FUNÇÃO HELPER PARA LOGGING ---
 async function logAttempt(
-  supabaseAdmin: supabaseCreateClient,
+  supabaseAdmin: supabaseCreateClient, // Use o nome renomeado aqui
   video_id: number,
   platform: string,
   status: "sucesso" | "falha" | "retentativa",
@@ -134,6 +135,7 @@ Deno.serve(async (_req) => {
     );
 
     const now = new Date().toISOString();
+    // ATUALIZADO: Incluir tiktok_status na query de seleção de vídeos agendados
     const { data: scheduledVideos, error: fetchError } = await supabaseAdmin
       .from("videos")
       .select("*, niches(social_connections(*))")
