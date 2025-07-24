@@ -1,6 +1,5 @@
 // supabase/functions/exchange-tiktok-auth-code/index.ts
 
-// CORREÇÃO: Renomeado createClient para supabaseCreateClient para evitar conflito de declaração
 import { createClient as supabaseCreateClient } from "https://esm.sh/@supabase/supabase-js@2"; 
 
 const corsHeaders = {
@@ -34,7 +33,7 @@ Deno.serve(async (req) => {
       method: "POST",
       headers: { 
           "Content-Type": "application/x-www-form-urlencoded",
-          // "User-Agent": "SocialPublisherMVP/1.0" // Removido na tentativa anterior
+          "Connection": "keep-alive" // <-- ADICIONADO: Header Connection
       },
       body: new URLSearchParams({
         client_key: TIKTOK_CLIENT_ID,
@@ -70,7 +69,7 @@ Deno.serve(async (req) => {
         headers: {
           "Authorization": `Bearer ${tokens.access_token}`,
           "Content-Type": "application/json",
-          // "User-Agent": "SocialPublisherMVP/1.0" // Removido na tentativa anterior
+          "Connection": "keep-alive" // <-- ADICIONADO: Header Connection
         },
         body: JSON.stringify({
           fields: ["open_id", "display_name", "avatar_url"]
@@ -98,7 +97,7 @@ Deno.serve(async (req) => {
     console.log(`Open ID do TikTok encontrado: ${tiktokOpenId}`);
 
     // --- Etapa 3: Salvar no banco de dados ---
-    const supabaseAdmin = supabaseCreateClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!); // CORREÇÃO: Usando supabaseCreateClient
+    const supabaseAdmin = supabaseCreateClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
     const { error: dbError } = await supabaseAdmin.from("social_connections").upsert({
       user_id: userId,
       niche_id: nicheId,
