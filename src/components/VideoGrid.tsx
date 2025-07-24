@@ -15,6 +15,7 @@ import {
   Copy,
   ScrollText,
 } from "lucide-react";
+import { IconBrandTiktok } from "@tabler/icons-react"; // Importe o ícone do TikTok
 import { useState } from "react";
 import Link from "next/link";
 import { format, isToday } from "date-fns";
@@ -24,10 +25,10 @@ import { Tooltip } from "react-tooltip";
 interface VideoGridProps {
   groupedVideos: { [key: string]: Video[] };
   // CORREÇÃO: Alterado o tipo de videoId de 'string' para 'number'
-  onDelete: (videoId: number) => void; 
+  onDelete: (videoId: number) => void;
   onEdit: (video: Video) => void;
   onDuplicate: (video: Video) => void;
-  onViewLogs: (video: Video) => void; 
+  onViewLogs: (video: Video) => void;
   sortOrder?: "asc" | "desc";
 }
 
@@ -38,9 +39,17 @@ const getPlatformError = (fullError: string | null, platform: string): string | 
   return errorSegment ? errorSegment.replace(`Falha no ${platform}: `, '') : null;
 };
 
-const PlatformStatus = ({ platformName, status, error }: { platformName: 'YouTube' | 'Instagram' | 'Facebook', status: string | null, error: string | null }) => {
+// Componente PlatformStatus atualizado para incluir TikTok
+const PlatformStatus = ({ platformName, status, error }: { platformName: 'YouTube' | 'Instagram' | 'Facebook' | 'TikTok', status: string | null, error: string | null }) => {
   if (!status) return null;
-  const platformIcons = { YouTube: <Youtube size={16} className="text-red-500" />, Instagram: <Instagram size={15} className="text-pink-500" />, Facebook: <Facebook size={16} className="text-blue-500" />, };
+
+  // Adicione o ícone do TikTok aqui
+  const platformIcons = {
+    YouTube: <Youtube size={16} className="text-red-500" />,
+    Instagram: <Instagram size={15} className="text-pink-500" />,
+    Facebook: <Facebook size={16} className="text-blue-500" />,
+    TikTok: <IconBrandTiktok size={16} className="text-black-400" />, // Ícone do TikTok
+  };
   const statusIcons = { agendado: <Clock size={12} className="text-blue-400" />, publicado: <CheckCircle size={12} className="text-green-400" />, falhou: <XCircle size={12} className="text-red-400" />, };
   const tooltipId = `tooltip-${platformName}-${Math.random()}`;
   const errorMessage = getPlatformError(error, platformName);
@@ -63,12 +72,13 @@ function VideoCard({
 }: {
   video: Video;
   // CORREÇÃO: Alterado o tipo de id de 'string' para 'number'
-  onDelete: (id: number) => void; 
+  onDelete: (id: number) => void;
   onEdit: (video: Video) => void;
   onDuplicate: (video: Video) => void;
   onViewLogs: (video: Video) => void;
 }) {
-  const isScheduled = video.youtube_status === 'agendado' || video.instagram_status === 'agendado' || video.facebook_status === 'agendado';
+  // Inclua o tiktok_status na verificação de agendado
+  const isScheduled = video.youtube_status === 'agendado' || video.instagram_status === 'agendado' || video.facebook_status === 'agendado' || video.tiktok_status === 'agendado';
 
   return (
     <div className="bg-gray-800/50 p-4 rounded-lg flex flex-col justify-between gap-3 border border-gray-700/80 h-full">
@@ -77,16 +87,16 @@ function VideoCard({
           {video.title}
         </span>
         <div className={`text-xs font-bold px-2 py-1 rounded-full border whitespace-nowrap ${
-          video.youtube_status === 'falhou' || video.instagram_status === 'falhou' || video.facebook_status === 'falhou' 
+          video.youtube_status === 'falhou' || video.instagram_status === 'falhou' || video.facebook_status === 'falhou' || video.tiktok_status === 'falhou' // Adicionado TikTok
           ? "bg-red-500/20 text-red-300 border-red-500/30"
-          : video.youtube_status === 'publicado' || video.instagram_status === 'publicado' || video.facebook_status === 'publicado'
+          : video.youtube_status === 'publicado' || video.instagram_status === 'publicado' || video.facebook_status === 'publicado' || video.tiktok_status === 'publicado' // Adicionado TikTok
           ? "bg-green-500/20 text-green-300 border-green-500/30"
           : "bg-blue-500/20 text-blue-300 border-blue-500/30"
         }`}>
           {
-            video.youtube_status === 'falhou' || video.instagram_status === 'falhou' || video.facebook_status === 'falhou'
+            video.youtube_status === 'falhou' || video.instagram_status === 'falhou' || video.facebook_status === 'falhou' || video.tiktok_status === 'falhou' // Adicionado TikTok
             ? "Falhou"
-            : video.youtube_status === 'publicado' || video.instagram_status === 'publicado' || video.facebook_status === 'publicado'
+            : video.youtube_status === 'publicado' || video.instagram_status === 'publicado' || video.facebook_status === 'publicado' || video.tiktok_status === 'publicado' // Adicionado TikTok
             ? "Publicado"
             : "Agendado"
           }
@@ -99,13 +109,15 @@ function VideoCard({
             {video.target_youtube && <PlatformStatus platformName="YouTube" status={video.youtube_status} error={video.post_error} />}
             {video.target_instagram && <PlatformStatus platformName="Instagram" status={video.instagram_status} error={video.post_error} />}
             {video.target_facebook && <PlatformStatus platformName="Facebook" status={video.facebook_status} error={video.post_error} />}
+            {/* Adicione a renderização condicional para o TikTok */}
+            {video.target_tiktok && <PlatformStatus platformName="TikTok" status={video.tiktok_status} error={video.post_error} />}
           </div>
         </div>
         <div className="flex items-center gap-3">
           <button onClick={() => onViewLogs(video)} title="Ver Histórico de Postagem" className="text-gray-400 hover:text-white transition-colors">
             <ScrollText size={14} />
           </button>
-          
+
           <button onClick={() => onDuplicate(video)} title="Duplicar Post" className="text-gray-400 hover:text-white transition-colors">
             <Copy size={14} />
           </button>
@@ -115,7 +127,7 @@ function VideoCard({
               <LinkIcon size={16} />
             </Link>
           )}
-          
+
           {isScheduled && (
             <div className="flex items-center gap-3 text-xs">
               <button onClick={() => onEdit(video)} className="text-blue-400 hover:text-blue-300">
