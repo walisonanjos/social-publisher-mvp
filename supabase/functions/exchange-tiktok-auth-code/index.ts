@@ -1,6 +1,7 @@
 // supabase/functions/exchange-tiktok-auth-code/index.ts
 
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+// CORREÇÃO: Renomeado createClient para supabaseCreateClient para evitar conflito de declaração
+import { createClient as supabaseCreateClient } from "https://esm.sh/@supabase/supabase-js@2"; 
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -16,7 +17,7 @@ Deno.serve(async (req) => {
     const { code, state } = await req.json();
 
     if (!code) throw new Error("O 'code' de autorização do TikTok não foi encontrado no body da requisição.");
-    if (!state) throw new Error("O 'state' (com niche_id e user_id) não foi encontrado no body da requisição.");
+    if (!state) throw new Error("O 'state' (com niche_id e user_id) não foi encontrado na URL.");
 
     const { nicheId, userId } = JSON.parse(atob(state));
 
@@ -33,7 +34,7 @@ Deno.serve(async (req) => {
       method: "POST",
       headers: { 
           "Content-Type": "application/x-www-form-urlencoded",
-          "User-Agent": "SocialPublisherMVP/1.0" // <-- ADICIONADO: User-Agent
+          // "User-Agent": "SocialPublisherMVP/1.0" // Removido na tentativa anterior
       },
       body: new URLSearchParams({
         client_key: TIKTOK_CLIENT_ID,
@@ -45,10 +46,10 @@ Deno.serve(async (req) => {
     });
 
     if (!tokenResponse.ok) {
-      const errorResponseText = await tokenResponse.text(); // Mantenha para pegar HTML de erro 403
-      let errorMessageFromTikTok = `Status: ${tokenResponse.status}. Resposta: ${errorResponseText}`;
+      const errorResponseText = await tokenResponse.text();
+      let errorMessageFromTikTok = errorResponseText;
       try {
-        const errorJson = JSON.parse(errorResponseText); // Tenta parsear como JSON
+        const errorJson = JSON.parse(errorResponseText);
         errorMessageFromTikTok = `Status: ${tokenResponse.status}. Message: ${errorJson.message || errorJson.error_description || JSON.stringify(errorJson)}`;
       } catch (parseError) {
         // Não foi JSON, usa o texto puro
@@ -69,7 +70,7 @@ Deno.serve(async (req) => {
         headers: {
           "Authorization": `Bearer ${tokens.access_token}`,
           "Content-Type": "application/json",
-          "User-Agent": "SocialPublisherMVP/1.0" // <-- ADICIONADO: User-Agent
+          // "User-Agent": "SocialPublisherMVP/1.0" // Removido na tentativa anterior
         },
         body: JSON.stringify({
           fields: ["open_id", "display_name", "avatar_url"]
@@ -77,7 +78,7 @@ Deno.serve(async (req) => {
       });
       if (!userInfoResponse.ok) {
         const userInfoErrorResponseText = await userInfoResponse.text();
-        let userInfoErrorMessage = `Status: ${userInfoResponse.status}. Resposta: ${userInfoErrorResponseText}`;
+        let userInfoErrorMessage = userInfoErrorResponseText;
         try {
           const userInfoErrorJson = JSON.parse(userInfoErrorResponseText);
           userInfoErrorMessage = `Status: ${userInfoResponse.status}. Message: ${userInfoErrorJson.data?.error?.message || JSON.stringify(userInfoErrorJson)}`;
@@ -97,7 +98,7 @@ Deno.serve(async (req) => {
     console.log(`Open ID do TikTok encontrado: ${tiktokOpenId}`);
 
     // --- Etapa 3: Salvar no banco de dados ---
-    const supabaseAdmin = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
+    const supabaseAdmin = supabaseCreateClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!); // CORREÇÃO: Usando supabaseCreateClient
     const { error: dbError } = await supabaseAdmin.from("social_connections").upsert({
       user_id: userId,
       niche_id: nicheId,
