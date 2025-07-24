@@ -915,7 +915,7 @@ Deno.serve(async (_req) => {
   } catch (e: any) {
     console.error("Erro geral no post-scheduler:", e);
     return new Response(JSON.stringify({ error: e.message }), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      headers: { ...corsHeaders, "Content-Type": "applicatin/json" },
       status: 500,
     });
   }
