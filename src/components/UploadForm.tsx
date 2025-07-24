@@ -12,11 +12,10 @@ import { toast } from "sonner";
 
 interface UploadFormProps {
   nicheId: string;
-  // Alterado: onScheduleSuccess agora recebe um callback para limpar o arquivo
   onScheduleSuccess: (newVideo: Video, clearFileCallback: () => void) => void;
   isYouTubeConnected: boolean;
   isInstagramConnected: boolean;
-  // Novas props para tornar o formulário "controlado"
+  isTikTokConnected: boolean; // <-- NOVO: Prop para o status da conexão TikTok
   title: string;
   setTitle: (title: string) => void;
   description: string;
@@ -28,14 +27,13 @@ export default function UploadForm({
   onScheduleSuccess,
   isYouTubeConnected,
   isInstagramConnected,
-  // Recebendo as novas props
+  isTikTokConnected, // <-- NOVO: Usado aqui
   title,
   setTitle,
   description,
   setDescription,
 }: UploadFormProps) {
   const [file, setFile] = useState<File | null>(null);
-  // O estado de title e description foi movido para o NichePageClient
   const [scheduleDate, setScheduleDate] = useState<Date | undefined>(
     new Date(),
   );
@@ -45,6 +43,7 @@ export default function UploadForm({
   const [postToYouTube, setPostToYouTube] = useState(true);
   const [postToInstagram, setPostToInstagram] = useState(true);
   const [postToFacebook, setPostToFacebook] = useState(true);
+  const [postToTikTok, setPostToTikTok] = useState(false); // <-- NOVO: Estado para o checkbox do TikTok
 
   const supabase = createClient();
   const today = new Date();
@@ -58,7 +57,6 @@ export default function UploadForm({
     }
   };
 
-  // Função para o pai poder limpar o campo de arquivo
   const clearFile = () => {
     setFile(null);
     const fileInput = document.getElementById("file-upload") as HTMLInputElement;
@@ -71,7 +69,8 @@ export default function UploadForm({
       toast.error("Por favor, preencha todos os campos obrigatórios.");
       return;
     }
-    if (!postToYouTube && !postToInstagram && !postToFacebook) {
+    // ATUALIZADO: Validação para incluir o TikTok
+    if (!postToYouTube && !postToInstagram && !postToFacebook && !postToTikTok) {
       toast.error("Por favor, selecione pelo menos uma rede social para postar.");
       return;
     }
@@ -143,9 +142,11 @@ export default function UploadForm({
           target_youtube: postToYouTube,
           target_instagram: postToInstagram,
           target_facebook: postToFacebook,
+          target_tiktok: postToTikTok, // <-- NOVO: Campo para o TikTok
           youtube_status: postToYouTube ? 'agendado' : null,
           instagram_status: postToInstagram ? 'agendado' : null,
           facebook_status: postToFacebook ? 'agendado' : null,
+          tiktok_status: postToTikTok ? 'agendado' : null, // <-- NOVO: Status para o TikTok
         })
         .select()
         .single();
@@ -163,7 +164,6 @@ export default function UploadForm({
 
       toast.success("Seu vídeo foi agendado com sucesso!");
       
-      // A limpeza de title/description agora é feita no NichePageClient
       onScheduleSuccess(newVideo as Video, clearFile);
       
     } catch (err) {
@@ -269,7 +269,17 @@ export default function UploadForm({
             <label className={`flex items-center gap-2 ${isInstagramConnected ? 'cursor-pointer text-white' : 'cursor-not-allowed text-gray-500'}`}><input type="checkbox" className="h-4 w-4 rounded bg-gray-700 border-gray-500 text-teal-600 focus:ring-teal-500 disabled:opacity-50" checked={postToInstagram} onChange={(e) => setPostToInstagram(e.target.checked)} disabled={!isInstagramConnected}/>Instagram</label>
             <label className={`flex items-center gap-2 ${isInstagramConnected ? 'cursor-pointer text-white' : 'cursor-not-allowed text-gray-500'}`}><input type="checkbox" className="h-4 w-4 rounded bg-gray-700 border-gray-500 text-teal-600 focus:ring-teal-500 disabled:opacity-50" checked={postToFacebook} onChange={(e) => setPostToFacebook(e.target.checked)} disabled={!isInstagramConnected}/>Facebook</label>
             <label className={`flex items-center gap-2 ${isYouTubeConnected ? 'cursor-pointer text-white' : 'cursor-not-allowed text-gray-500'}`}><input type="checkbox" className="h-4 w-4 rounded bg-gray-700 border-gray-500 text-teal-600 focus:ring-teal-500 disabled:opacity-50" checked={postToYouTube} onChange={(e) => setPostToYouTube(e.target.checked)} disabled={!isYouTubeConnected}/>YouTube</label>
-            <label className="flex items-center gap-2 cursor-pointer text-gray-500"><input type="checkbox" className="h-4 w-4 rounded bg-gray-700 border-gray-500 text-teal-600 focus:ring-teal-500" disabled/>Tiktok</label>
+            {/* NOVO: Checkbox do TikTok */}
+            <label className={`flex items-center gap-2 ${isTikTokConnected ? 'cursor-pointer text-white' : 'cursor-not-allowed text-gray-500'}`}>
+                <input 
+                    type="checkbox" 
+                    className="h-4 w-4 rounded bg-gray-700 border-gray-500 text-teal-600 focus:ring-teal-500 disabled:opacity-50" 
+                    checked={postToTikTok} 
+                    onChange={(e) => setPostToTikTok(e.target.checked)} 
+                    disabled={!isTikTokConnected}
+                />
+                TikTok
+            </label>
             <label className="flex items-center gap-2 cursor-pointer text-gray-500"><input type="checkbox" className="h-4 w-4 rounded bg-gray-700 border-gray-500 text-teal-600 focus:ring-teal-500" disabled/>Kwai</label>
           </div>
         </div>

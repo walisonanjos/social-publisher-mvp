@@ -187,6 +187,7 @@ export default function NichePageClient({ nicheId }: { nicheId: string }) {
             onScheduleSuccess={handleScheduleSuccess}
             isYouTubeConnected={isYouTubeConnected}
             isInstagramConnected={isInstagramConnected}
+            isTikTokConnected={isTikTokConnected} // <-- NOVO: Passando a prop para UploadForm
             title={formTitle}
             setTitle={setFormTitle}
             description={formDescription}
