@@ -1,6 +1,6 @@
 // supabase/functions/generate-tiktok-auth-url/index.ts
 
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { createClient as supabaseCreateClient } from "https://esm.sh/@supabase/supabase-js@2"; // Use o nome renomeado aqui
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -30,11 +30,12 @@ Deno.serve(async (req) => {
     const state = btoa(JSON.stringify({ nicheId, userId, csrf: Math.random().toString(36).substring(2) }));
 
     // URL de autorização do TikTok para Web Apps (sem PKCE)
+    // CORREÇÃO: Re-adicionados os escopos completos para postagem
     const tiktokAuthUrl = `https://www.tiktok.com/v2/auth/authorize?` +
       `client_key=${TIKTOK_CLIENT_ID}&` +
       `redirect_uri=${encodeURIComponent(TIKTOK_REDIRECT_URI)}&` +
       `response_type=code&` +
-      `scope=user.info.basic&` + // <-- ALTERADO: Escopo limitado a user.info.basic
+      `scope=user.info.basic,video.publish,video.upload&` + // <-- ATUALIZADO: Escopos completos
       `state=${encodeURIComponent(state)}`;
 
     return new Response(JSON.stringify({ authUrl: tiktokAuthUrl }), {
