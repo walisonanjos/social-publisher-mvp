@@ -31,7 +31,10 @@ Deno.serve(async (req) => {
     // --- Etapa 1: Trocar o código pelo token de acesso do TikTok ---
     const tokenResponse = await fetch("https://www.tiktok.com/v2/oauth/token/", {
       method: "POST",
-      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      headers: { 
+          "Content-Type": "application/x-www-form-urlencoded",
+          "User-Agent": "SocialPublisherMVP/1.0" // <-- ADICIONADO: User-Agent
+      },
       body: new URLSearchParams({
         client_key: TIKTOK_CLIENT_ID,
         client_secret: TIKTOK_CLIENT_SECRET,
@@ -42,17 +45,16 @@ Deno.serve(async (req) => {
     });
 
     if (!tokenResponse.ok) {
-      // Capturar e logar mais detalhes do erro da API do TikTok
-      const errorResponseText = await tokenResponse.text();
-      let errorMessageFromTikTok = errorResponseText;
+      const errorResponseText = await tokenResponse.text(); // Mantenha para pegar HTML de erro 403
+      let errorMessageFromTikTok = `Status: ${tokenResponse.status}. Resposta: ${errorResponseText}`;
       try {
-        const errorJson = JSON.parse(errorResponseText);
-        errorMessageFromTikTok = errorJson.message || errorJson.error_description || JSON.stringify(errorJson);
+        const errorJson = JSON.parse(errorResponseText); // Tenta parsear como JSON
+        errorMessageFromTikTok = `Status: ${tokenResponse.status}. Message: ${errorJson.message || errorJson.error_description || JSON.stringify(errorJson)}`;
       } catch (parseError) {
-        // Não foi JSON, usar texto puro
+        // Não foi JSON, usa o texto puro
       }
       console.error("ERRO API TIKTOK (troca de token):", errorMessageFromTikTok);
-      throw new Error(`TikTok token exchange failed: ${errorMessageFromTikTok} (Status: ${tokenResponse.status})`);
+      throw new Error(`TikTok token exchange failed: ${errorMessageFromTikTok}`);
     }
 
     const tokens = await tokenResponse.json();
@@ -66,7 +68,8 @@ Deno.serve(async (req) => {
         method: "POST",
         headers: {
           "Authorization": `Bearer ${tokens.access_token}`,
-          "Content-Type": "application/json"
+          "Content-Type": "application/json",
+          "User-Agent": "SocialPublisherMVP/1.0" // <-- ADICIONADO: User-Agent
         },
         body: JSON.stringify({
           fields: ["open_id", "display_name", "avatar_url"]
@@ -74,15 +77,15 @@ Deno.serve(async (req) => {
       });
       if (!userInfoResponse.ok) {
         const userInfoErrorResponseText = await userInfoResponse.text();
-        let userInfoErrorMessage = userInfoErrorResponseText;
+        let userInfoErrorMessage = `Status: ${userInfoResponse.status}. Resposta: ${userInfoErrorResponseText}`;
         try {
           const userInfoErrorJson = JSON.parse(userInfoErrorResponseText);
-          userInfoErrorMessage = userInfoErrorJson.data?.error?.message || JSON.stringify(userInfoErrorJson);
+          userInfoErrorMessage = `Status: ${userInfoResponse.status}. Message: ${userInfoErrorJson.data?.error?.message || JSON.stringify(userInfoErrorJson)}`;
         } catch (parseError) {
           // Não foi JSON
         }
         console.error("ERRO API TIKTOK (user info):", userInfoErrorMessage);
-        throw new Error(`TikTok user info fetch failed: ${userInfoErrorMessage} (Status: ${userInfoResponse.status})`);
+        throw new Error(`TikTok user info fetch failed: ${userInfoErrorMessage}`);
       }
       const userInfoData = await userInfoResponse.json();
       const extractedOpenId = userInfoData.data?.user?.open_id;
@@ -115,12 +118,10 @@ Deno.serve(async (req) => {
       status: 200 
     });
 
-  } catch (error: unknown) { // Use 'unknown' para melhor tipagem
-    // Detalhar o erro para o frontend e para os logs do Supabase
+  } catch (error: unknown) {
     const detailedErrorMessage = error instanceof Error ? error.message : String(error);
     console.error("ERRO NA EDGE FUNCTION exchange-tiktok-auth-code:", detailedErrorMessage);
     
-    // Retorna um erro JSON para a rota de API do Next.js
     return new Response(JSON.stringify({ error: detailedErrorMessage }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
       status: 400
