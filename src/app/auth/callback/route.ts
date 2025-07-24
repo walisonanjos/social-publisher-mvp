@@ -3,18 +3,13 @@ import { NextResponse } from 'next/server';
 
 const EXCHANGE_TIKTOK_AUTH_CODE_FUNCTION_URL = `https://${process.env.NEXT_PUBLIC_SUPABASE_PROJECT_REF}.supabase.co/functions/v1/exchange-tiktok-auth-code`;
 
-// Função auxiliar para determinar a URL base do site
 const getSiteUrl = () => {
-  // Se estiver em um ambiente Vercel (produção ou preview), VERCEL_URL é configurado automaticamente
   if (process.env.VERCEL_URL) {
     return `https://${process.env.VERCEL_URL}`;
   }
-  // Para desenvolvimento local (incluindo Gitpod), SITE_URL precisa ser definida explicitamente
-  // Por exemplo, no seu .env.local ou nas configurações de ambiente do Gitpod/terminal
   if (process.env.SITE_URL) {
       return process.env.SITE_URL;
   }
-  // Fallback final para desenvolvimento local padrão se SITE_URL não estiver definida
   return 'http://localhost:3000'; 
 };
 
@@ -24,7 +19,7 @@ export async function GET(request: Request) {
   const code = searchParams.get('code');
   const state = searchParams.get('state');
 
-  const siteUrl = getSiteUrl(); // Obtém a URL do site dinamicamente
+  const siteUrl = getSiteUrl(); 
 
   if (!code || !state) {
     return NextResponse.redirect(`${siteUrl}/error?message=TikTok_OAuth_missing_code_or_state`);
@@ -42,14 +37,21 @@ export async function GET(request: Request) {
     });
 
     if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(`Edge Function error: ${errorData.error || 'Unknown error'}`);
+      const errorData = await response.json(); // Tenta parsear a resposta da Edge Function como JSON
+      // ATUALIZADO: Incluir mais detalhes do erro retornado pela Edge Function
+      const edgeFunctionErrorMessage = errorData.error 
+                                       ? errorData.error 
+                                       : JSON.stringify(errorData, null, 2); // Se não tiver 'error', stringify o JSON completo
+      
+      console.error("Erro retornado pela Edge Function:", edgeFunctionErrorMessage);
+      throw new Error(`Edge Function error: ${edgeFunctionErrorMessage}`);
     }
 
     return NextResponse.redirect(`${siteUrl}/niche/${nicheId}`);
 
   } catch (error: unknown) {
     console.error("Erro no callback OAuth do TikTok (Next.js API Route):", error instanceof Error ? error.message : String(error));
+    const siteUrl = getSiteUrl(); // Redefinir siteUrl para o caso de erro, garantindo que esteja acessível
     return NextResponse.redirect(`${siteUrl}/error?message=TikTok_OAuth_callback_failed&details=${encodeURIComponent(error instanceof Error ? error.message : String(error))}`);
   }
 }
