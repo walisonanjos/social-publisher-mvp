@@ -1,20 +1,22 @@
 // supabase/functions/post-scheduler/index.ts
 // VERSÃO FINAL COM AUTO-DESCONEXÃO DE TOKENS REVOGADOS E ATUALIZAÇÕES ATÔMICAS DE STATUS/IDs
+// AGORA COM LÓGICA DE POSTAGEM PARA TIKTOK
 
-import { createClient, SupabaseClient } from "https://esm.sh/@supabase/supabase-js@2";
+import { createClient as supabaseCreateClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 const GRAPH_API_VERSION = "v20.0";
+const TIKTOK_API_VERSION = "v2"; // Versão da API do TikTok
 const MAX_RETRIES = 1;
 const RETRY_DELAY_MINUTES = 15;
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 // --- FUNÇÃO HELPER PARA LOGGING ---
 async function logAttempt(
-  supabaseAdmin: SupabaseClient,
+  supabaseAdmin: supabaseCreateClient, // Use o nome renomeado aqui
   video_id: number,
   platform: string,
   status: 'sucesso' | 'falha' | 'retentativa',
@@ -30,11 +32,12 @@ async function logAttempt(
     if (error) {
       console.error("!!! Erro ao salvar log no banco de dados:", error.message);
     }
-  } catch (e: any) { // Adicionado 'any' para o tipo de exceção
+  } catch (e: any) {
     console.error("!!! Exceção crítica ao salvar log:", e.message);
   }
 }
 
+// Funções Auxiliares para Meta (Instagram/Facebook)
 async function startMediaContainer(accessToken: string, instagramUserId: string, videoUrl: string, caption: string): Promise<string> {
   const mediaUrl = `https://graph.facebook.com/${GRAPH_API_VERSION}/${instagramUserId}/media`;
   const params = new URLSearchParams({ media_type: "REELS", video_url: videoUrl, caption: caption, access_token: accessToken });
@@ -79,21 +82,20 @@ async function sha1(str: string): Promise<string> {
 // --- FUNÇÃO PRINCIPAL DO AGENDADOR ---
 Deno.serve(async (_req) => {
   try {
-    const supabaseAdmin = createClient( Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")! );
+    const supabaseAdmin = supabaseCreateClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
 
     const now = new Date().toISOString();
-    const { data: scheduledVideos, error: fetchError } = await supabaseAdmin.from("videos").select("*, niches(social_connections(*))").or('youtube_status.eq.agendado,instagram_status.eq.agendado,facebook_status.eq.agendado').lte("scheduled_at", now);
+    const { data: scheduledVideos, error: fetchError } = await supabaseAdmin.from("videos").select("*, niches(social_connections(*))").or('youtube_status.eq.agendado,instagram_status.eq.agendado,facebook_status.eq.agendado,tiktok_status.eq.agendado').lte("scheduled_at", now); // ATUALIZADO: Incluir tiktok_status
 
     if (fetchError) throw fetchError;
     if (!scheduledVideos || scheduledVideos.length === 0) {
       return new Response(JSON.stringify({ message: "Nenhum vídeo para processar." }), { headers: corsHeaders });
     }
 
-    // Processa vídeos um por um para isolar erros
     for (const video of scheduledVideos){
       const errorMessages: string[] = [];
       let successfulPlatforms = 0;
-      let updateRequired = false; // Flag para indicar se alguma atualização é necessária no final
+      let updateRequired = false;
 
       // --- TENTATIVA DE POSTAGEM NO YOUTUBE ---
       if (video.target_youtube && video.youtube_status === 'agendado') {
@@ -138,28 +140,26 @@ Deno.serve(async (_req) => {
           const uploadResult = JSON.parse(uploadText);
           if (!uploadResponse.ok) throw new Error(uploadResult.error.message);
           
-          // ATUALIZAÇÃO ATÔMICA PARA YOUTUBE
           const { error: ytUpdateError } = await supabaseAdmin.from("videos").update({
               youtube_video_id: uploadResult.id,
               youtube_status: 'publicado'
           }).eq("id", video.id);
           if (ytUpdateError) console.error("Erro ao atualizar status/ID do YouTube:", ytUpdateError);
-          else updateRequired = true; // Marca que uma atualização de sucesso ocorreu
+          else updateRequired = true;
 
           successfulPlatforms++;
           await logAttempt(supabaseAdmin, video.id, 'youtube', 'sucesso', `Vídeo postado. ID no YouTube: ${uploadResult.id}`);
 
-        } catch (e: any) { // Adicionado 'any' para o tipo de exceção
+        } catch (e: any) {
           console.error(`ERRO no fluxo do YouTube (vídeo ID ${video.id}):`, e.message);
           errorMessages.push(`Falha no YouTube: ${e.message}`);
           
           if (video.retry_count < MAX_RETRIES) {
             const newScheduledAt = new Date(Date.now() + RETRY_DELAY_MINUTES * 60 * 1000).toISOString();
-            // ATUALIZAÇÃO ATÔMICA DE RETENTATIVA PARA YOUTUBE
             const { error: ytRetryUpdateError } = await supabaseAdmin.from("videos").update({
               retry_count: video.retry_count + 1,
               scheduled_at: newScheduledAt,
-              youtube_status: 'agendado' // Mantém o status agendado para nova tentativa
+              youtube_status: 'agendado'
             }).eq("id", video.id);
             if (ytRetryUpdateError) console.error("Erro ao atualizar retry YouTube:", ytRetryUpdateError);
             else updateRequired = true;
@@ -167,7 +167,6 @@ Deno.serve(async (_req) => {
             await logAttempt(supabaseAdmin, video.id, 'youtube', 'retentativa', e.message);
             console.log(`Falha no YouTube. Reagendando post ${video.id} para ${newScheduledAt}. Tentativa ${video.retry_count + 1}.`);
           } else {
-            // ATUALIZAÇÃO ATÔMICA DE FALHA FINAL PARA YOUTUBE
             const { error: ytFailUpdateError } = await supabaseAdmin.from("videos").update({
                 youtube_status: 'falhou'
             }).eq("id", video.id);
@@ -201,7 +200,6 @@ Deno.serve(async (_req) => {
           await pollContainerStatus(access_token, creationId);
           const instagramPostId = await publishMediaContainer(access_token, instagramUserId, creationId);
           
-          // ATUALIZAÇÃO ATÔMICA PARA INSTAGRAM
           const { error: igUpdateError } = await supabaseAdmin.from("videos").update({
               instagram_post_id: instagramPostId,
               instagram_status: 'publicado'
@@ -212,16 +210,15 @@ Deno.serve(async (_req) => {
           successfulPlatforms++;
           await logAttempt(supabaseAdmin, video.id, 'instagram', 'sucesso', `Reel postado com sucesso. ID do post: ${instagramPostId}`);
 
-        } catch(e: any) { // Adicionado 'any' para o tipo de exceção
+        } catch(e: any) {
           console.error(`ERRO no fluxo do Instagram (vídeo ID ${video.id}):`, e.message);
           errorMessages.push(`Falha no Instagram: ${e.message}`);
           if (video.retry_count < MAX_RETRIES) {
             const newScheduledAt = new Date(Date.now() + RETRY_DELAY_MINUTES * 60 * 1000).toISOString();
-            // ATUALIZAÇÃO ATÔMICA DE RETENTATIVA PARA INSTAGRAM
             const { error: igRetryUpdateError } = await supabaseAdmin.from("videos").update({
               retry_count: video.retry_count + 1,
               scheduled_at: newScheduledAt,
-              instagram_status: 'agendado' // Mantém o status agendado para nova tentativa
+              instagram_status: 'agendado'
             }).eq("id", video.id);
             if (igRetryUpdateError) console.error("Erro ao atualizar retry Instagram:", igRetryUpdateError);
             else updateRequired = true;
@@ -229,7 +226,6 @@ Deno.serve(async (_req) => {
             await logAttempt(supabaseAdmin, video.id, 'instagram', 'retentativa', e.message);
             console.log(`Falha no Instagram. Reagendando post ${video.id} para ${newScheduledAt}. Tentativa ${video.retry_count + 1}.`);
           } else {
-            // ATUALIZAÇÃO ATÔMICA DE FALHA FINAL PARA INSTAGRAM
             const { error: igFailUpdateError } = await supabaseAdmin.from("videos").update({
                 instagram_status: 'falhou'
             }).eq("id", video.id);
@@ -272,7 +268,6 @@ Deno.serve(async (_req) => {
             if (!postResponse.ok) { const postData = await postResponse.json(); throw new Error(postData.error?.message); }
             const finalPostData = await postResponse.json();
 
-            // ATUALIZAÇÃO ATÔMICA PARA FACEBOOK
             const { error: fbUpdateError } = await supabaseAdmin.from("videos").update({
                 facebook_post_id: finalPostData.id,
                 facebook_status: 'publicado'
@@ -283,16 +278,15 @@ Deno.serve(async (_req) => {
             successfulPlatforms++;
             await logAttempt(supabaseAdmin, video.id, 'facebook', 'sucesso', `Reel postado com sucesso. ID do post: ${finalPostData.id}`);
 
-        } catch(e: any) { // Adicionado 'any' para o tipo de exceção
+        } catch(e: any) {
             console.error(`ERRO no fluxo do Facebook (vídeo ID ${video.id}):`, e.message);
             errorMessages.push(`Falha no Facebook: ${e.message}`);
             if (video.retry_count < MAX_RETRIES) {
               const newScheduledAt = new Date(Date.now() + RETRY_DELAY_MINUTES * 60 * 1000).toISOString();
-              // ATUALIZAÇÃO ATÔMICA DE RETENTATIVA PARA FACEBOOK
               const { error: fbRetryUpdateError } = await supabaseAdmin.from("videos").update({
                 retry_count: video.retry_count + 1,
                 scheduled_at: newScheduledAt,
-                facebook_status: 'agendado' // Mantém o status agendado para nova tentativa
+                facebook_status: 'agendado'
               }).eq("id", video.id);
               if (fbRetryUpdateError) console.error("Erro ao atualizar retry Facebook:", fbRetryUpdateError);
               else updateRequired = true;
@@ -300,7 +294,6 @@ Deno.serve(async (_req) => {
               await logAttempt(supabaseAdmin, video.id, 'facebook', 'retentativa', e.message);
               console.log(`Falha no Facebook. Reagendando post ${video.id} para ${newScheduledAt}. Tentativa ${video.retry_count + 1}.`);
             } else {
-              // ATUALIZAÇÃO ATÔMICA DE FALHA FINAL PARA FACEBOOK
               const { error: fbFailUpdateError } = await supabaseAdmin.from("videos").update({
                   facebook_status: 'falhou'
               }).eq("id", video.id);
@@ -323,9 +316,146 @@ Deno.serve(async (_req) => {
         }
       }
 
+      // --- NOVA TENTATIVA DE POSTAGEM NO TIKTOK ---
+      if (video.target_tiktok && video.tiktok_status === 'agendado') {
+        try {
+          console.log(`Processando TikTok para o vídeo ID: ${video.id}`);
+          const tiktokConnection = video.niches?.social_connections.find((c: any) => c.platform === 'tiktok');
+          if (!tiktokConnection?.access_token || !tiktokConnection?.provider_user_id) throw new Error("Credenciais do TikTok não encontradas.");
+          const { access_token: tiktokAccessToken, provider_user_id: tiktokOpenId } = tiktokConnection;
+
+          // Etapa 1: Iniciar upload (upload_init)
+          const initUploadResponse = await fetch(`https://open.tiktokapis.com/${TIKTOK_API_VERSION}/post/publish/video/init/`, {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${tiktokAccessToken}`,
+              'Content-Type': 'application/json',
+              'User-Agent': 'SocialPublisherMVP/1.0', // Adicione User-Agent para todas as chamadas TikTok
+              'Connection': 'keep-alive'
+            },
+            body: JSON.stringify({
+              post_info: {
+                title: video.title.substring(0, 100), // Título max 100 caracteres para TikTok
+                // desc: video.description?.substring(0, 400), // Descrição max 400 caracteres
+                visibility_type: 'PRIVATE_TO_ONLY_ME', // Começa como privado para testar
+                // if you use original_url, you must verify your domain in TikTok dev portal
+                // original_url: video.video_url, // URL direta do Cloudinary
+              },
+              source_info: {
+                source: 'PULL_FROM_URL', // Usar Pull from URL do Cloudinary
+                video_url: video.video_url, // URL do Cloudinary
+              }
+            })
+          });
+
+          if (!initUploadResponse.ok) {
+            const errorText = await initUploadResponse.text();
+            console.error("ERRO TikTok upload_init:", errorText);
+            throw new Error(`TikTok upload init failed: ${errorText}`);
+          }
+          const initData = await initUploadResponse.json();
+          const uploadId = initData.data?.upload_id;
+          const uploadUrl = initData.data?.upload_url;
+          if (!uploadId || !uploadUrl) throw new Error(`TikTok upload init returned no upload_id or upload_url: ${JSON.stringify(initData)}`);
+          
+          console.log(`TikTok upload init successful. Upload ID: ${uploadId}, Upload URL: ${uploadUrl}`);
+
+          // Etapa 2: Fazer upload do vídeo para a URL de upload (upload_phase)
+          const videoFileResponse = await fetch(video.video_url);
+          if (!videoFileResponse.ok) throw new Error("Não foi possível buscar o vídeo do Cloudinary para TikTok.");
+          const videoBlob = await videoFileResponse.blob();
+
+          const uploadPhaseResponse = await fetch(uploadUrl, {
+            method: 'PUT', // Método PUT para upload
+            headers: {
+              'Content-Type': 'video/mp4', // Ou o tipo MIME correto do vídeo
+              'Content-Disposition': `attachment; filename="${video.title.substring(0, 50).replace(/[^\w.]/g, '_')}.mp4"`, // Nome do arquivo
+              'User-Agent': 'SocialPublisherMVP/1.0', // User-Agent
+              'Connection': 'keep-alive'
+            },
+            body: videoBlob
+          });
+
+          if (!uploadPhaseResponse.ok) {
+            const errorText = await uploadPhaseResponse.text();
+            console.error("ERRO TikTok upload_phase:", errorText);
+            throw new Error(`TikTok upload phase failed: ${errorText}`);
+          }
+          console.log("TikTok upload phase successful.");
+
+          // Etapa 3: Completar o upload (upload_complete)
+          const completeUploadResponse = await fetch(`https://open.tiktokapis.com/${TIKTOK_API_VERSION}/post/publish/video/complete/`, {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${tiktokAccessToken}`,
+              'Content-Type': 'application/json',
+              'User-Agent': 'SocialPublisherMVP/1.0', // User-Agent
+              'Connection': 'keep-alive'
+            },
+            body: JSON.stringify({ upload_id: uploadId })
+          });
+
+          if (!completeUploadResponse.ok) {
+            const errorText = await completeUploadResponse.text();
+            console.error("ERRO TikTok upload_complete:", errorText);
+            throw new Error(`TikTok upload complete failed: ${errorText}`);
+          }
+          const completeData = await completeUploadResponse.json();
+          const tiktokPostId = completeData.data?.share_id || completeData.data?.publish_id; // Verificar qual ID é retornado
+          if (!tiktokPostId) throw new Error(`TikTok upload complete returned no post ID: ${JSON.stringify(completeData)}`);
+
+          console.log(`Vídeo do TikTok publicado com sucesso! Share ID: ${tiktokPostId}`);
+
+          // ATUALIZAÇÃO ATÔMICA PARA TIKTOK
+          const { error: tiktokUpdateError } = await supabaseAdmin.from("videos").update({
+              tiktok_post_id: tiktokPostId,
+              tiktok_status: 'publicado'
+          }).eq("id", video.id);
+          if (tiktokUpdateError) console.error("Erro ao atualizar status/ID do TikTok:", tiktokUpdateError);
+          else updateRequired = true;
+
+          successfulPlatforms++;
+          await logAttempt(supabaseAdmin, video.id, 'tiktok', 'sucesso', `Vídeo postado no TikTok. ID do post: ${tiktokPostId}`);
+
+        } catch(e: any) {
+          console.error(`ERRO no fluxo do TikTok (vídeo ID ${video.id}):`, e.message);
+          errorMessages.push(`Falha no TikTok: ${e.message}`);
+          if (video.retry_count < MAX_RETRIES) {
+            const newScheduledAt = new Date(Date.now() + RETRY_DELAY_MINUTES * 60 * 1000).toISOString();
+            const { error: tiktokRetryUpdateError } = await supabaseAdmin.from("videos").update({
+              retry_count: video.retry_count + 1,
+              scheduled_at: newScheduledAt,
+              tiktok_status: 'agendado'
+            }).eq("id", video.id);
+            if (tiktokRetryUpdateError) console.error("Erro ao atualizar retry TikTok:", tiktokRetryUpdateError);
+            else updateRequired = true;
+
+            await logAttempt(supabaseAdmin, video.id, 'tiktok', 'retentativa', e.message);
+            console.log(`Falha no TikTok. Reagendando post ${video.id} para ${newScheduledAt}. Tentativa ${video.retry_count + 1}.`);
+          } else {
+            const { error: tiktokFailUpdateError } = await supabaseAdmin.from("videos").update({
+                tiktok_status: 'falhou'
+            }).eq("id", video.id);
+            if (tiktokFailUpdateError) console.error("Erro ao atualizar falha TikTok:", tiktokFailUpdateError);
+            else updateRequired = true;
+
+            await logAttempt(supabaseAdmin, video.id, 'tiktok', 'falha', e.message);
+            console.log(`Máximo de tentativas atingido para o TikTok no post ${video.id}.`);
+            
+            const isTokenError = e.message.toLowerCase().includes('token') || e.message.toLowerCase().includes('session') || e.message.toLowerCase().includes('unauthorized');
+            if (isTokenError) {
+              console.log(`Token do TikTok revogado detectado para o nicho ${video.niche_id}. Removendo conexão.`);
+              await logAttempt(supabaseAdmin, video.id, 'tiktok', 'falha', `Token inválido. Desconectando conta automaticamente.`);
+              await supabaseAdmin
+                .from('social_connections')
+                .delete()
+                .match({ niche_id: video.niche_id, platform: 'tiktok' });
+            }
+          }
+        }
+      }
+
       // --- ATUALIZAÇÃO FINAL DO POST_ERROR E CLOUDINARY ---
-      // Apenas atualiza post_error se houver mensagens de erro acumuladas
-      // ou se alguma plataforma foi publicada com sucesso (para garantir o delete do cloudinary)
       if (errorMessages.length > 0 || successfulPlatforms > 0) {
         const finalUpdatePayload: { post_error?: string | null } = {
             post_error: errorMessages.join(' | ') || null
@@ -358,7 +488,7 @@ Deno.serve(async (_req) => {
     }
 
     return new Response(JSON.stringify({ message: "Processamento concluído." }), { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 200 });
-  } catch (e: any) { // Adicionado 'any' para o tipo de exceção
+  } catch (e: any) {
     console.error("Erro geral no post-scheduler:", e);
     return new Response(JSON.stringify({ error: e.message }), { headers: { ...corsHeaders, "Content-Type": "application/json" }, status: 500 });
   }
