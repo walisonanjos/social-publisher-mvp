@@ -29,11 +29,13 @@ Deno.serve(async (req) => {
     }
 
     // --- Etapa 1: Trocar o código pelo token de acesso do TikTok ---
-    const tokenResponse = await fetch("https://www.tiktok.com/v2/oauth/token/", {
+    // CORREÇÃO: Endpoint da API de Token atualizado para 'open.tiktokapis.com'
+    const tokenResponse = await fetch("https://open.tiktokapis.com/v2/oauth/token/", { 
       method: "POST",
       headers: { 
           "Content-Type": "application/x-www-form-urlencoded",
-          "Connection": "keep-alive" // <-- ADICIONADO: Header Connection
+          "Connection": "keep-alive", // Mantido conforme adicionado anteriormente
+          "Cache-Control": "no-cache" // Adicionado conforme exemplo da documentação
       },
       body: new URLSearchParams({
         client_key: TIKTOK_CLIENT_ID,
@@ -61,6 +63,7 @@ Deno.serve(async (req) => {
     console.log("Tokens do TikTok recebidos com sucesso.");
 
     // --- Etapa 2: Usar o access_token para buscar o user_id (open_id) do TikTok ---
+    // Endpoint para User Info também está no domínio open.tiktokapis.com
     let tiktokOpenId = tokens.open_id;
     if (!tiktokOpenId) {
       console.warn("Open ID do TikTok não encontrado na resposta do token. Tentando userinfo endpoint.");
@@ -69,7 +72,8 @@ Deno.serve(async (req) => {
         headers: {
           "Authorization": `Bearer ${tokens.access_token}`,
           "Content-Type": "application/json",
-          "Connection": "keep-alive" // <-- ADICIONADO: Header Connection
+          "Connection": "keep-alive", // Mantido
+          "Cache-Control": "no-cache" // Adicionado
         },
         body: JSON.stringify({
           fields: ["open_id", "display_name", "avatar_url"]
