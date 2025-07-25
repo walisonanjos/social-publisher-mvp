@@ -1,6 +1,6 @@
 // supabase/functions/post-scheduler/index.ts
 // VERSÃO FINAL COM AUTO-DESCONEXÃO DE TOKENS REVOGADOS E ATUALIZAÇÕES ATÔMICAS DE STATUS/IDs
-// AGORA COM LÓGICA DE POSTAGEM PARA TIKTOK USANDO UPLOAD DIRETO
+// AGORA COM LÓGICA DE POSTAGEM PARA TIKTOK USANDO UPLOAD DIRETO CORRETAMENTE
 
 // CORREÇÃO: Renomeado createClient para supabaseCreateClient
 import { createClient as supabaseCreateClient } from "https://esm.sh/@supabase/supabase-js@2";
@@ -11,7 +11,7 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type",
 };
 const GRAPH_API_VERSION = "v20.0";
-const TIKTOK_API_VERSION = "v2"; // <-- NOVO: Versão da API do TikTok
+const TIKTOK_API_VERSION = "v2"; // Versão da API do TikTok
 const MAX_RETRIES = 1;
 const RETRY_DELAY_MINUTES = 15;
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -643,6 +643,7 @@ Deno.serve(async (_req) => {
           } = tiktokConnection;
 
           // Etapa 1: Iniciar upload (upload_init)
+          // CORREÇÃO: source: 'FILE_UPLOAD' e adicionar video_size
           const initUploadResponse = await fetch(
             `https://open.tiktokapis.com/${TIKTOK_API_VERSION}/post/publish/video/init/`,
             {
@@ -650,20 +651,19 @@ Deno.serve(async (_req) => {
               headers: {
                 Authorization: `Bearer ${tiktokAccessToken}`,
                 "Content-Type": "application/json",
-                "User-Agent": "SocialPublisherMVP/1.0", // Adicione User-Agent para todas as chamadas TikTok
+                "User-Agent": "SocialPublisherMVP/1.0",
                 Connection: "keep-alive",
               },
               body: JSON.stringify({
                 post_info: {
-                  title: video.title.substring(0, 100), // Título max 100 caracteres para TikTok
-                  // desc: video.description?.substring(0, 400), // Descrição max 400 caracteres
-                  visibility_type: "PRIVATE_TO_ONLY_ME", // Começa como privado para testar
-                  // if you use original_url, you must verify your domain in TikTok dev portal
-                  // original_url: video.video_url, // URL direta do Cloudinary
+                  title: video.title.substring(0, 100),
+                  visibility_type: "PRIVATE_TO_ONLY_ME",
                 },
                 source_info: {
-                  source: "PULL_FROM_URL", // Usar Pull from URL do Cloudinary
-                  video_url: video.video_url, // URL do Cloudinary
+                  source: "FILE_UPLOAD", // <-- CORRIGIDO: Agora é FILE_UPLOAD
+                  video_size: video.video_size_bytes, // <-- NOVO: Adiciona o tamanho do vídeo
+                  chunk_size: video.video_size_bytes, // <-- NOVO: Para upload de arquivo único
+                  total_chunk_count: 1, // <-- NOVO: Para upload de arquivo único
                 },
               }),
             }
@@ -702,8 +702,8 @@ Deno.serve(async (_req) => {
               "Content-Type": "video/mp4", // Ou o tipo MIME correto do vídeo
               "Content-Disposition": `attachment; filename="${video.title
                 .substring(0, 50)
-                .replace(/[^\w.]/g, "_")}.mp4"`, // Nome do arquivo
-              "User-Agent": "SocialPublisherMVP/1.0", // User-Agent
+                .replace(/[^\w.]/g, "_")}.mp4"`,
+              "User-Agent": "SocialPublisherMVP/1.0",
               Connection: "keep-alive",
             },
             body: videoBlob,
@@ -724,7 +724,7 @@ Deno.serve(async (_req) => {
               headers: {
                 Authorization: `Bearer ${tiktokAccessToken}`,
                 "Content-Type": "application/json",
-                "User-Agent": "SocialPublisherMVP/1.0", // User-Agent
+                "User-Agent": "SocialPublisherMVP/1.0",
                 Connection: "keep-alive",
               },
               body: JSON.stringify({ upload_id: uploadId }),
@@ -738,7 +738,7 @@ Deno.serve(async (_req) => {
           }
           const completeData = await completeUploadResponse.json();
           const tiktokPostId =
-            completeData.data?.share_id || completeData.data?.publish_id; // Verificar qual ID é retornado
+            completeData.data?.share_id || completeData.data?.publish_id;
           if (!tiktokPostId)
             throw new Error(
               `TikTok upload complete returned no post ID: ${JSON.stringify(
