@@ -1033,7 +1033,7 @@ Deno.serve(async (_req) => {
     console.error("Erro geral no post-scheduler:", e);
     return new Response(JSON.stringify({ error: e.message }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
-      status: 500,
+      status: ,
     });
   }
 });
