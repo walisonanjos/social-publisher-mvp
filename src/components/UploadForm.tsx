@@ -15,7 +15,7 @@ interface UploadFormProps {
   onScheduleSuccess: (newVideo: Video, clearFileCallback: () => void) => void;
   isYouTubeConnected: boolean;
   isInstagramConnected: boolean;
-  isTikTokConnected: boolean; // <-- NOVO: Prop para o status da conexão TikTok
+  isTikTokConnected: boolean; // Prop para o status da conexão TikTok
   title: string;
   setTitle: (title: string) => void;
   description: string;
@@ -27,7 +27,7 @@ export default function UploadForm({
   onScheduleSuccess,
   isYouTubeConnected,
   isInstagramConnected,
-  isTikTokConnected, // <-- NOVO: Usado aqui
+  isTikTokConnected, // Usado aqui
   title,
   setTitle,
   description,
@@ -35,7 +35,7 @@ export default function UploadForm({
 }: UploadFormProps) {
   const [file, setFile] = useState<File | null>(null);
   const [scheduleDate, setScheduleDate] = useState<Date | undefined>(
-    new Date(),
+    new Date()
   );
   const [scheduleTime, setScheduleTime] = useState("09:00");
   const [isUploading, setIsUploading] = useState(false);
@@ -43,7 +43,7 @@ export default function UploadForm({
   const [postToYouTube, setPostToYouTube] = useState(true);
   const [postToInstagram, setPostToInstagram] = useState(true);
   const [postToFacebook, setPostToFacebook] = useState(true);
-  const [postToTikTok, setPostToTikTok] = useState(false); // <-- NOVO: Estado para o checkbox do TikTok
+  const [postToTikTok, setPostToTikTok] = useState(false); // Estado para o checkbox do TikTok
 
   const supabase = createClient();
   const today = new Date();
@@ -59,7 +59,9 @@ export default function UploadForm({
 
   const clearFile = () => {
     setFile(null);
-    const fileInput = document.getElementById("file-upload") as HTMLInputElement;
+    const fileInput = document.getElementById(
+      "file-upload"
+    ) as HTMLInputElement;
     if (fileInput) fileInput.value = "";
   };
 
@@ -69,9 +71,15 @@ export default function UploadForm({
       toast.error("Por favor, preencha todos os campos obrigatórios.");
       return;
     }
-    // ATUALIZADO: Validação para incluir o TikTok
-    if (!postToYouTube && !postToInstagram && !postToFacebook && !postToTikTok) {
-      toast.error("Por favor, selecione pelo menos uma rede social para postar.");
+    if (
+      !postToYouTube &&
+      !postToInstagram &&
+      !postToFacebook &&
+      !postToTikTok
+    ) {
+      toast.error(
+        "Por favor, selecione pelo menos uma rede social para postar."
+      );
       return;
     }
 
@@ -86,7 +94,7 @@ export default function UploadForm({
         parseInt(hours, 10),
         parseInt(minutes, 10),
         0,
-        0,
+        0
       );
       const scheduled_at_iso = finalScheduleDate.toISOString();
 
@@ -102,7 +110,7 @@ export default function UploadForm({
       }
       if (existingPost) {
         throw new Error(
-          "Já existe um agendamento para este workspace neste mesmo dia e hora.",
+          "Já existe um agendamento para este workspace neste mesmo dia e hora."
         );
       }
 
@@ -110,12 +118,12 @@ export default function UploadForm({
       formData.append("file", file);
       formData.append(
         "upload_preset",
-        process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET!,
+        process.env.NEXT_PUBLIC_CLOUDINARY_UPLOAD_PRESET!
       );
 
       const cloudinaryResponse = await fetch(
         `https://api.cloudinary.com/v1_1/${process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME}/video/upload`,
-        { method: "POST", body: formData },
+        { method: "POST", body: formData }
       );
       if (!cloudinaryResponse.ok)
         throw new Error("Falha no upload para o Cloudinary.");
@@ -123,12 +131,13 @@ export default function UploadForm({
       const cloudinaryData = await cloudinaryResponse.json();
       const videoUrl = cloudinaryData.secure_url;
       const cloudinaryPublicId = cloudinaryData.public_id;
+      const videoSizeBytes = cloudinaryData.bytes; // <-- NOVO: Captura o tamanho do vídeo
 
       const {
         data: { user },
       } = await supabase.auth.getUser();
       if (!user) throw new Error("Usuário não autenticado.");
-      
+
       const { data: newVideo, error: insertError } = await supabase
         .from("videos")
         .insert({
@@ -138,47 +147,52 @@ export default function UploadForm({
           description,
           video_url: videoUrl,
           cloudinary_public_id: cloudinaryPublicId,
+          video_size_bytes: videoSizeBytes, // <-- NOVO: Salva o tamanho do vídeo
           scheduled_at: scheduled_at_iso,
           target_youtube: postToYouTube,
           target_instagram: postToInstagram,
           target_facebook: postToFacebook,
-          target_tiktok: postToTikTok, // <-- NOVO: Campo para o TikTok
-          youtube_status: postToYouTube ? 'agendado' : null,
-          instagram_status: postToInstagram ? 'agendado' : null,
-          facebook_status: postToFacebook ? 'agendado' : null,
-          tiktok_status: postToTikTok ? 'agendado' : null, // <-- NOVO: Status para o TikTok
+          target_tiktok: postToTikTok,
+          youtube_status: postToYouTube ? "agendado" : null,
+          instagram_status: postToInstagram ? "agendado" : null,
+          facebook_status: postToFacebook ? "agendado" : null,
+          tiktok_status: postToTikTok ? "agendado" : null,
         })
         .select()
         .single();
 
       if (insertError) {
-        if (insertError.code === '23505') {
-          throw new Error('Já existe um agendamento para este workspace neste mesmo dia e hora.');
+        if (insertError.code === "23505") {
+          throw new Error(
+            "Já existe um agendamento para este workspace neste mesmo dia e hora."
+          );
         }
         throw insertError;
       }
       if (!newVideo)
         throw new Error(
-          "Não foi possível obter os dados do agendamento criado.",
+          "Não foi possível obter os dados do agendamento criado."
         );
 
       toast.success("Seu vídeo foi agendado com sucesso!");
-      
+
       onScheduleSuccess(newVideo as Video, clearFile);
-      
     } catch (err) {
-        if (err instanceof Error) {
-            toast.error(`Ocorreu um erro: ${err.message}`);
-        } else {
-            toast.error("Ocorreu um erro inesperado.");
-        }
+      if (err instanceof Error) {
+        toast.error(`Ocorreu um erro: ${err.message}`);
+      } else {
+        toast.error("Ocorreu um erro inesperado.");
+      }
     } finally {
       setIsUploading(false);
     }
   };
 
   return (
-    <div id="upload-form" className="bg-gray-800 p-8 rounded-lg shadow-lg border border-gray-700">
+    <div
+      id="upload-form"
+      className="bg-gray-800 p-8 rounded-lg shadow-lg border border-gray-700"
+    >
       <h2 className="text-xl font-bold text-white mb-6">Novo Agendamento</h2>
       <form onSubmit={handleSubmit} className="space-y-6">
         <div>
@@ -239,7 +253,26 @@ export default function UploadForm({
               locale={ptBR}
               disabled={{ before: today, after: tenDaysFromNow }}
               className="bg-gray-900 p-2 rounded-md"
-              classNames={{ caption: "flex justify-center py-2 mb-2 relative items-center", caption_label: "text-sm font-medium text-white", nav: "flex items-center", nav_button: "h-6 w-6 bg-transparent hover:bg-gray-700 p-1 rounded-full", nav_button_previous: "absolute left-1", nav_button_next: "absolute right-1", table: "w-full border-collapse", head_row: "flex font-medium text-gray-400", head_cell: "w-8 font-normal text-xs", row: "flex w-full mt-2", cell: "text-white h-8 w-8 text-center text-sm p-0 relative [&:has([aria-selected])]:bg-teal-500/20 rounded-full", day: "h-8 w-8 p-0 font-normal hover:bg-teal-500/30 rounded-full transition-colors", day_selected: "bg-teal-600 text-white hover:bg-teal-700 rounded-full", day_today: "text-teal-400", day_outside: "text-gray-500 opacity-50", day_disabled: "text-gray-600 opacity-50" }}
+              classNames={{
+                caption: "flex justify-center py-2 mb-2 relative items-center",
+                caption_label: "text-sm font-medium text-white",
+                nav: "flex items-center",
+                nav_button:
+                  "h-6 w-6 bg-transparent hover:bg-gray-700 p-1 rounded-full",
+                nav_button_previous: "absolute left-1",
+                nav_button_next: "absolute right-1",
+                table: "w-full border-collapse",
+                head_row: "flex font-medium text-gray-400",
+                head_cell: "w-8 font-normal text-xs",
+                row: "flex w-full mt-2",
+                cell: "text-white h-8 w-8 text-center text-sm p-0 relative [&:has([aria-selected])]:bg-teal-500/20 rounded-full",
+                day: "h-8 w-8 p-0 font-normal hover:bg-teal-500/30 rounded-full transition-colors",
+                day_selected:
+                  "bg-teal-600 text-white hover:bg-teal-700 rounded-full",
+                day_today: "text-teal-400",
+                day_outside: "text-gray-500 opacity-50",
+                day_disabled: "text-gray-600 opacity-50",
+              }}
             />
           </div>
           <div>
@@ -266,21 +299,79 @@ export default function UploadForm({
         <div>
           <h3 className="text-sm font-medium text-gray-300 mb-2">Postar em:</h3>
           <div className="flex flex-wrap gap-x-6 gap-y-2">
-            <label className={`flex items-center gap-2 ${isInstagramConnected ? 'cursor-pointer text-white' : 'cursor-not-allowed text-gray-500'}`}><input type="checkbox" className="h-4 w-4 rounded bg-gray-700 border-gray-500 text-teal-600 focus:ring-teal-500 disabled:opacity-50" checked={postToInstagram} onChange={(e) => setPostToInstagram(e.target.checked)} disabled={!isInstagramConnected}/>Instagram</label>
-            <label className={`flex items-center gap-2 ${isInstagramConnected ? 'cursor-pointer text-white' : 'cursor-not-allowed text-gray-500'}`}><input type="checkbox" className="h-4 w-4 rounded bg-gray-700 border-gray-500 text-teal-600 focus:ring-teal-500 disabled:opacity-50" checked={postToFacebook} onChange={(e) => setPostToFacebook(e.target.checked)} disabled={!isInstagramConnected}/>Facebook</label>
-            <label className={`flex items-center gap-2 ${isYouTubeConnected ? 'cursor-pointer text-white' : 'cursor-not-allowed text-gray-500'}`}><input type="checkbox" className="h-4 w-4 rounded bg-gray-700 border-gray-500 text-teal-600 focus:ring-teal-500 disabled:opacity-50" checked={postToYouTube} onChange={(e) => setPostToYouTube(e.target.checked)} disabled={!isYouTubeConnected}/>YouTube</label>
-            {/* NOVO: Checkbox do TikTok */}
-            <label className={`flex items-center gap-2 ${isTikTokConnected ? 'cursor-pointer text-white' : 'cursor-not-allowed text-gray-500'}`}>
-                <input 
-                    type="checkbox" 
-                    className="h-4 w-4 rounded bg-gray-700 border-gray-500 text-teal-600 focus:ring-teal-500 disabled:opacity-50" 
-                    checked={postToTikTok} 
-                    onChange={(e) => setPostToTikTok(e.target.checked)} 
-                    disabled={!isTikTokConnected}
-                />
-                TikTok
+            <label
+              className={`flex items-center gap-2 ${
+                isInstagramConnected
+                  ? "cursor-pointer text-white"
+                  : "cursor-not-allowed text-gray-500"
+              }`}
+            >
+              <input
+                type="checkbox"
+                className="h-4 w-4 rounded bg-gray-700 border-gray-500 text-teal-600 focus:ring-teal-500 disabled:opacity-50"
+                checked={postToInstagram}
+                onChange={(e) => setPostToInstagram(e.target.checked)}
+                disabled={!isInstagramConnected}
+              />
+              Instagram
             </label>
-            <label className="flex items-center gap-2 cursor-pointer text-gray-500"><input type="checkbox" className="h-4 w-4 rounded bg-gray-700 border-gray-500 text-teal-600 focus:ring-teal-500" disabled/>Kwai</label>
+            <label
+              className={`flex items-center gap-2 ${
+                isInstagramConnected
+                  ? "cursor-pointer text-white"
+                  : "cursor-not-allowed text-gray-500"
+              }`}
+            >
+              <input
+                type="checkbox"
+                className="h-4 w-4 rounded bg-gray-700 border-gray-500 text-teal-600 focus:ring-teal-500 disabled:opacity-50"
+                checked={postToFacebook}
+                onChange={(e) => setPostToFacebook(e.target.checked)}
+                disabled={!isInstagramConnected}
+              />
+              Facebook
+            </label>
+            <label
+              className={`flex items-center gap-2 ${
+                isYouTubeConnected
+                  ? "cursor-pointer text-white"
+                  : "cursor-not-allowed text-gray-500"
+              }`}
+            >
+              <input
+                type="checkbox"
+                className="h-4 w-4 rounded bg-gray-700 border-gray-500 text-teal-600 focus:ring-teal-500 disabled:opacity-50"
+                checked={postToYouTube}
+                onChange={(e) => setPostToYouTube(e.target.checked)}
+                disabled={!isYouTubeConnected}
+              />
+              YouTube
+            </label>
+            {/* NOVO: Checkbox do TikTok */}
+            <label
+              className={`flex items-center gap-2 ${
+                isTikTokConnected
+                  ? "cursor-pointer text-white"
+                  : "cursor-not-allowed text-gray-500"
+              }`}
+            >
+              <input
+                type="checkbox"
+                className="h-4 w-4 rounded bg-gray-700 border-gray-500 text-teal-600 focus:ring-teal-500 disabled:opacity-50"
+                checked={postToTikTok}
+                onChange={(e) => setPostToTikTok(e.target.checked)}
+                disabled={!isTikTokConnected}
+              />
+              TikTok
+            </label>
+            <label className="flex items-center gap-2 cursor-pointer text-gray-500">
+              <input
+                type="checkbox"
+                className="h-4 w-4 rounded bg-gray-700 border-gray-500 text-teal-600 focus:ring-teal-500"
+                disabled
+              />
+              Kwai
+            </label>
           </div>
         </div>
         <div>
