@@ -214,7 +214,6 @@ Deno.serve(async (_req) => {
     );
 
     const now = new Date().toISOString();
-    // ATUALIZADO: Incluir tiktok_status na query de seleção de vídeos agendados
     const { data: scheduledVideos, error: fetchError } = await supabaseAdmin
       .from("videos")
       .select("*, niches(social_connections(*))")
@@ -706,68 +705,31 @@ Deno.serve(async (_req) => {
 
       // --- NOVA TENTATIVA DE POSTAGEM NO TIKTOK ---
       if (video.target_tiktok && video.tiktok_status === "agendado") {
-        // Obtenha o token de acesso do TikTok. Tente renovar se necessário.
-        let currentTiktokAccessToken = tiktokConnection.access_token;
-        if (!currentTiktokAccessToken)
-          throw new Error("Access Token do TikTok não encontrado.");
-
-        // Verifique se o token de acesso expirou (pode não ser exato, mas é uma boa heurística)
-        const tokenExpiresAt = new Date(
-          tiktokConnection.expires_at || 0
-        ).getTime();
-        const now = Date.now();
-        // Renovamos se expirar em menos de 5 minutos (300 segundos) ou já expirou
-        if (tokenExpiresAt - now < 300 * 1000) {
-          console.log(
-            `Token do TikTok para nicho ${video.niche_id} expirando ou expirado. Tentando renovar.`
-          );
-          const {
-            accessToken: newAccessToken,
-            newRefreshToken,
-            expiresIn,
-            refreshExpiresIn,
-          } = await refreshTiktokAccessToken(
-            tiktokConnection.refresh_token,
-            video.niche_id
-          );
-
-          currentTiktokAccessToken = newAccessToken;
-          // Atualiza o token no banco de dados
-          const { error: tokenUpdateError } = await supabaseAdmin
-            .from("social_connections")
-            .update({
-              access_token: newAccessToken,
-              refresh_token: newRefreshToken,
-              expires_at: new Date(now + expiresIn * 1000).toISOString(),
-              // refresh_expires_at: new Date(now + refreshExpiresIn * 1000).toISOString() // Se você tiver esta coluna
-            })
-            .eq("user_id", video.user_id)
-            .eq("niche_id", video.niche_id)
-            .eq("platform", "tiktok");
-          if (tokenUpdateError) {
-            console.error(
-              `Erro ao atualizar token do TikTok no DB para o nicho ${video.niche_id}:`,
-              tokenUpdateError
-            );
-            throw new Error(
-              "Falha ao atualizar token do TikTok no banco de dados."
-            );
-          }
-        }
-
         try {
           console.log(`Processando TikTok para o vídeo ID: ${video.id}`);
+          const tiktokConnection = video.niches?.social_connections.find(
+            (c: any) => c.platform === "tiktok"
+          );
+          if (
+            !tiktokConnection?.access_token ||
+            !tiktokConnection?.provider_user_id
+          )
+            throw new Error("Credenciais do TikTok não encontradas.");
+          const {
+            access_token: tiktokAccessToken,
+            provider_user_id: tiktokOpenId,
+          } = tiktokConnection;
 
           // Etapa 1: Iniciar upload (upload_init)
-          // CORREÇÃO: source: 'FILE_UPLOAD' e adicionar video_size, chunk_size, total_chunk_count
+          // CORREÇÃO: source: 'FILE_UPLOAD' e adicionar video_size
           const initUploadResponse = await fetch(
             `https://open.tiktokapis.com/${TIKTOK_API_VERSION}/post/publish/video/init/`,
             {
               method: "POST",
               headers: {
-                Authorization: `Bearer ${currentTiktokAccessToken}`,
+                Authorization: `Bearer ${tiktokAccessToken}`,
                 "Content-Type": "application/json",
-                "User-Agent": "SocialPublisherMVP/1.0",
+                "User-Agent": "SocialPublisherMVP/1.0", // Adicione User-Agent para todas as chamadas TikTok
                 Connection: "keep-alive",
               },
               body: JSON.stringify({
@@ -775,12 +737,12 @@ Deno.serve(async (_req) => {
                   title: video.title.substring(0, 100), // Título max 100 caracteres para TikTok
                   // desc: video.description?.substring(0, 400), // Descrição max 400 caracteres
                   visibility_type: "PRIVATE_TO_ONLY_ME", // Começa como privado para testar
+                  // if you use original_url, you must verify your domain in TikTok dev portal
+                  // original_url: video.video_url, // URL direta do Cloudinary
                 },
                 source_info: {
-                  source: "FILE_UPLOAD", // <-- CORRIGIDO: Agora é FILE_UPLOAD
-                  video_size: video.video_size_bytes, // <-- NOVO: Adiciona o tamanho do vídeo
-                  chunk_size: video.video_size_bytes, // <-- NOVO: Para upload de arquivo único
-                  total_chunk_count: 1, // <-- NOVO: Para upload de arquivo único
+                  source: "PULL_FROM_URL", // Usar Pull from URL do Cloudinary
+                  video_url: video.video_url, // URL do Cloudinary
                 },
               }),
             }
@@ -839,7 +801,7 @@ Deno.serve(async (_req) => {
             {
               method: "POST",
               headers: {
-                Authorization: `Bearer ${currentTiktokAccessToken}`,
+                Authorization: `Bearer ${tiktokAccessToken}`,
                 "Content-Type": "application/json",
                 "User-Agent": "SocialPublisherMVP/1.0", // User-Agent
                 Connection: "keep-alive",
@@ -1033,7 +995,7 @@ Deno.serve(async (_req) => {
     console.error("Erro geral no post-scheduler:", e);
     return new Response(JSON.stringify({ error: e.message }), {
       headers: { ...corsHeaders, "Content-Type": "application/json" },
-      status: ,
+      status: 500,
     });
   }
 });
