@@ -657,7 +657,7 @@ Deno.serve(async (_req) => {
               body: JSON.stringify({
                 post_info: {
                   title: video.title.substring(0, 100),
-                  visibility_type: "PRIVATE_TO_ONLY_ME",
+                  visibility_type: "FOLLOWER_OF_CREATOR",
                 },
                 source_info: {
                   source: "FILE_UPLOAD", // <-- CORRIGIDO: Agora é FILE_UPLOAD

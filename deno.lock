@@ -1,0 +1,40 @@
+{
+  "version": "5",
+  "redirects": {
+    "https://deno.land/x/dotenv/load.ts": "https://deno.land/x/dotenv@v3.2.2/load.ts"
+  },
+  "remote": {
+    "https://deno.land/x/dotenv@v3.2.2/load.ts": "cbd76a0aee01aad8d09222afaa1dd04b84d9d3e44637503b01bf77a91df9e041",
+    "https://deno.land/x/dotenv@v3.2.2/mod.ts": "077b48773de9205266a0b44c3c3a3c3083449ed64bb0b6cc461b95720678d38e",
+    "https://deno.land/x/dotenv@v3.2.2/util.ts": "693730877b13f8ead2b79b2aa31e2a0652862f7dc0c5f6d2f313f4d39c7b7670"
+  },
+  "workspace": {
+    "packageJson": {
+      "dependencies": [
+        "npm:@eslint/eslintrc@3",
+        "npm:@supabase/auth-helpers-nextjs@0.10",
+        "npm:@supabase/ssr@~0.6.1",
+        "npm:@supabase/supabase-js@^2.50.2",
+        "npm:@tabler/icons-react@^3.34.1",
+        "npm:@tailwindcss/postcss@4",
+        "npm:@types/node@20",
+        "npm:@types/react-dom@19",
+        "npm:@types/react@19",
+        "npm:date-fns@^4.1.0",
+        "npm:eslint-config-next@15.3.4",
+        "npm:eslint@9",
+        "npm:lucide-react@0.525",
+        "npm:next@15.3.4",
+        "npm:react-day-picker@^9.7.0",
+        "npm:react-dom@19",
+        "npm:react-tooltip@^5.29.1",
+        "npm:react@19",
+        "npm:recharts@^3.0.2",
+        "npm:sonner@^2.0.6",
+        "npm:supabase@^2.30.4",
+        "npm:tailwindcss@4",
+        "npm:typescript@5"
+      ]
+    }
+  }
+}
