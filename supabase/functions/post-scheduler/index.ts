@@ -1,6 +1,5 @@
 // supabase/functions/post-scheduler/index.ts
-// VERSÃO FINAL COM AUTO-DESCONEXÃO DE TOKENS REVOGADOS E ATUALIZAÇÕES ATÔMICAS DE STATUS/IDs
-// AGORA COM LÓGICA DE POSTAGEM PARA TIKTOK USANDO UPLOAD DIRETO CORRETAMENTE
+// VERSÃO FINAL CORRIGIDA: AGORA COM LÓGICA DE POSTAGEM PARA TIKTOK USANDO UPLOAD DIRETO CORRETAMENTE E RENOVAÇÃO DE TOKEN NO FLUXO PRINCIPAL
 
 // CORREÇÃO: Renomeado createClient para supabaseCreateClient
 import { createClient as supabaseCreateClient } from "https://esm.sh/@supabase/supabase-js@2";
@@ -18,7 +17,7 @@ const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
 
 // --- FUNÇÃO HELPER PARA LOGGING ---
 async function logAttempt(
-  supabaseAdmin: supabaseCreateClient, // Use o nome renomeado aqui
+  supabaseAdmin: supabaseCreateClient,
   video_id: number,
   platform: string,
   status: "sucesso" | "falha" | "retentativa",
@@ -37,6 +36,85 @@ async function logAttempt(
   } catch (e: any) {
     console.error("!!! Exceção crítica ao salvar log:", e.message);
   }
+}
+
+// --- NOVO: Função para renovar o token de acesso do TikTok ---
+async function refreshTiktokAccessToken(
+  refreshToken: string,
+  nicheId: string // Adicionado nicheId para logs ou remoção da conexão
+): Promise<{
+  accessToken: string;
+  newRefreshToken: string | null;
+  expiresIn: number;
+  refreshExpiresIn: number;
+}> {
+  const TIKTOK_CLIENT_ID = Deno.env.get("TIKTOK_CLIENT_ID");
+  const TIKTOK_CLIENT_SECRET = Deno.env.get("TIKTOK_CLIENT_SECRET");
+
+  if (!TIKTOK_CLIENT_ID || !TIKTOK_CLIENT_SECRET) {
+    throw new Error(
+      "Variáveis de ambiente TIKTOK_CLIENT_ID ou TIKTOK_CLIENT_SECRET não configuradas para renovação de token."
+    );
+  }
+
+  const tokenRefreshResponse = await fetch(
+    "https://open.tiktokapis.com/v2/oauth/token/",
+    {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded",
+      },
+      body: new URLSearchParams({
+        client_key: TIKTOK_CLIENT_ID,
+        client_secret: TIKTOK_CLIENT_SECRET,
+        grant_type: "refresh_token",
+        refresh_token: refreshToken,
+      }).toString(),
+    }
+  );
+
+  if (!tokenRefreshResponse.ok) {
+    const errorText = await tokenRefreshResponse.text();
+    let errorMessage = errorText;
+    try {
+      const errorJson = JSON.parse(errorText);
+      errorMessage =
+        errorJson.message ||
+        errorJson.error_description ||
+        JSON.stringify(errorJson);
+    } catch (parseError) {} // Não é JSON, use o texto puro
+
+    // Se o refresh token for inválido, é um erro de token que requer reconexão
+    const isTokenError =
+      errorMessage.toLowerCase().includes("token") ||
+      errorMessage.toLowerCase().includes("invalid_grant");
+    if (isTokenError) {
+      console.log(
+        `Token de renovação do TikTok revogado para o nicho ${nicheId}. Removendo conexão.`
+      );
+      const supabaseAdmin = supabaseCreateClient(
+        Deno.env.get("SUPABASE_URL")!,
+        Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!
+      );
+      await supabaseAdmin
+        .from("social_connections")
+        .delete()
+        .match({ niche_id: nicheId, platform: "tiktok" });
+      throw new Error(
+        `Token inválido ou expirado. Desconectando conta automaticamente.`
+      );
+    }
+    throw new Error(`Falha ao renovar token do TikTok: ${errorMessage}`);
+  }
+
+  const refreshData = await tokenRefreshResponse.json();
+  console.log("Token do TikTok renovado com sucesso.");
+  return {
+    accessToken: refreshData.access_token,
+    newRefreshToken: refreshData.refresh_token || refreshToken, // Use o novo refresh token se fornecido
+    expiresIn: refreshData.expires_in,
+    refreshExpiresIn: refreshData.refresh_expires_in,
+  };
 }
 
 // Funções Auxiliares para Meta (Instagram/Facebook)
@@ -625,26 +703,45 @@ Deno.serve(async (_req) => {
         }
       }
 
-      // --- NOVA TENTATIVA DE POSTAGEM NO TIKTOK ---
+      // --- TENTATIVA DE POSTAGEM NO TIKTOK (POST DIRETO PRIVADO) ---
       if (video.target_tiktok && video.tiktok_status === "agendado") {
         try {
-          console.log(`Processando TikTok para o vídeo ID: ${video.id}`);
+          console.log(`Processando TikTok post direto (privado) para o vídeo ID: ${video.id}`);
           const tiktokConnection = video.niches?.social_connections.find(
             (c: any) => c.platform === "tiktok"
           );
-          if (
-            !tiktokConnection?.access_token ||
-            !tiktokConnection?.provider_user_id
-          )
+          if (!tiktokConnection?.access_token || !tiktokConnection?.provider_user_id)
             throw new Error("Credenciais do TikTok não encontradas.");
-          const {
-            access_token: tiktokAccessToken,
-            provider_user_id: tiktokOpenId,
-          } = tiktokConnection;
+          const { access_token: tiktokAccessToken } = tiktokConnection;
 
-          // Etapa 1: Iniciar upload (upload_init)
-          // CORREÇÃO: source: 'FILE_UPLOAD' e adicionar video_size
-          const initUploadResponse = await fetch(
+          // Etapa 1: Query Creator Info (obrigatório)
+          const creatorInfoResponse = await fetch(
+            `https://open.tiktokapis.com/${TIKTOK_API_VERSION}/post/publish/creator_info/query/`,
+            {
+              method: "POST",
+              headers: {
+                Authorization: `Bearer ${tiktokAccessToken}`,
+                "Content-Type": "application/json",
+                "User-Agent": "SocialPublisherMVP/1.0",
+              },
+              body: JSON.stringify({}), // Body vazio para query
+            }
+          );
+          if (!creatorInfoResponse.ok) {
+            const errorText = await creatorInfoResponse.text();
+            throw new Error(`TikTok creator info query failed: ${errorText}`);
+          }
+          const creatorData = await creatorInfoResponse.json();
+          const privacyOptions = creatorData.data?.privacy_level_options || [];
+          if (!privacyOptions.includes("SELF_ONLY")) {
+            throw new Error("Conta não suporta posts privados (SELF_ONLY). Verifique configurações.");
+          }
+          const maxDuration = creatorData.data?.max_video_post_duration_sec || 600; // Default 10min
+          console.log(`Creator info: Privacy options: ${privacyOptions}, Max duration: ${maxDuration}s`);
+
+          // Etapa 2: Iniciar post direto
+          const cloudinaryUrl = `https://social-publisher-mvp.vercel.app/video/upload/${video.cloudinary_public_id}.mp4`;
+          const initPostResponse = await fetch(
             `https://open.tiktokapis.com/${TIKTOK_API_VERSION}/post/publish/video/init/`,
             {
               method: "POST",
@@ -652,117 +749,75 @@ Deno.serve(async (_req) => {
                 Authorization: `Bearer ${tiktokAccessToken}`,
                 "Content-Type": "application/json",
                 "User-Agent": "SocialPublisherMVP/1.0",
-                Connection: "keep-alive",
               },
               body: JSON.stringify({
                 post_info: {
-                  title: video.title.substring(0, 100),
-                  visibility_type: "PRIVATE",
+                  title: video.title || "Vídeo Automatizado",
+                  description: video.description || "",
+                  privacy_level: "SELF_ONLY", // Privado no sandbox
+                  disable_comment: true, // Exemplo; ajuste conforme UX guidelines
+                  disable_duet: true,
+                  disable_stitch: true,
+                  video_cover_timestamp_ms: 1000, // Exemplo: 1s como cover
                 },
                 source_info: {
-                  source: "FILE_UPLOAD", // <-- CORRIGIDO: Agora é FILE_UPLOAD
-                  video_size: video.video_size_bytes, // <-- NOVO: Adiciona o tamanho do vídeo
-                  chunk_size: video.video_size_bytes, // <-- NOVO: Para upload de arquivo único
-                  total_chunk_count: 1, // <-- NOVO: Para upload de arquivo único
+                  source: "PULL_FROM_URL",
+                  video_url: cloudinaryUrl, // URL do Cloudinary construída dinamicamente
                 },
               }),
             }
           );
-
-          if (!initUploadResponse.ok) {
-            const errorText = await initUploadResponse.text();
-            console.error("ERRO TikTok upload_init:", errorText);
-            throw new Error(`TikTok upload init failed: ${errorText}`);
+          if (!initPostResponse.ok) {
+            const errorText = await initPostResponse.text();
+            throw new Error(`TikTok post init failed: ${errorText}`); // Pode ser url_ownership_unverified
           }
-          const initData = await initUploadResponse.json();
-          const uploadId = initData.data?.upload_id;
-          const uploadUrl = initData.data?.upload_url;
-          if (!uploadId || !uploadUrl)
-            throw new Error(
-              `TikTok upload init returned no upload_id or upload_url: ${JSON.stringify(
-                initData
-              )}`
+          const initData = await initPostResponse.json();
+          const publishId = initData.data?.publish_id;
+          if (!publishId) throw new Error(`TikTok init returned no publish_id: ${JSON.stringify(initData)}`);
+          console.log(`TikTok post init successful. Publish ID: ${publishId}`);
+
+          // Etapa 3: Poll status até completo (max ~5-10min)
+          const MAX_POLL_RETRIES = 60; // 10s * 60 = 10min
+          const POLL_INTERVAL_MS = 10000; // 10s
+          let status = "IN_PROGRESS";
+          for (let i = 0; i < MAX_POLL_RETRIES; i++) {
+            console.log(`Verificando status do TikTok (tentativa ${i + 1}/${MAX_POLL_RETRIES})...`);
+            const statusResponse = await fetch(
+              `https://open.tiktokapis.com/${TIKTOK_API_VERSION}/post/publish/status/fetch/`,
+              {
+                method: "POST",
+                headers: {
+                  Authorization: `Bearer ${tiktokAccessToken}`,
+                  "Content-Type": "application/json",
+                },
+                body: JSON.stringify({ publish_id: publishId }),
+              }
             );
-
-          console.log(
-            `TikTok upload init successful. Upload ID: ${uploadId}, Upload URL: ${uploadUrl}`
-          );
-
-          // Etapa 2: Fazer upload do vídeo para a URL de upload (upload_phase)
-          const videoFileResponse = await fetch(video.video_url);
-          if (!videoFileResponse.ok)
-            throw new Error(
-              "Não foi possível buscar o vídeo do Cloudinary para TikTok."
-            );
-          const videoBlob = await videoFileResponse.blob();
-
-          const uploadPhaseResponse = await fetch(uploadUrl, {
-            method: "PUT", // Método PUT para upload
-            headers: {
-              "Content-Type": "video/mp4", // Ou o tipo MIME correto do vídeo
-              "Content-Disposition": `attachment; filename="${video.title
-                .substring(0, 50)
-                .replace(/[^\w.]/g, "_")}.mp4"`,
-              "User-Agent": "SocialPublisherMVP/1.0",
-              Connection: "keep-alive",
-            },
-            body: videoBlob,
-          });
-
-          if (!uploadPhaseResponse.ok) {
-            const errorText = await uploadPhaseResponse.text();
-            console.error("ERRO TikTok upload_phase:", errorText);
-            throw new Error(`TikTok upload phase failed: ${errorText}`);
-          }
-          console.log("TikTok upload phase successful.");
-
-          // Etapa 3: Completar o upload (upload_complete)
-          const completeUploadResponse = await fetch(
-            `https://open.tiktokapis.com/${TIKTOK_API_VERSION}/post/publish/video/complete/`,
-            {
-              method: "POST",
-              headers: {
-                Authorization: `Bearer ${tiktokAccessToken}`,
-                "Content-Type": "application/json",
-                "User-Agent": "SocialPublisherMVP/1.0",
-                Connection: "keep-alive",
-              },
-              body: JSON.stringify({ upload_id: uploadId }),
+            if (!statusResponse.ok) {
+              const errorText = await statusResponse.text();
+              throw new Error(`TikTok status fetch failed: ${errorText}`);
             }
-          );
-
-          if (!completeUploadResponse.ok) {
-            const errorText = await completeUploadResponse.text();
-            console.error("ERRO TikTok upload_complete:", errorText);
-            throw new Error(`TikTok upload complete failed: ${errorText}`);
+            const statusData = await statusResponse.json();
+            status = statusData.data?.status || "ERROR";
+            if (status === "PUBLISH_COMPLETE") {
+              console.log("TikTok post completo!");
+              break;
+            } else if (status === "FAILED") {
+              throw new Error(`TikTok post falhou: ${statusData.data?.fail_reason || "Motivo desconhecido"}`);
+            }
+            await sleep(POLL_INTERVAL_MS);
           }
-          const completeData = await completeUploadResponse.json();
-          const tiktokPostId =
-            completeData.data?.share_id || completeData.data?.publish_id;
-          if (!tiktokPostId)
-            throw new Error(
-              `TikTok upload complete returned no post ID: ${JSON.stringify(
-                completeData
-              )}`
-            );
+          if (status !== "PUBLISH_COMPLETE") throw new Error("Tempo limite no polling de status do TikTok.");
 
-          console.log(
-            `Vídeo do TikTok publicado com sucesso! Share ID: ${tiktokPostId}`
-          );
-
-          // ATUALIZAÇÃO ATÔMICA PARA TIKTOK
+          // Atualização do status
           const { error: tiktokUpdateError } = await supabaseAdmin
             .from("videos")
             .update({
-              tiktok_post_id: tiktokPostId,
-              tiktok_status: "publicado",
+              tiktok_post_id: publishId,
+              tiktok_status: "publicado", // Ou "privado" para diferenciar
             })
             .eq("id", video.id);
-          if (tiktokUpdateError)
-            console.error(
-              "Erro ao atualizar status/ID do TikTok:",
-              tiktokUpdateError
-            );
+          if (tiktokUpdateError) console.error("Erro ao atualizar status/ID do TikTok:", tiktokUpdateError);
           else updateRequired = true;
 
           successfulPlatforms++;
@@ -771,13 +826,10 @@ Deno.serve(async (_req) => {
             video.id,
             "tiktok",
             "sucesso",
-            `Vídeo postado no TikTok. ID do post: ${tiktokPostId}`
+            `Vídeo postado diretamente (privado). ID: ${publishId}`
           );
         } catch (e: any) {
-          console.error(
-            `ERRO no fluxo do TikTok (vídeo ID ${video.id}):`,
-            e.message
-          );
+          console.error(`ERRO no fluxo do TikTok (post direto) (vídeo ID ${video.id}):`, e.message);
           errorMessages.push(`Falha no TikTok: ${e.message}`);
           if (video.retry_count < MAX_RETRIES) {
             const newScheduledAt = new Date(
@@ -858,7 +910,7 @@ Deno.serve(async (_req) => {
           }
         }
       }
-
+      
       // --- ATUALIZAÇÃO FINAL DO POST_ERROR E CLOUDINARY ---
       if (errorMessages.length > 0 || successfulPlatforms > 0) {
         const finalUpdatePayload: { post_error?: string | null } = {

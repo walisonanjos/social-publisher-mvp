@@ -1,0 +1,8 @@
+{
+  "rewrites": [
+    {
+      "source": "/video/upload/:path*",
+      "destination": "https://res.cloudinary.com/dan6ios8l/video/upload/:path*"
+    }
+  ]
+}
