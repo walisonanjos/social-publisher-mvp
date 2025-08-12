@@ -1,4 +1,5 @@
 // supabase/functions/post-scheduler/index.ts
+// VERSÃO FINAL COM LOGS APRIMORADOS DO YOUTUBE
 // VERSÃO FINAL CORRIGIDA: AGORA COM LÓGICA DE POSTAGEM PARA TIKTOK USANDO UPLOAD DIRETO CORRETAMENTE E RENOVAÇÃO DE TOKEN NO FLUXO PRINCIPAL
 
 // CORREÇÃO: Renomeado createClient para supabaseCreateClient
@@ -258,18 +259,15 @@ Deno.serve(async (_req) => {
               }),
             }
           );
-          const tokenText = await tokenResponse.text();
-          if (!tokenText)
-            throw new Error(
-              "A API de tokens do Google retornou uma resposta vazia."
-            );
-          const tokenData = JSON.parse(tokenText);
-          if (!tokenResponse.ok)
-            throw new Error(
-              tokenData.error_description ||
-                "Erro desconhecido ao renovar token."
-            );
+
+          if (!tokenResponse.ok) {
+            const errorText = await tokenResponse.text();
+            console.error(`[ERRO DETALHADO YOUTUBE] Falha ao renovar token: ${errorText}`);
+            throw new Error(`Falha ao renovar o access token do Google: ${errorText}`);
+          }
+          const tokenData = await tokenResponse.json();
           const accessToken = tokenData.access_token;
+          console.log("Token de acesso renovado com sucesso.");
 
           const videoMetadata = {
             snippet: {
@@ -301,13 +299,13 @@ Deno.serve(async (_req) => {
             body: formData,
           });
 
-          const uploadText = await uploadResponse.text();
-          if (!uploadText)
-            throw new Error(
-              "A API de upload do YouTube retornou uma resposta vazia."
-            );
-          const uploadResult = JSON.parse(uploadText);
-          if (!uploadResponse.ok) throw new Error(uploadResult.error.message);
+          if (!uploadResponse.ok) {
+            const errorText = await uploadResponse.text();
+            console.error(`[ERRO DETALHADO YOUTUBE] Falha no upload: ${errorText}`);
+            throw new Error(`A API de upload do YouTube retornou um erro: ${errorText}`);
+          }
+          const uploadResult = await uploadResponse.json();
+          if (!uploadResult.id) throw new Error("A API de upload do YouTube não retornou um ID de vídeo.");
 
           const { error: ytUpdateError } = await supabaseAdmin
             .from("videos")
@@ -703,7 +701,7 @@ Deno.serve(async (_req) => {
         }
       }
 
-      // --- TENTATIVA DE POSTAGEM NO TIKTOK (POST DIRETO PRIVADO) ---
+      // --- TENTATIVA DE POSTAGEM NO TIKTOK ---
       if (video.target_tiktok && video.tiktok_status === "agendado") {
         try {
           console.log(`Processando TikTok post direto (privado) para o vídeo ID: ${video.id}`);
