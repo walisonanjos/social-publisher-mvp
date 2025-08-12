@@ -1,8 +1,6 @@
 // supabase/functions/post-scheduler/index.ts
-// VERSÃO FINAL COM LOGS APRIMORADOS DO YOUTUBE
-// VERSÃO FINAL CORRIGIDA: AGORA COM LÓGICA DE POSTAGEM PARA TIKTOK USANDO UPLOAD DIRETO CORRETAMENTE E RENOVAÇÃO DE TOKEN NO FLUXO PRINCIPAL
+// VERSÃO DEFINITIVA: AGORA COM LOGS DETALHADOS NO YOUTUBE E POSTAGEM DE REELS NO FACEBOOK CORRIGIDA
 
-// CORREÇÃO: Renomeado createClient para supabaseCreateClient
 import { createClient as supabaseCreateClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
@@ -11,7 +9,7 @@ const corsHeaders = {
     "authorization, x-client-info, apikey, content-type",
 };
 const GRAPH_API_VERSION = "v20.0";
-const TIKTOK_API_VERSION = "v2"; // Versão da API do TikTok
+const TIKTOK_API_VERSION = "v2";
 const MAX_RETRIES = 1;
 const RETRY_DELAY_MINUTES = 15;
 const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
@@ -42,7 +40,7 @@ async function logAttempt(
 // --- NOVO: Função para renovar o token de acesso do TikTok ---
 async function refreshTiktokAccessToken(
   refreshToken: string,
-  nicheId: string // Adicionado nicheId para logs ou remoção da conexão
+  nicheId: string
 ): Promise<{
   accessToken: string;
   newRefreshToken: string | null;
@@ -83,9 +81,8 @@ async function refreshTiktokAccessToken(
         errorJson.message ||
         errorJson.error_description ||
         JSON.stringify(errorJson);
-    } catch (parseError) {} // Não é JSON, use o texto puro
+    } catch (parseError) {}
 
-    // Se o refresh token for inválido, é um erro de token que requer reconexão
     const isTokenError =
       errorMessage.toLowerCase().includes("token") ||
       errorMessage.toLowerCase().includes("invalid_grant");
@@ -112,7 +109,7 @@ async function refreshTiktokAccessToken(
   console.log("Token do TikTok renovado com sucesso.");
   return {
     accessToken: refreshData.access_token,
-    newRefreshToken: refreshData.refresh_token || refreshToken, // Use o novo refresh token se fornecido
+    newRefreshToken: refreshData.refresh_token || refreshToken,
     expiresIn: refreshData.expires_in,
     refreshExpiresIn: refreshData.refresh_expires_in,
   };
@@ -198,6 +195,56 @@ async function publishMediaContainer(
   );
   return data.id;
 }
+
+// --- NOVO: Função auxiliar para iniciar container no Facebook ---
+async function startFacebookMediaContainer(
+  accessToken: string,
+  facebookPageId: string,
+  videoUrl: string,
+  caption: string
+): Promise<string> {
+  const mediaUrl = `https://graph.facebook.com/${GRAPH_API_VERSION}/${facebookPageId}/media`;
+  const params = new URLSearchParams({
+    media_type: "REELS",
+    video_url: videoUrl,
+    caption: caption,
+    access_token: accessToken,
+  });
+  const response = await fetch(mediaUrl, { method: "POST", body: params });
+  const data = await response.json();
+  if (!response.ok)
+    throw new Error(
+      `Falha ao iniciar container do Facebook: ${
+        data.error?.message || "Erro desconhecido"
+      }`
+    );
+  console.log(`Container de mídia do Facebook iniciado com ID: ${data.id}`);
+  return data.id;
+}
+
+// --- NOVO: Função auxiliar para publicar container no Facebook ---
+async function publishFacebookMediaContainer(
+  accessToken: string,
+  facebookPageId: string,
+  creationId: string
+): Promise<string> {
+  const publishUrl = `https://graph.facebook.com/${GRAPH_API_VERSION}/${facebookPageId}/media_publish`;
+  const params = new URLSearchParams({
+    creation_id: creationId,
+    access_token: accessToken,
+  });
+  const response = await fetch(publishUrl, { method: "POST", body: params });
+  const data = await response.json();
+  if (!response.ok)
+    throw new Error(
+      `Falha ao publicar container do Facebook: ${data.error?.message}`
+    );
+  console.log(
+    `Reel do Facebook publicado com sucesso! ID do post: ${data.id}`
+  );
+  return data.id;
+}
+
 async function sha1(str: string): Promise<string> {
   const data = new TextEncoder().encode(str);
   const hashBuffer = await crypto.subtle.digest("SHA-1", data);
@@ -214,7 +261,6 @@ Deno.serve(async (_req) => {
     );
 
     const now = new Date().toISOString();
-    // ATUALIZADO: Incluir tiktok_status na query de seleção de vídeos agendados
     const { data: scheduledVideos, error: fetchError } = await supabaseAdmin
       .from("videos")
       .select("*, niches(social_connections(*))")
@@ -259,7 +305,6 @@ Deno.serve(async (_req) => {
               }),
             }
           );
-
           if (!tokenResponse.ok) {
             const errorText = await tokenResponse.text();
             console.error(`[ERRO DETALHADO YOUTUBE] Falha ao renovar token: ${errorText}`);
@@ -969,4 +1014,4 @@ Deno.serve(async (_req) => {
       status: 500,
     });
   }
-});
+});git add supabase/functions/post-scheduler/index.ts
