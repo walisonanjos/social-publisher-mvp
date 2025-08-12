@@ -61,13 +61,12 @@ export default function AccountConnection({
           throw new Error("Plataforma desconhecida.");
       }
 
-      // CORREÇÃO: Passando o user.id para a Edge Function
       const { data, error } = await supabase.functions.invoke(functionName, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${session.access_token}`,
         },
-        body: { nicheId: nicheId, userId: session.user.id } // userId agora é enviado
+        body: { nicheId: nicheId, userId: session.user.id }
       });
 
       if (error) throw error;
@@ -88,6 +87,12 @@ export default function AccountConnection({
       setIsLoading(null);
     }
   };
+  
+  const handleDisconnect = async (platform: 'youtube' | 'instagram' | 'tiktok') => {
+    // A sua lógica de desconectar está no NichePageClient, mas
+    // o AccountConnection precisa de uma prop para o onClick do botão
+    onDisconnect(platform);
+  }
 
   return ( 
     <div className="bg-gray-800 p-8 rounded-lg shadow-lg border border-gray-700">
