@@ -61,13 +61,13 @@ export default function AccountConnection({
           throw new Error("Plataforma desconhecida.");
       }
 
-      // CORREÇÃO APLICADA AQUI: Passando o cabeçalho de autenticação
+      // CORREÇÃO: Passando o user.id para a Edge Function
       const { data, error } = await supabase.functions.invoke(functionName, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${session.access_token}`,
         },
-        body: { nicheId: nicheId }
+        body: { nicheId: nicheId, userId: session.user.id } // userId agora é enviado
       });
 
       if (error) throw error;
@@ -97,7 +97,7 @@ export default function AccountConnection({
       </p>
       <div className="space-y-4">
         {isYouTubeConnected ? (
-          <ConnectionStatus icon={Youtube} platformName="YouTube" onDisconnect={() => onDisconnect('youtube')} iconColorClass="text-red-500" />
+          <ConnectionStatus icon={Youtube} platformName="YouTube" onDisconnect={() => handleDisconnect('youtube')} iconColorClass="text-red-500" />
         ) : (
           <button onClick={() => handleConnect('youtube')} disabled={isLoading !== null} className="w-full flex items-center justify-center gap-3 py-3 px-4 border border-red-600/50 bg-red-600/20 hover:bg-red-600/30 text-white font-bold rounded-lg transition-colors disabled:opacity-50">
             <Youtube size={20} />
@@ -107,8 +107,8 @@ export default function AccountConnection({
 
         {isInstagramConnected ? (
           <>
-            <ConnectionStatus icon={Instagram} platformName="Instagram" onDisconnect={() => onDisconnect('instagram')} iconColorClass="text-pink-500" />
-            <ConnectionStatus icon={Facebook} platformName="Facebook" onDisconnect={() => onDisconnect('instagram')} iconColorClass="text-blue-500" /> 
+            <ConnectionStatus icon={Instagram} platformName="Instagram" onDisconnect={() => handleDisconnect('instagram')} iconColorClass="text-pink-500" />
+            <ConnectionStatus icon={Facebook} platformName="Facebook" onDisconnect={() => handleDisconnect('instagram')} iconColorClass="text-blue-500" /> 
           </>
         ) : (
           <button onClick={() => handleConnect('instagram')} disabled={isLoading !== null} className="w-full flex items-center justify-center gap-3 py-3 px-4 border border-purple-600/50 bg-purple-600/20 hover:bg-purple-600/30 text-white font-bold rounded-lg transition-colors disabled:opacity-50">
@@ -118,7 +118,7 @@ export default function AccountConnection({
         )}
 
         {isTikTokConnected ? (
-          <ConnectionStatus icon={Globe} platformName="TikTok" onDisconnect={() => onDisconnect('tiktok')} iconColorClass="text-gray-400" />
+          <ConnectionStatus icon={Globe} platformName="TikTok" onDisconnect={() => handleDisconnect('tiktok')} iconColorClass="text-gray-400" />
         ) : (
           <button onClick={() => handleConnect('tiktok')} disabled={isLoading !== null} className="w-full flex items-center justify-center gap-3 py-3 px-4 border border-gray-600/50 bg-gray-600/20 hover:bg-gray-600/30 text-white font-bold rounded-lg transition-colors disabled:opacity-50">
             <Globe size={20} />
