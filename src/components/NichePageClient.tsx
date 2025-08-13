@@ -14,6 +14,16 @@ import EditVideoModal from "./EditVideoModal";
 import ViewLogsModal from "./ViewLogsModal";
 import { toast } from "sonner";
 import { useSearchParams } from "next/navigation";
+import { format, isToday } from "date-fns";
+import { ptBR } from "date-fns/locale";
+
+// Define um tipo mais específico para o payload da subscription
+type RealtimePayload = {
+  eventType: 'INSERT' | 'UPDATE' | 'DELETE';
+  table: string;
+  new: any;
+  old: any;
+}
 
 export default function NichePageClient({ nicheId }: { nicheId: string }) {
   const supabase = createClient();
@@ -83,7 +93,7 @@ export default function NichePageClient({ nicheId }: { nicheId: string }) {
   useEffect(() => {
     if (!user) return;
 
-    const handleRealtimeUpdates = (payload: any) => {
+    const handleRealtimeUpdates = (payload: RealtimePayload) => {
       if (payload.table === 'videos') {
         const newVideo = payload.new as Video;
         const oldVideo = payload.old as Video;
