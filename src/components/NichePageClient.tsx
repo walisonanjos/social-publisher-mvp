@@ -82,7 +82,6 @@ export default function NichePageClient({ nicheId }: { nicheId: string }) {
     }
   }, [searchParams, nicheId]);
 
-  // --- CÓDIGO REAL-TIME OTIMIZADO ---
   useEffect(() => {
     if (!user) return;
 
@@ -106,18 +105,15 @@ export default function NichePageClient({ nicheId }: { nicheId: string }) {
       }
 
       if (payload.table === 'social_connections') {
-        // Para atualizações de conexões, ainda é mais simples refetchar os dados
         fetchPageData(user.id);
       }
     };
 
-    // Subscription para a tabela 'videos'
     const videosChannel = supabase
       .channel(`videos-niche-${nicheId}`)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'videos', filter: `niche_id=eq.${nicheId}`}, handleRealtimeUpdates)
       .subscribe();
     
-    // Subscription para a tabela 'social_connections'
     const connectionsChannel = supabase
       .channel(`connections-niche-${nicheId}`)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'social_connections', filter: `niche_id=eq.${nicheId}`}, handleRealtimeUpdates)
@@ -128,7 +124,6 @@ export default function NichePageClient({ nicheId }: { nicheId: string }) {
       supabase.removeChannel(connectionsChannel);
     };
   }, [user, nicheId, supabase, fetchPageData]);
-  // --- FIM DO CÓDIGO REAL-TIME OTIMIZADO ---
 
   const handleScheduleSuccess = (newVideo: Video, clearFileCallback: () => void) => {
     setVideos(currentVideos => [...currentVideos, newVideo].sort((a, b) => new Date(a.scheduled_at).getTime() - new Date(b.scheduled_at).getTime()));
