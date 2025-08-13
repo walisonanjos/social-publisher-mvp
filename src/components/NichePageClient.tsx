@@ -14,7 +14,7 @@ import EditVideoModal from "./EditVideoModal";
 import ViewLogsModal from "./ViewLogsModal";
 import { toast } from "sonner";
 import { useSearchParams } from "next/navigation";
-import { format, addDays } from "date-fns";
+import { format, isToday } from "date-fns";
 import { ptBR } from "date-fns/locale";
 
 export default function NichePageClient({ nicheId }: { nicheId: string }) {
