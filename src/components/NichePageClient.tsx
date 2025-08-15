@@ -81,10 +81,11 @@ export default function NichePageClient({ nicheId }: { nicheId: string }) {
   useEffect(() => {
     const setupPage = async () => {
       setLoading(true);
-      const { data: { user: currentUser } } = await supabase.auth.getUser();
-      setUser(currentUser);
-      if (currentUser) {
-        await fetchPageData(currentUser.id);
+      // CORREÇÃO AQUI: A variável 'data' é usada para extrair 'user'
+      const { data } = await supabase.auth.getUser(); 
+      setUser(data.user);
+      if (data.user) {
+        await fetchPageData(data.user.id);
       }
       setLoading(false);
     };
@@ -109,7 +110,6 @@ export default function NichePageClient({ nicheId }: { nicheId: string }) {
     }
   }, [searchParams, nicheId]);
 
-  // --- ALTERAÇÕES AQUI ---
   useEffect(() => {
     if (!user) return;
 
@@ -126,14 +126,11 @@ export default function NichePageClient({ nicheId }: { nicheId: string }) {
         },
         (payload) => {
           console.log("UPDATE em tempo real recebido:", payload);
-          // Atualiza o estado para remover vídeos publicados/falhos da lista "agendado"
           setVideos((currentVideos) => {
             const updatedVideo = payload.new as Video;
             if (updatedVideo.youtube_status === "publicado" || updatedVideo.instagram_status === "publicado" || updatedVideo.facebook_status === "publicado" || updatedVideo.tiktok_status === "publicado" || updatedVideo.youtube_status === "falhou" || updatedVideo.instagram_status === "falhou" || updatedVideo.facebook_status === "falhou" || updatedVideo.tiktok_status === "falhou") {
-              // Se o status mudou para 'publicado' ou 'falhou', remove da lista de agendados
               return currentVideos.filter(v => v.id !== updatedVideo.id);
             }
-            // Se o vídeo ainda está agendado mas foi alterado, atualiza
             return currentVideos.map(v => v.id === updatedVideo.id ? updatedVideo : v);
           });
         }
@@ -166,25 +163,23 @@ export default function NichePageClient({ nicheId }: { nicheId: string }) {
       .on(
         "postgres_changes",
         {
-          event: "*", // Escuta INSERTS, UPDATES e DELETES
+          event: "*",
           schema: "public",
           table: "social_connections",
           filter: `niche_id=eq.${nicheId}`,
         },
         () => {
-          fetchPageData(user.id); // Simplesmente refaz a busca para atualizar os ícones
+          fetchPageData(user.id);
         }
       )
       .subscribe();
 
-    // Limpa as assinaturas quando o componente é desmontado
     return () => {
       supabase.removeChannel(videosChannel);
       supabase.removeChannel(videosDeleteChannel);
       supabase.removeChannel(connectionsChannel);
     };
   }, [user, nicheId, fetchPageData, supabase]);
-  // --- FIM DAS ALTERAÇÕES ---
 
   const handleScheduleSuccess = (newVideo: Video, clearFileCallback: () => void) => {
     setVideos(currentVideos => [...currentVideos, newVideo].sort((a, b) => new Date(a.scheduled_at).getTime() - new Date(b.scheduled_at).getTime()));
@@ -196,13 +191,11 @@ export default function NichePageClient({ nicheId }: { nicheId: string }) {
   const handleDeleteVideo = async (videoId: number) => {
     if (!window.confirm("Tem certeza que deseja excluir este agendamento?")) return;
     
-    // Otimização: remove o vídeo da tela imediatamente (otimistic update)
     setVideos(currentVideos => currentVideos.filter(v => v.id !== videoId));
 
     const { error } = await supabase.from('videos').delete().eq('id', videoId);
     if (error) {
       toast.error("Não foi possível excluir o agendamento.");
-      // Opcional: Reverter a remoção em caso de erro
     } else {
       toast.success("Agendamento excluído com sucesso.");
     }
@@ -222,7 +215,6 @@ export default function NichePageClient({ nicheId }: { nicheId: string }) {
       toast.error(`Erro ao desconectar a conta.`);
     } else {
       toast.success(`Conta do ${platformName} desconectada com sucesso!`);
-      // O estado será atualizado automaticamente pelo listener de 'connectionsChannel'
     }
   };
 
@@ -231,11 +223,10 @@ export default function NichePageClient({ nicheId }: { nicheId: string }) {
   const handleSaveChanges = async (updatedData: { title: string; description: string; scheduled_at: string; }) => {
     if (!editingVideo) return;
     try {
-      // Otimização: atualiza o estado imediatamente com os novos dados
       const oldVideo = editingVideo;
       setVideos(currentVideos => currentVideos.map(v => v.id === oldVideo.id ? { ...oldVideo, ...updatedData } : v));
       
-      const { data, error } = await supabase.from('videos').update(updatedData).eq('id', editingVideo.id).select().single();
+      const { error } = await supabase.from('videos').update(updatedData).eq('id', editingVideo.id).select().single();
       if (error) throw error;
       
       toast.success("Agendamento atualizado com sucesso!");
@@ -243,7 +234,6 @@ export default function NichePageClient({ nicheId }: { nicheId: string }) {
     } catch (e) {
       if (e instanceof Error) { toast.error(`Erro ao salvar: ${e.message}`); }
       else { toast.error("Ocorreu um erro inesperado ao salvar as alterações."); }
-      // Opcional: Reverter a atualização em caso de erro
     }
   };
 
