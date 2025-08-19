@@ -1,52 +1,52 @@
 // supabase/functions/generate-tiktok-auth-url/index.ts
 
-import { createClient as supabaseCreateClient } from "https://esm.sh/@supabase/supabase-js@2"; // Use o nome renomeado aqui
+import { createClient as supabaseCreateClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const corsHeaders = {
-  "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
 Deno.serve(async (req) => {
-  if (req.method === 'OPTIONS') {
-    return new Response('ok', { headers: corsHeaders });
-  }
+  if (req.method === 'OPTIONS') {
+    return new Response('ok', { headers: corsHeaders });
+  }
 
-  try {
-    const { nicheId, userId } = await req.json();
+  try {
+    const { nicheId, userId } = await req.json();
 
-    if (!nicheId || !userId) {
-      throw new Error("Niche ID and User ID are required.");
-    }
+    if (!nicheId || !userId) {
+      throw new Error("Niche ID and User ID are required.");
+    }
 
-    const TIKTOK_CLIENT_ID = Deno.env.get("TIKTOK_CLIENT_ID");
-    const TIKTOK_REDIRECT_URI = Deno.env.get("TIKTOK_REDIRECT_URI");
+    const TIKTOK_CLIENT_ID = Deno.env.get("TIKTOK_CLIENT_ID");
+    const TIKTOK_REDIRECT_URI = Deno.env.get("TIKTOK_REDIRECT_URI");
 
-    if (!TIKTOK_CLIENT_ID || !TIKTOK_REDIRECT_URI) {
-      throw new Error("Variáveis de ambiente TIKTOK_CLIENT_ID ou TIKTOK_REDIRECT_URI não configuradas.");
-    }
+    if (!TIKTOK_CLIENT_ID || !TIKTOK_REDIRECT_URI) {
+      throw new Error("Variáveis de ambiente TIKTOK_CLIENT_ID ou TIKTOK_REDIRECT_URI não configuradas.");
+    }
 
-    // Gerar um estado seguro para CSRF e para carregar nicheId/userId de volta
-    const state = btoa(JSON.stringify({ nicheId, userId, csrf: Math.random().toString(36).substring(2) }));
+    // Gerar um estado seguro para CSRF e para carregar nicheId/userId de volta
+    const state = btoa(JSON.stringify({ nicheId, userId, csrf: Math.random().toString(36).substring(2) }));
 
-    // URL de autorização do TikTok para Web Apps (sem PKCE)
-    // CORREÇÃO: Re-adicionados os escopos completos para postagem
-    const tiktokAuthUrl = `https://www.tiktok.com/v2/auth/authorize?` +
-      `client_key=${TIKTOK_CLIENT_ID}&` +
-      `redirect_uri=${encodeURIComponent(TIKTOK_REDIRECT_URI)}&` +
-      `response_type=code&` +
-      `scope=user.info.basic,video.publish,video.upload&` + // <-- ATUALIZADO: Escopos completos
-      `state=${encodeURIComponent(state)}`;
+    // URL de autorização do TikTok para Web Apps (sem PKCE)
+    // CORREÇÃO: Escopos completos para postagem E analytics
+    const tiktokAuthUrl = `https://www.tiktok.com/v2/auth/authorize?` +
+      `client_key=${TIKTOK_CLIENT_ID}&` +
+      `redirect_uri=${encodeURIComponent(TIKTOK_REDIRECT_URI)}&` +
+      `response_type=code&` +
+      `scope=user.info.basic,user.info.public,video.publish,video.upload,video.list&` + // <-- CORRIGIDO: Adicionado 'user.info.public' e 'video.list'
+      `state=${encodeURIComponent(state)}`;
 
-    return new Response(JSON.stringify({ authUrl: tiktokAuthUrl }), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-      status: 200,
-    });
-  } catch (error: any) {
-    console.error("Erro na função generate-tiktok-auth-url:", error.message);
-    return new Response(JSON.stringify({ error: error.message }), {
-      headers: { ...corsHeaders, "Content-Type": "application/json" },
-      status: 500,
-    });
-  }
+    return new Response(JSON.stringify({ authUrl: tiktokAuthUrl }), {
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      status: 200,
+    });
+  } catch (error: any) {
+    console.error("Erro na função generate-tiktok-auth-url:", error.message);
+    return new Response(JSON.stringify({ error: error.message }), {
+      headers: { ...corsHeaders, "Content-Type": "application/json" },
+      status: 500,
+    });
+  }
 });
