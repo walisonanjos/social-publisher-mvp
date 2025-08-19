@@ -1,4 +1,4 @@
-// supabase/functions/get-youtube-analytics/index.ts
+// supabase/functions/get-youtube-analytics/index.ts / reenviando
 // v13 - Versão final com validação de IDs de vídeo via regex
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
