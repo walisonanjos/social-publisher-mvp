@@ -3,9 +3,9 @@
 "use client";
 
 import { useState } from "react";
-import { Youtube, Instagram, Facebook, Globe } from "lucide-react";
+import { Youtube, Instagram, Facebook } from "lucide-react"; // CORRIGIDO: 'Globe' removido daqui
 import { createClient } from "../lib/supabaseClient";
-import { IconBrandTiktok } from "@tabler/icons-react"; // NOVO: Ícone do TikTok
+import { IconBrandTiktok } from "@tabler/icons-react";
 
 interface AccountConnectionProps {
   nicheId: string;
