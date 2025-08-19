@@ -1,5 +1,5 @@
 // supabase/functions/get-youtube-analytics/index.ts
-// v12 - Versão com checagem de segurança aprimorada para IDs de vídeo
+// v13 - Versão final com validação de IDs de vídeo via regex
 
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
@@ -8,7 +8,10 @@ const corsHeaders = {
   "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
 };
 
-console.log("Função get-youtube-analytics (v12-robusto) INICIALIZADA.");
+console.log("Função get-youtube-analytics (v13-final) INICIALIZADA.");
+
+// Expressão regular para validar um ID de vídeo do YouTube
+const youtubeVideoIdRegex = /^[a-zA-Z0-9_-]{11}$/;
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") {
@@ -76,10 +79,10 @@ Deno.serve(async (req) => {
     const accessToken = tokenData.access_token;
     console.log("[4/6] Token de acesso renovado com sucesso.");
 
-    // CORREÇÃO AQUI: Filtra IDs de vídeos que são válidos e não vazios
+    // CORREÇÃO FINAL AQUI: Filtra IDs de vídeos que são válidos com regex
     const validVideoIds = postedVideos
         .map(v => v.youtube_video_id)
-        .filter(id => id && typeof id === 'string' && id.trim() !== '')
+        .filter(id => id && typeof id === 'string' && youtubeVideoIdRegex.test(id))
         .join(',');
     
     if (!validVideoIds) {
