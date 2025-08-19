@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { createClient } from "@/lib/supabaseClient";
 import { User } from "@supabase/supabase-js";
 import { Loader2, BarChart2 as ChartIcon, Youtube, Instagram } from "lucide-react";
+import { IconBrandTiktok } from "@tabler/icons-react"; // NOVO: Importe o ícone do TikTok
 
 import MainHeader from "@/components/MainHeader";
 import Navbar from "@/components/Navbar";
@@ -13,15 +14,18 @@ import Auth from "@/components/Auth";
 // NOSSOS NOVOS COMPONENTES DE VISUALIZAÇÃO
 import YouTubeAnalyticsView from "./YouTubeAnalyticsView";
 import MetaAnalyticsView from "./MetaAnalyticsView";
+import TikTokAnalyticsView from "./TikTokAnalyticsView"; // NOVO: Importe o componente
 
 // Tipos (atualizados para remover 'any' e corresponder aos componentes)
-interface VideoStatistics { viewCount: string; likeCount: string; commentCount: string; } // Tipo movido, mas mantido para referência se ainda usado em AnalyticsPageClient
+interface VideoStatistics { viewCount: string; likeCount: string; commentCount: string; }
 interface YouTubeAnalyticsVideo { youtube_video_id: string; title: string; thumbnail: string; scheduled_at: string; statistics: VideoStatistics; }
 
-interface MetaInsightValue { value: number; } // Tipo movido, mas mantido para referência
-interface MetaInsight { name: string; period: string; values: MetaInsightValue[]; } // Tipo movido, mas mantido para referência
+interface MetaInsightValue { value: number; }
+interface MetaInsight { name: string; period: string; values: MetaInsightValue[]; }
 interface MetaAnalyticsVideo { id: number; title: string; scheduled_at: string; instagram_post_id: string | null; facebook_post_id: string | null; instagram_insights: MetaInsight[] | null; facebook_insights: MetaInsight[] | null; }
 
+// NOVO: Tipos para o analytics do TikTok
+interface TikTokStats { userStats: any; videos: any; }
 
 export default function AnalyticsPageClient({ nicheId }: { nicheId: string }) {
   const supabase = createClient();
@@ -32,10 +36,12 @@ export default function AnalyticsPageClient({ nicheId }: { nicheId: string }) {
   
   const [youtubeData, setYoutubeData] = useState<YouTubeAnalyticsVideo[]>([]);
   const [metaData, setMetaData] = useState<MetaAnalyticsVideo[]>([]);
+  const [tiktokData, setTiktokData] = useState<TikTokStats | null>(null); // NOVO: Estado para os dados do TikTok
   
   const [isYouTubeConnected, setIsYouTubeConnected] = useState(false);
   const [isInstagramConnected, setIsInstagramConnected] = useState(false);
-  const [activeTab, setActiveTab] = useState<'youtube' | 'meta'>('youtube');
+  const [isTikTokConnected, setIsTikTokConnected] = useState(false); // NOVO: Estado de conexão do TikTok
+  const [activeTab, setActiveTab] = useState<'youtube' | 'meta' | 'tiktok'>('youtube'); // ATUALIZADO: Adiciona 'tiktok' ao tipo
 
   const fetchPageData = useCallback(async (userId: string) => {
     setError(null);
@@ -49,47 +55,67 @@ export default function AnalyticsPageClient({ nicheId }: { nicheId: string }) {
       
       const ytConnected = connections?.some(c => c.platform === 'youtube') || false;
       const igConnected = connections?.some(c => c.platform === 'instagram') || false;
+      const tkConnected = connections?.some(c => c.platform === 'tiktok') || false; // NOVO
+      
       setIsYouTubeConnected(ytConnected);
       setIsInstagramConnected(igConnected);
+      setIsTikTokConnected(tkConnected); // NOVO
 
       // Define a aba inicial com base na conexão
-      if (ytConnected && activeTab !== 'meta') { // Se YouTube está conectado e a aba atual não é Meta
+      if (ytConnected) {
         setActiveTab('youtube');
-      } else if (igConnected) { // Se Instagram está conectado (e YouTube não, ou a aba já era Meta)
+      } else if (igConnected) {
         setActiveTab('meta');
-      } else { // Se nenhum está conectado, ou se a aba atual é meta e YouTube não está conectado, default para youtube (será a tela de "não conectado")
-        setActiveTab('youtube');
+      } else if (tkConnected) { // NOVO
+        setActiveTab('tiktok');
       }
 
-      // Busca os dados para ambas as plataformas em paralelo
+      // Busca os dados para todas as plataformas em paralelo
       const promises = [];
-      if (ytConnected) promises.push(supabase.functions.invoke("get-youtube-analytics", { body: { nicheId } }));
-      if (igConnected) promises.push(supabase.functions.invoke("get-meta-analytics", { body: { nicheId } }));
-      
-      const results = await Promise.all(promises);
-      let resultIndex = 0;
+      const platformIndices = { youtube: -1, meta: -1, tiktok: -1 }; // NOVO
+      let nextIndex = 0; // NOVO
 
       if (ytConnected) {
-        const ytResult = results[resultIndex++];
-        if (ytResult?.error) throw new Error(`YouTube Analytics: ${ytResult.error.message}`);
-        setYoutubeData(ytResult?.data?.data || []);
-      } else {
-        setYoutubeData([]); // Limpa dados se não estiver conectado
+        promises.push(supabase.functions.invoke("get-youtube-analytics", { body: { nicheId } }));
+        platformIndices.youtube = nextIndex++;
       }
       if (igConnected) {
-        const metaResult = results[resultIndex++];
+        promises.push(supabase.functions.invoke("get-meta-analytics", { body: { nicheId } }));
+        platformIndices.meta = nextIndex++;
+      }
+      if (tkConnected) { // NOVO
+        promises.push(supabase.functions.invoke("get-tiktok-analytics", { body: { nicheId } }));
+        platformIndices.tiktok = nextIndex++;
+      }
+      
+      const results = await Promise.all(promises);
+
+      // ATUALIZADO: Lógica para processar os resultados dinamicamente
+      if (ytConnected) {
+        const ytResult = results[platformIndices.youtube];
+        if (ytResult?.error) throw new Error(`YouTube Analytics: ${ytResult.error.message}`);
+        setYoutubeData(ytResult?.data?.data || []);
+      } else { setYoutubeData([]); }
+
+      if (igConnected) {
+        const metaResult = results[platformIndices.meta];
         if (metaResult?.error) throw new Error(`Meta Analytics: ${metaResult.error.message}`);
         setMetaData(metaResult?.data?.data || []);
-      } else {
-        setMetaData([]); // Limpa dados se não estiver conectado
-      }
+      } else { setMetaData([]); }
+
+      if (tkConnected) { // NOVO
+        const tkResult = results[platformIndices.tiktok];
+        if (tkResult?.error) throw new Error(`TikTok Analytics: ${tkResult.error.message}`);
+        setTiktokData(tkResult?.data?.data || null);
+      } else { setTiktokData(null); }
+
     } catch (e) {
       if (e instanceof Error) setError(e.message);
       else setError("Ocorreu um erro desconhecido ao buscar análises.");
     } finally {
       setLoading(false);
     }
-  }, [nicheId, supabase, activeTab]);
+  }, [nicheId, supabase]);
 
   useEffect(() => {
     const initialize = async () => {
@@ -106,6 +132,7 @@ export default function AnalyticsPageClient({ nicheId }: { nicheId: string }) {
 
   useEffect(() => {
     if (!user) return;
+    
     // Monitora mudanças na tabela de 'videos'
     const videosChannel = supabase.channel(`analytics-realtime-videos-${nicheId}`).on('postgres_changes', { event: '*', schema: 'public', table: 'videos', filter: `niche_id=eq.${nicheId}`}, () => { 
       if (user) fetchPageData(user.id); 
@@ -127,7 +154,7 @@ export default function AnalyticsPageClient({ nicheId }: { nicheId: string }) {
   if (!user) { return <Auth />; }
 
   const renderContent = () => {
-    if (!isYouTubeConnected && !isInstagramConnected) {
+    if (!isYouTubeConnected && !isInstagramConnected && !isTikTokConnected) { // ATUALIZADO
       return (
         <div className="text-center bg-gray-800 p-8 rounded-lg border border-gray-700">
           <ChartIcon className="mx-auto h-12 w-12 text-gray-500" />
@@ -152,13 +179,27 @@ export default function AnalyticsPageClient({ nicheId }: { nicheId: string }) {
       <>
         <div className="mb-6 border-b border-gray-700">
           <nav className="-mb-px flex space-x-6" aria-label="Tabs">
-            {isYouTubeConnected && (<button onClick={() => setActiveTab('youtube')} className={`${activeTab === 'youtube' ? 'border-teal-400 text-teal-300' : 'border-transparent text-gray-400 hover:text-gray-200 hover:border-gray-500'} flex items-center gap-2 whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}><Youtube size={16} /> YouTube</button>)}
-            {isInstagramConnected && (<button onClick={() => setActiveTab('meta')} className={`${activeTab === 'meta' ? 'border-teal-400 text-teal-300' : 'border-transparent text-gray-400 hover:text-gray-200 hover:border-gray-500'} flex items-center gap-2 whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}><Instagram size={16} /> Instagram & Facebook</button>)}
+            {isYouTubeConnected && (
+              <button onClick={() => setActiveTab('youtube')} className={`${activeTab === 'youtube' ? 'border-teal-400 text-teal-300' : 'border-transparent text-gray-400 hover:text-gray-200 hover:border-gray-500'} flex items-center gap-2 whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}>
+                <Youtube size={16} /> YouTube
+              </button>
+            )}
+            {isInstagramConnected && (
+              <button onClick={() => setActiveTab('meta')} className={`${activeTab === 'meta' ? 'border-teal-400 text-teal-300' : 'border-transparent text-gray-400 hover:text-gray-200 hover:border-gray-500'} flex items-center gap-2 whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}>
+                <Instagram size={16} /> Instagram & Facebook
+              </button>
+            )}
+            {isTikTokConnected && ( // NOVO
+              <button onClick={() => setActiveTab('tiktok')} className={`${activeTab === 'tiktok' ? 'border-teal-400 text-teal-300' : 'border-transparent text-gray-400 hover:text-gray-200 hover:border-gray-500'} flex items-center gap-2 whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}>
+                <IconBrandTiktok size={16} /> TikTok
+              </button>
+            )}
           </nav>
         </div>
 
         {activeTab === 'youtube' && <YouTubeAnalyticsView data={youtubeData} nicheId={nicheId} />}
         {activeTab === 'meta' && <MetaAnalyticsView data={metaData} nicheId={nicheId} />}
+        {activeTab === 'tiktok' && tiktokData && <TikTokAnalyticsView data={tiktokData} nicheId={nicheId} />} {/* NOVO */}
       </>
     );
   };
