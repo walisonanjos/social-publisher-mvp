@@ -2,137 +2,129 @@
 
 "use client";
 
-import { useEffect, useState } from "react";
-import Link from "next/link";
-import { createClient } from "@/lib/supabaseClient";
-import { toast } from "sonner";
-import { Youtube, Instagram, Facebook, Globe, CheckCircle, XCircle } from "lucide-react";
-import { IconBrandTiktok } from "@tabler/icons-react"; // NOVO: Importe o ícone do TikTok
-
-// Tipos
-type Platform = "youtube" | "instagram" | "facebook" | "tiktok";
+import { useState } from "react";
+import { Youtube, Instagram, Facebook, Globe } from "lucide-react";
+import { createClient } from "../lib/supabaseClient";
+import { IconBrandTiktok } from "@tabler/icons-react"; // NOVO: Ícone do TikTok
 
 interface AccountConnectionProps {
   nicheId: string;
   isYouTubeConnected: boolean;
   isInstagramConnected: boolean;
-  isTikTokConnected: boolean; // NOVO: Prop para o estado do TikTok
-  onDisconnect: (platform: Platform) => void;
+  isTikTokConnected: boolean; // Prop para o status da conexão TikTok
+  onDisconnect: (platform: 'youtube' | 'instagram' | 'tiktok') => void; // Adicionado 'tiktok' ao tipo
 }
+
+const ConnectionStatus = ({ icon: Icon, platformName, onDisconnect, iconColorClass }: { icon: React.ElementType, platformName: string, onDisconnect: () => void, iconColorClass: string }) => (
+  <div className={`p-4 bg-green-900/50 border ${iconColorClass}/30 rounded-lg flex items-center justify-between`}>
+    <div className="flex items-center gap-3">
+      <Icon className={`${iconColorClass}`} size={24} />
+      <span className="font-medium text-green-300">{platformName} Conectado</span>
+    </div>
+    <button
+      onClick={onDisconnect}
+      className="text-xs text-red-400 hover:text-red-300 hover:underline"
+    >
+      Desconectar
+    </button>
+  </div>
+);
+
 
 export default function AccountConnection({
   nicheId,
   isYouTubeConnected,
   isInstagramConnected,
-  isTikTokConnected,
+  isTikTokConnected, // Usado aqui
   onDisconnect,
 }: AccountConnectionProps) {
+  const [isLoading, setIsLoading] = useState<null | 'youtube' | 'instagram' | 'tiktok'>(null);
   const supabase = createClient();
-  const [loading, setLoading] = useState(false);
 
-  // NOVO: Renderiza o ícone com base na plataforma
-  const renderPlatformIcon = (platform: Platform) => {
-    switch (platform) {
-      case "youtube":
-        return <Youtube size={24} className="text-red-500" />;
-      case "instagram":
-        return <Instagram size={24} className="text-pink-500" />;
-      case "facebook":
-        return <Facebook size={24} className="text-blue-500" />;
-      case "tiktok":
-        return <IconBrandTiktok size={24} className="text-gray-200" />; // ATUALIZADO
-      default:
-        return <Globe size={24} className="text-gray-500" />;
-    }
-  };
-
-  const handleConnect = async (platform: Platform) => {
-    if (loading) return;
-    setLoading(true);
-
+  const handleConnect = async (platform: 'youtube' | 'instagram' | 'tiktok') => {
+    setIsLoading(platform);
     try {
-      let functionName = "";
-      if (platform === "youtube") {
-        functionName = "generate-youtube-auth-url";
-      } else if (platform === "instagram") {
-        functionName = "generate-facebook-auth-url";
-      } else if (platform === "tiktok") {
-        functionName = "generate-tiktok-auth-url"; // NOVO
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        throw new Error("Usuário não autenticado. Por favor, faça login novamente.");
+      }
+
+      let functionName: string;
+      switch (platform) {
+        case 'youtube':
+          functionName = 'generate-youtube-auth-url';
+          break;
+        case 'instagram':
+          functionName = 'generate-facebook-auth-url';
+          break;
+        case 'tiktok':
+          functionName = 'generate-tiktok-auth-url';
+          break;
+        default:
+          throw new Error("Plataforma desconhecida.");
       }
 
       const { data, error } = await supabase.functions.invoke(functionName, {
-        body: { nicheId },
+        method: 'POST',
+        body: { nicheId: nicheId, userId: user.id }
       });
 
-      if (error) {
-        toast.error(`Erro ao gerar URL de autorização para ${platform}.`);
-        console.error(error);
-        return;
+      if (error) throw error;
+      
+      if (data && data.authUrl) {
+        console.log("TikTok Auth URL gerada:", data.authUrl); // <-- AJUSTE ADICIONADO AQUI
+        window.location.href = data.authUrl;
+      } else {
+        throw new Error("A função de backend não retornou uma URL de autorização.");
       }
-
-      const authUrl = data.authUrl;
-      window.location.href = authUrl;
-    } catch (e: any) {
-      toast.error(`Erro ao conectar: ${e.message}`);
-    } finally {
-      setLoading(false);
+    } catch (error: unknown) {
+      console.error(`Erro ao gerar URL de autorização para ${platform}:`, error);
+      let errorMessage = `Não foi possível iniciar a conexão com ${platform}. Tente novamente.`;
+      if (error instanceof Error) {
+        errorMessage = `Não foi possível iniciar a conexão com ${platform}. Erro: ${error.message}`;
+      }
+      alert(errorMessage);
+      setIsLoading(null);
     }
   };
 
-  const renderConnectionCard = (
-    platform: Platform,
-    isConnected: boolean,
-    label: string
-  ) => {
-    return (
-      <div
-        key={platform}
-        className={`bg-gray-800/50 rounded-lg p-6 flex items-center justify-between border ${
-          isConnected ? "border-green-500/20" : "border-gray-700"
-        }`}
-      >
-        <div className="flex items-center gap-4">
-          {renderPlatformIcon(platform)}
-          <span className="text-lg font-medium">
-            {label}
-            {isConnected ? " Conectado" : " Não Conectado"}
-          </span>
-          {isConnected ? (
-            <CheckCircle size={18} className="text-green-400" />
-          ) : (
-            <XCircle size={18} className="text-red-400" />
-          )}
-        </div>
-        <div>
-          {isConnected ? (
-            <button
-              onClick={() => onDisconnect(platform)}
-              className="px-4 py-2 text-sm font-medium rounded-md text-white bg-red-600 hover:bg-red-700 transition-colors"
-            >
-              Desconectar
-            </button>
-          ) : (
-            <button
-              onClick={() => handleConnect(platform)}
-              className="px-4 py-2 text-sm font-medium rounded-md text-white bg-teal-600 hover:bg-teal-700 transition-colors"
-            >
-              Conectar
-            </button>
-          )}
-        </div>
-      </div>
-    );
-  };
-
   return (
-    <div className="space-y-4">
-      <p className="text-gray-400">
+    <div className="bg-gray-800 p-8 rounded-lg shadow-lg border border-gray-700">
+      <h2 className="text-xl font-bold text-white mb-4">Conectar Contas</h2>
+      <p className="text-gray-400 mb-6">
         Conecte suas contas de redes sociais para começar a agendar.
       </p>
-      {renderConnectionCard("youtube", isYouTubeConnected, "YouTube")}
-      {renderConnectionCard("instagram", isInstagramConnected, "Instagram")}
-      {renderConnectionCard("facebook", isInstagramConnected, "Facebook")}
-      {renderConnectionCard("tiktok", isTikTokConnected, "TikTok")}
+      <div className="space-y-4">
+        {isYouTubeConnected ? (
+          <ConnectionStatus icon={Youtube} platformName="YouTube" onDisconnect={() => onDisconnect('youtube')} iconColorClass="text-red-500" />
+        ) : (
+          <button onClick={() => handleConnect('youtube')} disabled={isLoading !== null} className="w-full flex items-center justify-center gap-3 py-3 px-4 border border-red-600/50 bg-red-600/20 hover:bg-red-600/30 text-white font-bold rounded-lg transition-colors disabled:opacity-50">
+            <Youtube size={20} />
+            <span>{isLoading === 'youtube' ? "Aguarde..." : "Conectar com YouTube"}</span>
+          </button>
+        )}
+
+        {isInstagramConnected ? (
+          <>
+            <ConnectionStatus icon={Instagram} platformName="Instagram" onDisconnect={() => onDisconnect('instagram')} iconColorClass="text-pink-500" />
+            <ConnectionStatus icon={Facebook} platformName="Facebook" onDisconnect={() => onDisconnect('instagram')} iconColorClass="text-blue-500" />
+          </>
+        ) : (
+          <button onClick={() => handleConnect('instagram')} disabled={isLoading !== null} className="w-full flex items-center justify-center gap-3 py-3 px-4 border border-purple-600/50 bg-purple-600/20 hover:bg-purple-600/30 text-white font-bold rounded-lg transition-colors disabled:opacity-50">
+            <Instagram size={20} />
+            <span>{isLoading === 'instagram' ? "Aguarde..." : "Conectar com Instagram / Facebook"}</span>
+          </button>
+        )}
+
+        {isTikTokConnected ? (
+          <ConnectionStatus icon={IconBrandTiktok} platformName="TikTok" onDisconnect={() => onDisconnect('tiktok')} iconColorClass="text-gray-200" />
+        ) : (
+          <button onClick={() => handleConnect('tiktok')} disabled={isLoading !== null} className="w-full flex items-center justify-center gap-3 py-3 px-4 border border-gray-600/50 bg-gray-600/20 hover:bg-gray-600/30 text-white font-bold rounded-lg transition-colors disabled:opacity-50">
+            <IconBrandTiktok size={20} />
+            <span>{isLoading === 'tiktok' ? "Aguarde..." : "Conectar com TikTok"}</span>
+          </button>
+        )}
+      </div>
     </div>
   );
 }
