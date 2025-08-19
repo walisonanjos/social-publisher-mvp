@@ -7,14 +7,13 @@ import Image from 'next/image';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import {
   BarChart2 as ChartIcon,
-  Youtube,
   Eye,
   ThumbsUp,
-  MessageSquare,
-  Share2, // Importado da lucide-react para o ícone de compartilhamento
+  MessageSquare, // Agora este ícone será usado
+  Share2,      // Agora este ícone será usado
   CameraOff
 } from "lucide-react";
-import { IconBrandTiktok } from "@tabler/icons-react"; // Usado para o ícone do TikTok
+import { IconBrandTiktok } from "@tabler/icons-react";
 
 // Tipos
 interface VideoStats {
@@ -155,10 +154,18 @@ export default function TikTokAnalyticsView({ data, nicheId }: { data: TikTokAna
                     </div>
                   </div>
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">{safeParseInt(video.stats.viewCount).toLocaleString('pt-BR')}</td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">{safeParseInt(video.stats.likeCount).toLocaleString('pt-BR')}</td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">{safeParseInt(video.stats.commentCount).toLocaleString('pt-BR')}</td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">{safeParseInt(video.stats.shareCount).toLocaleString('pt-BR')}</td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300 flex items-center gap-2">
+                  <Eye size={16} />{safeParseInt(video.stats.viewCount).toLocaleString('pt-BR')}
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300 flex items-center gap-2">
+                  <ThumbsUp size={16} />{safeParseInt(video.stats.likeCount).toLocaleString('pt-BR')}
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300 flex items-center gap-2">
+                  <MessageSquare size={16} />{safeParseInt(video.stats.commentCount).toLocaleString('pt-BR')}
+                </td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300 flex items-center gap-2">
+                  <Share2 size={16} />{safeParseInt(video.stats.shareCount).toLocaleString('pt-BR')}
+                </td>
               </tr>
             ))}
           </tbody>
