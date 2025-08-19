@@ -1,4 +1,4 @@
-// src/components/TikTokAnalyticsView.tsx
+// src/components/TikTokAnalyticsView.tsx / CÓDIGO NÃO ESTA SENDO RENDERIZADO NO MOMENTO
 "use client";
 
 import { useMemo } from "react";
