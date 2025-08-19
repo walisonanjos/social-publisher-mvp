@@ -5,7 +5,16 @@ import { useMemo } from "react";
 import Link from 'next/link';
 import Image from 'next/image';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
-import { ChartBar, TikTokLogo, Eye, Heart, MessageCircle, Share2, CameraOff } from "@phosphor-icons/react";
+import {
+  BarChart2 as ChartIcon,
+  Youtube,
+  Eye,
+  ThumbsUp,
+  MessageSquare,
+  Share2, // Importado da lucide-react para o ícone de compartilhamento
+  CameraOff
+} from "lucide-react";
+import { IconBrandTiktok } from "@tabler/icons-react"; // Usado para o ícone do TikTok
 
 // Tipos
 interface VideoStats {
@@ -74,7 +83,7 @@ export default function TikTokAnalyticsView({ data, nicheId }: { data: TikTokAna
   if (data.videos.length === 0) {
     return (
       <div className="text-center bg-gray-800 p-8 rounded-lg border border-gray-700">
-        <TikTokLogo className="mx-auto h-12 w-12 text-gray-500" />
+        <IconBrandTiktok className="mx-auto h-12 w-12 text-gray-500" />
         <h3 className="mt-4 text-lg font-medium text-white">Nenhum dado para exibir</h3>
         <p className="mt-2 text-sm text-gray-400">
           Ainda não há vídeos postados com sucesso no TikTok para analisar neste workspace.
@@ -91,10 +100,10 @@ export default function TikTokAnalyticsView({ data, nicheId }: { data: TikTokAna
   return (
     <>
       <div className="grid w-full grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4 mb-8">
-        <StatCard icon={ChartBar} label="Vídeos Analisados" value={summaryStats.totalVideos} />
+        <StatCard icon={ChartIcon} label="Vídeos Analisados" value={summaryStats.totalVideos} />
         <StatCard icon={Eye} label="Total de Visualizações" value={summaryStats.totalViews.toLocaleString('pt-BR')} />
-        <StatCard icon={Heart} label="Total de Curtidas" value={summaryStats.totalLikes.toLocaleString('pt-BR')} />
-        <StatCard icon={TikTokLogo} label="Seguidores" value={summaryStats.totalFollowers.toLocaleString('pt-BR')} />
+        <StatCard icon={ThumbsUp} label="Total de Curtidas" value={summaryStats.totalLikes.toLocaleString('pt-BR')} />
+        <StatCard icon={IconBrandTiktok} label="Seguidores" value={summaryStats.totalFollowers.toLocaleString('pt-BR')} />
       </div>
       <div className="bg-gray-800 rounded-lg border border-gray-700 p-6 mb-8">
         <ResponsiveContainer width="100%" height={300}>
