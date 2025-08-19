@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { createClient } from "@/lib/supabaseClient";
 import { User } from "@supabase/supabase-js";
 import { Loader2, BarChart2 as ChartIcon, Youtube, Instagram } from "lucide-react";
-import { IconBrandTiktok } from "@tabler/icons-react"; // NOVO: Importe o ícone do TikTok
+import { IconBrandTiktok } from "@tabler/icons-react";
 
 import MainHeader from "@/components/MainHeader";
 import Navbar from "@/components/Navbar";
@@ -14,7 +14,7 @@ import Auth from "@/components/Auth";
 // NOSSOS NOVOS COMPONENTES DE VISUALIZAÇÃO
 import YouTubeAnalyticsView from "./YouTubeAnalyticsView";
 import MetaAnalyticsView from "./MetaAnalyticsView";
-import TikTokAnalyticsView from "./TikTokAnalyticsView"; // NOVO: Importe o componente
+import TikTokAnalyticsView from "./TikTokAnalyticsView";
 
 // Tipos (atualizados para remover 'any' e corresponder aos componentes)
 interface VideoStatistics { viewCount: string; likeCount: string; commentCount: string; }
@@ -24,8 +24,29 @@ interface MetaInsightValue { value: number; }
 interface MetaInsight { name: string; period: string; values: MetaInsightValue[]; }
 interface MetaAnalyticsVideo { id: number; title: string; scheduled_at: string; instagram_post_id: string | null; facebook_post_id: string | null; instagram_insights: MetaInsight[] | null; facebook_insights: MetaInsight[] | null; }
 
-// NOVO: Tipos para o analytics do TikTok
-interface TikTokStats { userStats: any; videos: any; }
+// NOVO: Tipos para o analytics do TikTok sem 'any'
+interface TikTokVideoStats {
+  id: string;
+  title: string;
+  coverUrl: string;
+  stats: {
+    likeCount: number;
+    commentCount: number;
+    shareCount: number;
+    viewCount: number;
+  };
+}
+interface TikTokUserStats {
+  followerCount: number;
+  followingCount: number;
+  likesCount: number;
+  videoCount: number;
+}
+interface TikTokAnalyticsData {
+  userStats: TikTokUserStats;
+  videos: TikTokVideoStats[];
+}
+
 
 export default function AnalyticsPageClient({ nicheId }: { nicheId: string }) {
   const supabase = createClient();
@@ -36,12 +57,12 @@ export default function AnalyticsPageClient({ nicheId }: { nicheId: string }) {
   
   const [youtubeData, setYoutubeData] = useState<YouTubeAnalyticsVideo[]>([]);
   const [metaData, setMetaData] = useState<MetaAnalyticsVideo[]>([]);
-  const [tiktokData, setTiktokData] = useState<TikTokStats | null>(null); // NOVO: Estado para os dados do TikTok
+  const [tiktokData, setTiktokData] = useState<TikTokAnalyticsData | null>(null); // CORRIGIDO: Usa a nova interface
   
   const [isYouTubeConnected, setIsYouTubeConnected] = useState(false);
   const [isInstagramConnected, setIsInstagramConnected] = useState(false);
-  const [isTikTokConnected, setIsTikTokConnected] = useState(false); // NOVO: Estado de conexão do TikTok
-  const [activeTab, setActiveTab] = useState<'youtube' | 'meta' | 'tiktok'>('youtube'); // ATUALIZADO: Adiciona 'tiktok' ao tipo
+  const [isTikTokConnected, setIsTikTokConnected] = useState(false);
+  const [activeTab, setActiveTab] = useState<'youtube' | 'meta' | 'tiktok'>('youtube');
 
   const fetchPageData = useCallback(async (userId: string) => {
     setError(null);
@@ -55,25 +76,23 @@ export default function AnalyticsPageClient({ nicheId }: { nicheId: string }) {
       
       const ytConnected = connections?.some(c => c.platform === 'youtube') || false;
       const igConnected = connections?.some(c => c.platform === 'instagram') || false;
-      const tkConnected = connections?.some(c => c.platform === 'tiktok') || false; // NOVO
+      const tkConnected = connections?.some(c => c.platform === 'tiktok') || false;
       
       setIsYouTubeConnected(ytConnected);
       setIsInstagramConnected(igConnected);
-      setIsTikTokConnected(tkConnected); // NOVO
+      setIsTikTokConnected(tkConnected);
 
-      // Define a aba inicial com base na conexão
       if (ytConnected) {
         setActiveTab('youtube');
       } else if (igConnected) {
         setActiveTab('meta');
-      } else if (tkConnected) { // NOVO
+      } else if (tkConnected) {
         setActiveTab('tiktok');
       }
 
-      // Busca os dados para todas as plataformas em paralelo
       const promises = [];
-      const platformIndices = { youtube: -1, meta: -1, tiktok: -1 }; // NOVO
-      let nextIndex = 0; // NOVO
+      const platformIndices = { youtube: -1, meta: -1, tiktok: -1 };
+      let nextIndex = 0;
 
       if (ytConnected) {
         promises.push(supabase.functions.invoke("get-youtube-analytics", { body: { nicheId } }));
@@ -83,14 +102,13 @@ export default function AnalyticsPageClient({ nicheId }: { nicheId: string }) {
         promises.push(supabase.functions.invoke("get-meta-analytics", { body: { nicheId } }));
         platformIndices.meta = nextIndex++;
       }
-      if (tkConnected) { // NOVO
+      if (tkConnected) {
         promises.push(supabase.functions.invoke("get-tiktok-analytics", { body: { nicheId } }));
         platformIndices.tiktok = nextIndex++;
       }
       
       const results = await Promise.all(promises);
 
-      // ATUALIZADO: Lógica para processar os resultados dinamicamente
       if (ytConnected) {
         const ytResult = results[platformIndices.youtube];
         if (ytResult?.error) throw new Error(`YouTube Analytics: ${ytResult.error.message}`);
@@ -103,7 +121,7 @@ export default function AnalyticsPageClient({ nicheId }: { nicheId: string }) {
         setMetaData(metaResult?.data?.data || []);
       } else { setMetaData([]); }
 
-      if (tkConnected) { // NOVO
+      if (tkConnected) {
         const tkResult = results[platformIndices.tiktok];
         if (tkResult?.error) throw new Error(`TikTok Analytics: ${tkResult.error.message}`);
         setTiktokData(tkResult?.data?.data || null);
@@ -133,12 +151,10 @@ export default function AnalyticsPageClient({ nicheId }: { nicheId: string }) {
   useEffect(() => {
     if (!user) return;
     
-    // Monitora mudanças na tabela de 'videos'
     const videosChannel = supabase.channel(`analytics-realtime-videos-${nicheId}`).on('postgres_changes', { event: '*', schema: 'public', table: 'videos', filter: `niche_id=eq.${nicheId}`}, () => { 
       if (user) fetchPageData(user.id); 
     }).subscribe();
 
-    // Monitora mudanças na tabela de 'social_connections'
     const connectionsChannel = supabase.channel(`analytics-realtime-connections-${nicheId}`).on('postgres_changes', { event: '*', schema: 'public', table: 'social_connections', filter: `niche_id=eq.${nicheId}`}, () => { 
       if (user) fetchPageData(user.id); 
     }).subscribe();
@@ -154,7 +170,7 @@ export default function AnalyticsPageClient({ nicheId }: { nicheId: string }) {
   if (!user) { return <Auth />; }
 
   const renderContent = () => {
-    if (!isYouTubeConnected && !isInstagramConnected && !isTikTokConnected) { // ATUALIZADO
+    if (!isYouTubeConnected && !isInstagramConnected && !isTikTokConnected) {
       return (
         <div className="text-center bg-gray-800 p-8 rounded-lg border border-gray-700">
           <ChartIcon className="mx-auto h-12 w-12 text-gray-500" />
@@ -189,7 +205,7 @@ export default function AnalyticsPageClient({ nicheId }: { nicheId: string }) {
                 <Instagram size={16} /> Instagram & Facebook
               </button>
             )}
-            {isTikTokConnected && ( // NOVO
+            {isTikTokConnected && (
               <button onClick={() => setActiveTab('tiktok')} className={`${activeTab === 'tiktok' ? 'border-teal-400 text-teal-300' : 'border-transparent text-gray-400 hover:text-gray-200 hover:border-gray-500'} flex items-center gap-2 whitespace-nowrap py-4 px-1 border-b-2 font-medium text-sm`}>
                 <IconBrandTiktok size={16} /> TikTok
               </button>
@@ -199,7 +215,7 @@ export default function AnalyticsPageClient({ nicheId }: { nicheId: string }) {
 
         {activeTab === 'youtube' && <YouTubeAnalyticsView data={youtubeData} nicheId={nicheId} />}
         {activeTab === 'meta' && <MetaAnalyticsView data={metaData} nicheId={nicheId} />}
-        {activeTab === 'tiktok' && tiktokData && <TikTokAnalyticsView data={tiktokData} nicheId={nicheId} />} {/* NOVO */}
+        {activeTab === 'tiktok' && tiktokData && <TikTokAnalyticsView data={tiktokData} nicheId={nicheId} />}
       </>
     );
   };
