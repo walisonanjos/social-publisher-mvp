@@ -15,7 +15,7 @@ import { Loader2 } from "lucide-react";
 
 interface UploadFormProps {
   nicheId: string;
-  nicheTimezone: string;
+  nicheTimezone: string; // <-- NOVO: Prop para o fuso horário do nicho
   onScheduleSuccess: (newVideo: Video, clearFileCallback: () => void) => void;
   isYouTubeConnected: boolean;
   isInstagramConnected: boolean;
@@ -28,7 +28,7 @@ interface UploadFormProps {
 
 export default function UploadForm({
   nicheId,
-  nicheTimezone,
+  nicheTimezone, // <-- Usado aqui
   onScheduleSuccess,
   isYouTubeConnected,
   isInstagramConnected,
