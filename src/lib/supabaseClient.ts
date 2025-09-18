@@ -9,8 +9,5 @@ export function createClient() {
     throw new Error('Missing Supabase URL or API key');
   }
 
-  return createBrowserClient({
-    supabaseUrl: SUPABASE_URL,
-    supabaseKey: SUPABASE_ANON_KEY,
-  });
+  return createBrowserClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 }
