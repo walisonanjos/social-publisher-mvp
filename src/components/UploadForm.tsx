@@ -15,7 +15,7 @@ import { Loader2 } from "lucide-react";
 
 interface UploadFormProps {
   nicheId: string;
-  nicheTimezone: string; // <-- NOVO: Prop para o fuso horário do nicho
+  nicheTimezone: string;
   onScheduleSuccess: (newVideo: Video, clearFileCallback: () => void) => void;
   isYouTubeConnected: boolean;
   isInstagramConnected: boolean;
@@ -28,7 +28,7 @@ interface UploadFormProps {
 
 export default function UploadForm({
   nicheId,
-  nicheTimezone, // <-- Usado aqui
+  nicheTimezone,
   onScheduleSuccess,
   isYouTubeConnected,
   isInstagramConnected,
@@ -56,7 +56,6 @@ export default function UploadForm({
   const tenDaysFromNow = addDays(today, 9);
   const availableTimes = ["09:00", "11:00", "13:00", "15:00", "17:00"];
 
-  // Lógica para exibir o fuso horário do nicho de forma amigável
   const displayTimezone = useMemo(() => {
     try {
       const nowInTimezone = toZonedTime(new Date(), nicheTimezone);
@@ -117,7 +116,6 @@ export default function UploadForm({
         0,
         0
       );
-      // CORREÇÃO PRINCIPAL: Converte a hora agendada (que está no fuso do nicho) para UTC
       const scheduledAtUTC = fromZonedTime(finalScheduleDate, nicheTimezone).toISOString();
       const scheduled_at_iso = scheduledAtUTC;
 
@@ -370,7 +368,6 @@ export default function UploadForm({
               />
               YouTube
             </label>
-            {/* NOVO: Checkbox do TikTok */}
             <label
               className={`flex items-center gap-2 ${
                 isTikTokConnected
