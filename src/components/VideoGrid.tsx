@@ -15,7 +15,7 @@ import {
   PlusCircle,
   Copy,
   ScrollText,
-  RefreshCw
+  RefreshCw // <-- USADO AQUI
 } from "lucide-react";
 import { IconBrandTiktok } from "@tabler/icons-react";
 import { useState } from "react";
