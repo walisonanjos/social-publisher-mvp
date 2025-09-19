@@ -84,9 +84,8 @@ export default function UploadForm({
     }
     
     return allAvailableTimes;
-  }, [scheduleDate, nicheTimezone, allAvailableTimes]);
+  }, [scheduleDate, nicheTimezone, allAvailableTimes]); // <-- dependência 'allAvailableTimes' adicionada
   
-  // Atualiza o scheduleTime se a hora atual não estiver mais disponível
   useEffect(() => {
     if (!availableTimes.includes(scheduleTime)) {
         if (availableTimes.length > 0) {
