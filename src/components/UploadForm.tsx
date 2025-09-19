@@ -1,11 +1,11 @@
 // src/components/UploadForm.tsx
 "use client";
 
-import { useState, FormEvent, useMemo } from "react";
+import { useState, FormEvent, useMemo, useEffect } from "react";
 import { createClient } from "../lib/supabaseClient";
 import { DayPicker } from "react-day-picker";
 import "react-day-picker/dist/style.css";
-import { addDays } from "date-fns";
+import { addDays, isSameDay } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { fromZonedTime, toZonedTime } from "date-fns-tz";
 import { Video } from "@/types";
@@ -53,7 +53,7 @@ export default function UploadForm({
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   const tenDaysFromNow = addDays(today, 9);
-  const availableTimes = ["09:00", "11:00", "13:00", "15:00", "17:00"];
+  const allAvailableTimes = ["09:00", "11:00", "13:00", "15:00", "17:00"];
 
   const displayTimezone = useMemo(() => {
     try {
@@ -64,11 +64,36 @@ export default function UploadForm({
       });
       const offset = formatter.format(nowInTimezone).split(' ')[1];
       return `(${nicheTimezone} ${offset})`;
-    } catch (error) {
-      console.error(error);
+    } catch (e) {
       return nicheTimezone;
     }
   }, [nicheTimezone]);
+
+  const availableTimes = useMemo(() => {
+    if (!scheduleDate) return allAvailableTimes;
+    const nowInNicheTimezone = toZonedTime(new Date(), nicheTimezone);
+    
+    if (isSameDay(scheduleDate, nowInNicheTimezone)) {
+      const currentHour = nowInNicheTimezone.getHours();
+      const currentMinutes = nowInNicheTimezone.getMinutes();
+      
+      return allAvailableTimes.filter(time => {
+        const [hours, minutes] = time.split(":").map(Number);
+        return hours > currentHour || (hours === currentHour && minutes > currentMinutes);
+      });
+    }
+    
+    return allAvailableTimes;
+  }, [scheduleDate, nicheTimezone, allAvailableTimes]);
+  
+  // Atualiza o scheduleTime se a hora atual não estiver mais disponível
+  useEffect(() => {
+    if (!availableTimes.includes(scheduleTime)) {
+        if (availableTimes.length > 0) {
+            setScheduleTime(availableTimes[0]);
+        }
+    }
+  }, [availableTimes, scheduleTime]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -101,6 +126,10 @@ export default function UploadForm({
       );
       return;
     }
+    if (availableTimes.length === 0) {
+      toast.error("Não há horários disponíveis para o dia selecionado.");
+      return;
+    }
 
     setIsUploading(true);
 
@@ -108,13 +137,16 @@ export default function UploadForm({
       if (!nicheId) throw new Error("O ID do workspace é inválido.");
 
       const [hours, minutes] = scheduleTime.split(":");
+      const parsedHours = parseInt(hours, 10);
+      const parsedMinutes = parseInt(minutes, 10);
+
+      if (isNaN(parsedHours) || isNaN(parsedMinutes)) {
+        throw new Error("O valor da hora é inválido.");
+      }
+      
       const finalScheduleDate = new Date(scheduleDate);
-      finalScheduleDate.setHours(
-        parseInt(hours, 10),
-        parseInt(minutes, 10),
-        0,
-        0
-      );
+      finalScheduleDate.setHours(parsedHours, parsedMinutes, 0, 0);
+      
       const scheduledAtUTC = fromZonedTime(finalScheduleDate, nicheTimezone).toISOString();
       const scheduled_at_iso = scheduledAtUTC;
 
