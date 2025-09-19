@@ -1,0 +1,16 @@
+{
+  "schedule_post": "Agendar Post",
+  "niche_timezone": "Fuso Horário do Nicho:",
+  "save": "Salvar",
+  "post_title": "Título",
+  "post_description": "Descrição",
+  "scheduling_date": "Data do Agendamento",
+  "scheduling_time": "Hora do Agendamento",
+  "post_to": "Postar em:",
+  "no_available_times": "Nenhum horário disponível",
+  "file_upload_label": "Arquivo de Vídeo",
+  "new_appointment": "Novo Agendamento",
+  "scheduling": "Agendando...",
+  "youtube_connected": "YouTube Conectado",
+  "history": "Histórico"
+}

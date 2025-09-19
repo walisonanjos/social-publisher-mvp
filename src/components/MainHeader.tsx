@@ -5,7 +5,9 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabaseClient";
 import { User } from "@supabase/supabase-js";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, LogOut } from "lucide-react";
+import LanguageSwitcher from "./LanguageSwitcher";
+import { useTranslation } from "react-i18next";
 
 // O Header agora recebe o usuário e opcionalmente um título e link de 'voltar'
 interface MainHeaderProps {
@@ -21,6 +23,7 @@ export default function MainHeader({
 }: MainHeaderProps) {
   const supabase = createClient();
   const router = useRouter();
+  const { t } = useTranslation();
 
   const handleSignOut = async () => {
     await supabase.auth.signOut();
@@ -40,7 +43,7 @@ export default function MainHeader({
             <Link
               href={backLink}
               className="text-gray-400 hover:text-white transition-colors"
-              title="Voltar"
+              title={t("back")} // <-- TRADUZINDO A MENSAGEM
             >
               <ArrowLeft size={20} />
             </Link>
@@ -50,17 +53,15 @@ export default function MainHeader({
           )}
         </div>
         <div className="flex items-center gap-4">
+          <LanguageSwitcher /> {/* <-- ADICIONANDO O COMPONENTE */}
           <span className="text-gray-300 hidden sm:inline">
-            Olá,{" "}
-            <strong className="font-medium text-white">
-              {user.email?.split("@")[0]}
-            </strong>
+            {t("hello_user", { user_name: user.email?.split("@")[0] })} {/* <-- TRADUZINDO A SAUDAÇÃO */}
           </span>
           <button
             onClick={handleSignOut}
             className="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-lg transition-colors"
           >
-            Sair
+            {t("sign_out")} {/* <-- TRADUZINDO O BOTÃO */}
           </button>
         </div>
       </div>

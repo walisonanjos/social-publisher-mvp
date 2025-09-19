@@ -1,0 +1,16 @@
+{
+  "schedule_post": "Schedule Post",
+  "niche_timezone": "Niche Timezone:",
+  "save": "Save",
+  "post_title": "Title",
+  "post_description": "Description",
+  "scheduling_date": "Scheduling Date",
+  "scheduling_time": "Scheduling Time",
+  "post_to": "Post to:",
+  "no_available_times": "No times available",
+  "file_upload_label": "Video File",
+  "new_appointment": "New Appointment",
+  "scheduling": "Scheduling...",
+  "youtube_connected": "YouTube Connected",
+  "history": "History"
+}
