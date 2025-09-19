@@ -294,6 +294,7 @@ export default function NichePageClient({ nicheId }: { nicheId: string }) {
             description={formDescription}
             setDescription={setFormDescription}
             nicheTimezone={nicheTimezone.split(') ')[1] || nicheTimezone}
+            existingAppointments={videos} // <-- NOVA PROP
           />
         </div>
         <hr className="my-8 border-gray-700" />

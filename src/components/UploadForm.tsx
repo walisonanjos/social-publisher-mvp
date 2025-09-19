@@ -23,6 +23,7 @@ interface UploadFormProps {
   setTitle: (title: string) => void;
   description: string;
   setDescription: (description: string) => void;
+  existingAppointments: Video[]; // <-- NOVA PROP
 }
 
 export default function UploadForm({
@@ -36,6 +37,7 @@ export default function UploadForm({
   setTitle,
   description,
   setDescription,
+  existingAppointments, // <-- Usando a nova prop
 }: UploadFormProps) {
   const [file, setFile] = useState<File | null>(null);
   const [scheduleDate, setScheduleDate] = useState<Date | undefined>(
@@ -58,8 +60,19 @@ export default function UploadForm({
     const allAvailableTimes = ["09:00", "11:00", "13:00", "15:00", "17:00"];
     const nowInNicheTimezone = toZonedTime(new Date(), nicheTimezone);
     
+    // Lista de horários já agendados para o dia selecionado
+    const bookedTimes = existingAppointments
+      .filter(video => isSameDay(toZonedTime(new Date(video.scheduled_at), nicheTimezone), scheduleDate || nowInNicheTimezone))
+      .map(video => {
+          const date = toZonedTime(new Date(video.scheduled_at), nicheTimezone);
+          return `${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}`;
+      });
+
     if (!scheduleDate || !isSameDay(scheduleDate, nowInNicheTimezone)) {
-      return allAvailableTimes.map(time => ({ time, disabled: false }));
+      return allAvailableTimes.map(time => ({ 
+        time, 
+        disabled: bookedTimes.includes(time) 
+      }));
     }
     
     const currentHour = nowInNicheTimezone.getHours();
@@ -67,10 +80,12 @@ export default function UploadForm({
     
     return allAvailableTimes.map(time => {
       const [hours, minutes] = time.split(":").map(Number);
-      const disabled = hours < currentHour || (hours === currentHour && minutes <= currentMinutes);
-      return { time, disabled };
+      const isPast = hours < currentHour || (hours === currentHour && minutes <= currentMinutes);
+      const isBooked = bookedTimes.includes(time);
+      
+      return { time, disabled: isPast || isBooked };
     });
-  }, [scheduleDate, nicheTimezone]);
+  }, [scheduleDate, nicheTimezone, existingAppointments]);
   
   useEffect(() => {
     const available = allTimesAndStatus.filter(t => !t.disabled);
