@@ -5,7 +5,7 @@ import { useState } from "react";
 import { Youtube, Instagram, Facebook } from "lucide-react";
 import { createClient } from "../lib/supabaseClient";
 import { IconBrandTiktok } from "@tabler/icons-react";
-import { useTranslation } from "react-i18next";
+import { useTranslation, TFunction } from "react-i18next";
 
 interface AccountConnectionProps {
   nicheId: string;
@@ -15,7 +15,7 @@ interface AccountConnectionProps {
   onDisconnect: (platform: 'youtube' | 'instagram' | 'tiktok') => void;
 }
 
-const ConnectionStatus = ({ icon: Icon, platformName, onDisconnect, iconColorClass, t }: { icon: React.ElementType, platformName: string, onDisconnect: () => void, iconColorClass: string, t: any }) => (
+const ConnectionStatus = ({ icon: Icon, platformName, onDisconnect, iconColorClass, t }: { icon: React.ElementType, platformName: string, onDisconnect: () => void, iconColorClass: string, t: TFunction }) => (
   <div className={`p-4 bg-green-900/50 border ${iconColorClass}/30 rounded-lg flex items-center justify-between`}>
     <div className="flex items-center gap-3">
       <Icon className={`${iconColorClass}`} size={24} />

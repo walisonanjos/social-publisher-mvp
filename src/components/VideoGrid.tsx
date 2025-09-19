@@ -14,15 +14,14 @@ import {
   Clock,
   PlusCircle,
   Copy,
-  ScrollText,
-  RefreshCw
+  ScrollText
 } from "lucide-react";
-import { IconBrandTiktok } from "@tabler/icons-react"; // Importe o ícone do TikTok
+import { IconBrandTiktok } from "@tabler/icons-react";
 import { useState } from "react";
 import Link from "next/link";
 import { format, isToday } from "date-fns";
-import { ptBR, enUS, es, fr } from "date-fns/locale"; // <-- IMPORTANDO OUTROS IDIOMAS
-import { useTranslation } from "react-i18next"; // <-- IMPORTANDO O HOOK
+import { ptBR, enUS, es, fr } from "date-fns/locale";
+import { useTranslation } from "react-i18next";
 import { Tooltip } from "react-tooltip";
 import { formatTimeInTimezone } from "../lib/utils";
 
@@ -42,7 +41,7 @@ const getPlatformError = (fullError: string | null, platform: string): string | 
   return errorSegment ? errorSegment.replace(`Falha no ${platform}: `, '') : null;
 };
 
-const PlatformStatus = ({ platformName, status, error }: { platformName: 'YouTube' | 'Instagram' | 'Facebook' | 'TikTok', status: string | null, error: string | null }) => {
+const PlatformStatus = ({ platformName, status, error, t }: { platformName: 'YouTube' | 'Instagram' | 'Facebook' | 'TikTok', status: string | null, error: string | null, t: TFunction }) => {
   if (!status) return null;
 
   const platformIcons = {
@@ -78,7 +77,7 @@ function VideoCard({
   onViewLogs: (video: Video) => void;
   nicheTimezone: string;
 }) {
-  const { t } = useTranslation(); // <-- INICIALIZANDO O HOOK
+  const { t } = useTranslation();
   const isScheduled = video.youtube_status === 'agendado' || video.instagram_status === 'agendado' || video.facebook_status === 'agendado' || video.tiktok_status === 'agendado';
 
   return (
@@ -107,10 +106,10 @@ function VideoCard({
         <div className="flex items-center gap-2 text-gray-400 text-sm flex-wrap min-w-0">
           <span className="whitespace-nowrap">{formatTimeInTimezone(video.scheduled_at, nicheTimezone)}</span>
           <div className="flex items-center gap-1 border-l border-gray-700 pl-2">
-            {video.target_youtube && <PlatformStatus platformName="YouTube" status={video.youtube_status} error={video.post_error} />}
-            {video.target_instagram && <PlatformStatus platformName="Instagram" status={video.instagram_status} error={video.post_error} />}
-            {video.target_facebook && <PlatformStatus platformName="Facebook" status={video.facebook_status} error={video.post_error} />}
-            {video.target_tiktok && <PlatformStatus platformName="TikTok" status={video.tiktok_status} error={video.post_error} />}
+            {video.target_youtube && <PlatformStatus platformName="YouTube" status={video.youtube_status} error={video.post_error} t={t} />}
+            {video.target_instagram && <PlatformStatus platformName="Instagram" status={video.instagram_status} error={video.post_error} t={t} />}
+            {video.target_facebook && <PlatformStatus platformName="Facebook" status={video.facebook_status} error={video.post_error} t={t} />}
+            {video.target_tiktok && <PlatformStatus platformName="TikTok" status={video.tiktok_status} error={video.post_error} t={t} />}
           </div>
         </div>
         <div className="flex items-center gap-2 flex-shrink-0">
@@ -153,7 +152,7 @@ export default function VideoGrid({
   sortOrder = "desc",
   nicheTimezone,
 }: VideoGridProps) {
-  const { i18n, t } = useTranslation(); // <-- INICIALIZANDO O HOOK
+  const { i18n, t } = useTranslation();
   const [openGroups, setOpenGroups] = useState<{ [key: string]: boolean }>({});
 
   const sortedGroupKeys = Object.keys(groupedVideos).sort((a, b) => {
@@ -210,6 +209,13 @@ export default function VideoGrid({
 
   return (
     <div className="space-y-6">
+      <h2 className="text-2xl font-bold tracking-tight text-white mb-6">
+        {t("my_appointments")}
+      </h2>
+      <button onClick={() => {}} className="flex items-center gap-2 px-3 py-1.5 text-sm bg-gray-700/50 hover:bg-gray-700 border border-gray-600 rounded-lg transition-colors" title={t("update")}>
+        <RefreshCw size={14} /><span>{t("update")}</span>
+      </button>
+
       {sortedGroupKeys.map((dateKey) => {
         const date = new Date(dateKey + "T12:00:00");
         const defaultState = sortOrder === "asc" ? isToday(date) : false;
