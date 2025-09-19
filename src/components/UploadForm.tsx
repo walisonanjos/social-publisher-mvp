@@ -54,7 +54,6 @@ export default function UploadForm({
   today.setHours(0, 0, 0, 0);
   const tenDaysFromNow = addDays(today, 9);
   
-  // A constante 'allAvailableTimes' agora está dentro do useMemo para resolver o aviso.
   const availableTimes = useMemo(() => {
     const allAvailableTimes = ["09:00", "11:00", "13:00", "15:00", "17:00"];
     
@@ -72,9 +71,8 @@ export default function UploadForm({
     }
     
     return allAvailableTimes;
-  }, [scheduleDate, nicheTimezone]); // <-- dependências atualizadas
+  }, [scheduleDate, nicheTimezone]);
   
-  // Atualiza o scheduleTime se a hora atual não estiver mais disponível
   useEffect(() => {
     if (!availableTimes.includes(scheduleTime)) {
         if (availableTimes.length > 0) {
