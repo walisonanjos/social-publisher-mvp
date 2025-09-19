@@ -11,11 +11,11 @@ import fromZonedTime from "date-fns-tz/fromZonedTime";
 import toZonedTime from "date-fns-tz/toZonedTime";
 import { Video } from "@/types";
 import { toast } from "sonner";
-import { Loader2 } from "lucide-react"; // <-- Adicionado o Loader2 aqui
+import { Loader2 } from "lucide-react";
 
 interface UploadFormProps {
   nicheId: string;
-  nicheTimezone: string; // <-- NOVO: Prop para o fuso horário do nicho
+  nicheTimezone: string;
   onScheduleSuccess: (newVideo: Video, clearFileCallback: () => void) => void;
   isYouTubeConnected: boolean;
   isInstagramConnected: boolean;
@@ -23,12 +23,12 @@ interface UploadFormProps {
   title: string;
   setTitle: (title: string) => void;
   description: string;
-  setDescription: (description: (description: string) => void);
+  setDescription: (description: string) => void; // <-- Linha corrigida
 }
 
 export default function UploadForm({
   nicheId,
-  nicheTimezone, // <-- Usado aqui
+  nicheTimezone,
   onScheduleSuccess,
   isYouTubeConnected,
   isInstagramConnected,
@@ -302,7 +302,7 @@ export default function UploadForm({
             >
               Hora do Agendamento
             </label>
-            <div className="flex items-center gap-2"> {/* <-- Adicionado um container flex para alinhar o select e o texto */}
+            <div className="flex items-center gap-2">
               <select
                 id="scheduleTime"
                 value={scheduleTime}
@@ -315,7 +315,6 @@ export default function UploadForm({
                   </option>
                 ))}
               </select>
-              {/* <-- Exibindo o fuso horário para o usuário --> */}
               <span className="text-gray-400 text-sm">{displayTimezone}</span>
             </div>
           </div>
