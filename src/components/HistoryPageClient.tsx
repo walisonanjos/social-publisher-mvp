@@ -1,3 +1,5 @@
+// src/components/HistoryPageClient.tsx
+
 "use client";
 
 import { useEffect, useState, useMemo } from "react";
@@ -10,7 +12,8 @@ import Navbar from "./Navbar";
 import VideoGrid from "./VideoGrid";
 import Auth from "./Auth";
 import { useRouter } from "next/navigation";
-import ViewLogsModal from "./ViewLogsModal"; // 1. IMPORTAR O MODAL DE LOGS
+import ViewLogsModal from "./ViewLogsModal";
+import { timeZones } from "../lib/timezones";
 
 export default function HistoryPageClient({ nicheId }: { nicheId: string }) {
   const supabase = createClient();
@@ -19,9 +22,9 @@ export default function HistoryPageClient({ nicheId }: { nicheId: string }) {
   const [videos, setVideos] = useState<Video[]>([]);
   const [loading, setLoading] = useState(true);
   const [nicheName, setNicheName] = useState("Carregando...");
-  
-  // 2. ADICIONAR ESTADO PARA CONTROLAR O MODAL
   const [viewingLogsForVideo, setViewingLogsForVideo] = useState<Video | null>(null);
+  const initialTimezoneName = timeZones[0].split(') ')[1];
+  const [nicheTimezone, setNicheTimezone] = useState(timeZones.find(tz => tz.endsWith(initialTimezoneName)) || timeZones[0]);
 
   const groupedVideos = useMemo(() => {
     const groups: { [key: string]: Video[] } = {};
@@ -56,10 +59,16 @@ export default function HistoryPageClient({ nicheId }: { nicheId: string }) {
 
         const { data: nicheData } = await supabase
           .from("niches")
-          .select("name")
+          .select("name, timezone")
           .eq("id", nicheId)
           .single();
-        if (nicheData) setNicheName(nicheData.name);
+        if (nicheData) {
+          setNicheName(nicheData.name);
+          if (nicheData.timezone) {
+            const fullTimezone = timeZones.find(tz => tz.endsWith(nicheData.timezone));
+            setNicheTimezone(fullTimezone || nicheData.timezone);
+          }
+        }
       }
       setLoading(false);
     };
@@ -74,7 +83,6 @@ export default function HistoryPageClient({ nicheId }: { nicheId: string }) {
     router.push(`/niche/${nicheId}?${params.toString()}`);
   };
 
-  // 3. ADICIONAR FUNÇÃO PARA ABRIR O MODAL
   const handleViewLogs = (video: Video) => {
     setViewingLogsForVideo(video);
   };
@@ -92,7 +100,6 @@ export default function HistoryPageClient({ nicheId }: { nicheId: string }) {
 
   return (
     <div className="bg-gray-900 min-h-screen text-white">
-      {/* 4. RENDERIZAR O MODAL QUANDO UM VÍDEO FOR SELECIONADO */}
       {viewingLogsForVideo && (
         <ViewLogsModal 
           video={viewingLogsForVideo} 
@@ -114,8 +121,9 @@ export default function HistoryPageClient({ nicheId }: { nicheId: string }) {
             onDelete={() => {}}
             onEdit={() => {}}
             onDuplicate={handleDuplicate}
-            onViewLogs={handleViewLogs} // 5. PASSAR A NOVA FUNÇÃO
+            onViewLogs={handleViewLogs}
             sortOrder="desc"
+            nicheTimezone={nicheTimezone.split(') ')[1] || nicheTimezone} // <-- PASSANDO A PROP AQUI
           />
         </div>
       </main>
