@@ -14,14 +14,15 @@ import {
   Clock,
   PlusCircle,
   Copy,
-  ScrollText
+  ScrollText,
+  RefreshCw // <-- USADO AQUI
 } from "lucide-react";
 import { IconBrandTiktok } from "@tabler/icons-react";
 import { useState } from "react";
 import Link from "next/link";
 import { format, isToday } from "date-fns";
 import { ptBR, enUS, es, fr } from "date-fns/locale";
-import { useTranslation } from "react-i18next";
+import { useTranslation, TFunction } from "react-i18next";
 import { Tooltip } from "react-tooltip";
 import { formatTimeInTimezone } from "../lib/utils";
 
@@ -87,16 +88,16 @@ function VideoCard({
           {video.title}
         </span>
         <div className={`text-xs font-bold px-2 py-1 rounded-full border whitespace-nowrap ${
-          video.youtube_status === 'falhou' || video.instagram_status === 'falhou' || video.facebook_status === 'falhou' || video.tiktok_status === 'falhou' 
+          video.youtube_status === 'falhou' || video.instagram_status === 'falhou' || video.facebook_status === 'falhou' || video.tiktok_status === 'falhou'
           ? "bg-red-500/20 text-red-300 border-red-500/30"
-          : video.youtube_status === 'publicado' || video.instagram_status === 'publicado' || video.facebook_status === 'publicado' || video.tiktok_status === 'publicado' 
+          : video.youtube_status === 'publicado' || video.instagram_status === 'publicado' || video.facebook_status === 'publicado' || video.tiktok_status === 'publicado'
           ? "bg-green-500/20 text-green-300 border-green-500/30"
           : "bg-blue-500/20 text-blue-300 border-blue-500/30"
         }`}>
           {
-            video.youtube_status === 'falhou' || video.instagram_status === 'falhou' || video.facebook_status === 'falhou' || video.tiktok_status === 'falhou' 
+            video.youtube_status === 'falhou' || video.instagram_status === 'falhou' || video.facebook_status === 'falhou' || video.tiktok_status === 'falhou'
             ? t("failed")
-            : video.youtube_status === 'publicado' || video.instagram_status === 'publicado' || video.facebook_status === 'publicado' || video.tiktok_status === 'publicado' 
+            : video.youtube_status === 'publicado' || video.instagram_status === 'publicado' || video.facebook_status === 'publicado' || video.tiktok_status === 'publicado'
             ? t("published")
             : t("scheduled")
           }
@@ -209,12 +210,12 @@ export default function VideoGrid({
 
   return (
     <div className="space-y-6">
-      <h2 className="text-2xl font-bold tracking-tight text-white mb-6">
-        {t("my_appointments")}
-      </h2>
-      <button onClick={() => {}} className="flex items-center gap-2 px-3 py-1.5 text-sm bg-gray-700/50 hover:bg-gray-700 border border-gray-600 rounded-lg transition-colors" title={t("update")}>
-        <RefreshCw size={14} /><span>{t("update")}</span>
-      </button>
+      <div className="flex justify-between items-center mb-6">
+          <h2 className="text-2xl font-bold tracking-tight text-white">{t("my_appointments")}</h2>
+          <button onClick={() => {}} className="flex items-center gap-2 px-3 py-1.5 text-sm bg-gray-700/50 hover:bg-gray-700 border border-gray-600 rounded-lg transition-colors" title={t("update")}>
+            <RefreshCw size={14} /><span>{t("update")}</span>
+          </button>
+        </div>
 
       {sortedGroupKeys.map((dateKey) => {
         const date = new Date(dateKey + "T12:00:00");
