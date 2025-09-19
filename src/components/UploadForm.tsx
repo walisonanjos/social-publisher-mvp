@@ -90,7 +90,8 @@ export default function UploadForm({
       });
       const offset = formatter.format(nowInTimezone).split(' ')[1];
       return `(${nicheTimezone} ${offset})`;
-    } catch (e) {
+    } catch (error) { // <-- CORREÇÃO: Variável 'e' alterada para 'error'
+      console.error(error); // <-- CORREÇÃO: Usando 'error' para log
       return nicheTimezone;
     }
   }, [nicheTimezone]);
