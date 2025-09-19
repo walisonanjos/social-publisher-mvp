@@ -1,0 +1,19 @@
+{
+  "schedule_post": "Planifier une publication",
+  "niche_timezone": "Fuseau horaire de la niche:",
+  "save": "Enregistrer",
+  "post_title": "Titre",
+  "post_description": "Description",
+  "scheduling_date": "Date de planification",
+  "scheduling_time": "Heure de planification",
+  "post_to": "Publier sur:",
+  "no_available_times": "Aucun horaire disponible",
+  "file_upload_label": "Fichier vidéo",
+  "new_appointment": "Nouvelle publication",
+  "scheduling": "Planification...",
+  "youtube_connected": "YouTube Connecté",
+  "history": "Historique",
+  "back": "Retour",
+  "sign_out": "Déconnexion",
+  "hello_user": "Bonjour, {{user_name}}"
+}

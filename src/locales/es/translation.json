@@ -1,0 +1,19 @@
+{
+  "schedule_post": "Programar publicación",
+  "niche_timezone": "Zona horaria del nicho:",
+  "save": "Guardar",
+  "post_title": "Título",
+  "post_description": "Descripción",
+  "scheduling_date": "Fecha de programación",
+  "scheduling_time": "Hora de programación",
+  "post_to": "Publicar en:",
+  "no_available_times": "No hay horarios disponibles",
+  "file_upload_label": "Archivo de vídeo",
+  "new_appointment": "Nueva publicación",
+  "scheduling": "Programando...",
+  "youtube_connected": "YouTube Conectado",
+  "history": "Historial",
+  "back": "Volver",
+  "sign_out": "Cerrar sesión",
+  "hello_user": "Hola, {{user_name}}"
+}
