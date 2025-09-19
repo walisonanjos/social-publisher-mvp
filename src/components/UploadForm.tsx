@@ -240,7 +240,7 @@ export default function UploadForm({
             type="text"
             id="title"
             value={title}
-            onChange={(_e) => setTitle(_e.target.value)} // <-- Linha corrigida
+            onChange={(_e) => setTitle(_e.target.value)}
             className="mt-1 block w-full bg-gray-900 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-teal-500 focus:border-teal-500"
             required
           />
@@ -332,7 +332,7 @@ export default function UploadForm({
                 type="checkbox"
                 className="h-4 w-4 rounded bg-gray-700 border-gray-500 text-teal-600 focus:ring-teal-500 disabled:opacity-50"
                 checked={postToInstagram}
-                onChange={(e) => setPostToInstagram(e.target.checked)}
+                onChange={(_e) => setPostToInstagram(_e.target.checked)}
                 disabled={!isInstagramConnected}
               />
               Instagram
@@ -348,7 +348,7 @@ export default function UploadForm({
                 type="checkbox"
                 className="h-4 w-4 rounded bg-gray-700 border-gray-500 text-teal-600 focus:ring-teal-500 disabled:opacity-50"
                 checked={postToFacebook}
-                onChange={(e) => setPostToFacebook(e.target.checked)}
+                onChange={(_e) => setPostToFacebook(_e.target.checked)}
                 disabled={!isInstagramConnected}
               />
               Facebook
@@ -364,7 +364,7 @@ export default function UploadForm({
                 type="checkbox"
                 className="h-4 w-4 rounded bg-gray-700 border-gray-500 text-teal-600 focus:ring-teal-500 disabled:opacity-50"
                 checked={postToYouTube}
-                onChange={(e) => setPostToYouTube(e.target.checked)}
+                onChange={(_e) => setPostToYouTube(_e.target.checked)}
                 disabled={!isYouTubeConnected}
               />
               YouTube
@@ -380,7 +380,7 @@ export default function UploadForm({
                 type="checkbox"
                 className="h-4 w-4 rounded bg-gray-700 border-gray-500 text-teal-600 focus:ring-teal-500 disabled:opacity-50"
                 checked={postToTikTok}
-                onChange={(e) => setPostToTikTok(e.target.checked)}
+                onChange={(_e) => setPostToTikTok(_e.target.checked)}
                 disabled={!isTikTokConnected}
               />
               TikTok
