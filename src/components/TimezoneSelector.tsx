@@ -29,9 +29,12 @@ export default function TimezoneSelector({
   const handleSaveTimezone = async () => {
     setIsSaving(true);
     try {
+      // Extraindo apenas o nome canônico do fuso horário antes de salvar
+      const timezoneToSave = selectedTimezone.split(') ')[1];
+
       const { data, error } = await supabase
         .from("niches")
-        .update({ timezone: selectedTimezone })
+        .update({ timezone: timezoneToSave })
         .eq("id", nicheId)
         .select()
         .single();
@@ -41,7 +44,9 @@ export default function TimezoneSelector({
       }
 
       if (data) {
-        onTimezoneChange(data.timezone);
+        // Retornando a string completa para o componente pai
+        const savedTimezone = timeZones.find(tz => tz.endsWith(data.timezone));
+        onTimezoneChange(savedTimezone || data.timezone);
         toast.success("Fuso horário atualizado!");
       }
     } catch (e) {

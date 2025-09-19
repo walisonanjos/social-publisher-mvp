@@ -34,7 +34,8 @@ export default function NichePageClient({ nicheId }: { nicheId: string }) {
   const [viewingLogsForVideo, setViewingLogsForVideo] = useState<Video | null>(null);
   const [formTitle, setFormTitle] = useState("");
   const [formDescription, setFormDescription] = useState("");
-  const [nicheTimezone, setNicheTimezone] = useState(timeZones[0]);
+  const initialTimezoneName = timeZones[0].split(') ')[1];
+  const [nicheTimezone, setNicheTimezone] = useState(timeZones.find(tz => tz.endsWith(initialTimezoneName)) || timeZones[0]);
 
   const groupedVideos = useMemo(() => {
     const sortedVideos = [...videos].sort((a, b) => new Date(a.scheduled_at).getTime() - new Date(b.scheduled_at).getTime());
@@ -81,7 +82,8 @@ export default function NichePageClient({ nicheId }: { nicheId: string }) {
     if (nicheData) {
       setNicheName(nicheData.name);
       if (nicheData.timezone) {
-        setNicheTimezone(nicheData.timezone);
+        const fullTimezone = timeZones.find(tz => tz.endsWith(nicheData.timezone));
+        setNicheTimezone(fullTimezone || nicheData.timezone);
       }
     }
   }, [nicheId, supabase]);
@@ -291,7 +293,7 @@ export default function NichePageClient({ nicheId }: { nicheId: string }) {
             setTitle={setFormTitle}
             description={formDescription}
             setDescription={setFormDescription}
-            nicheTimezone={nicheTimezone}
+            nicheTimezone={nicheTimezone.split(') ')[1] || nicheTimezone}
           />
         </div>
         <hr className="my-8 border-gray-700" />
