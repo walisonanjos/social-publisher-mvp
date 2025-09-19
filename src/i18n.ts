@@ -16,10 +16,10 @@ const resources = {
   pt: {
     translation: translationPT,
   },
-  fr: { // <-- NOVO: Francês
+  fr: {
     translation: translationFR,
   },
-  es: { // <-- NOVO: Espanhol
+  es: {
     translation: translationES,
   },
 };
