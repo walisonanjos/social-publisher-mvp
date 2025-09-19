@@ -5,7 +5,7 @@ import { useState, useEffect } from "react";
 import { createClient } from "@/lib/supabaseClient";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
-import { timeZones } from "@/lib/timezones"; // Importaremos a lista no próximo passo
+import { timeZones } from "@/lib/timezones";
 
 interface TimezoneSelectorProps {
   nicheId: string;
