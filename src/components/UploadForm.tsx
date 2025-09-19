@@ -7,8 +7,7 @@ import { DayPicker } from "react-day-picker";
 import "react-day-picker/dist/style.css";
 import { addDays } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import fromZonedTime from "date-fns-tz/fromZonedTime";
-import toZonedTime from "date-fns-tz/toZonedTime";
+import { fromZonedTime, toZonedTime } from "date-fns-tz"; // <-- Importação corrigida
 import { Video } from "@/types";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
@@ -23,7 +22,7 @@ interface UploadFormProps {
   title: string;
   setTitle: (title: string) => void;
   description: string;
-  setDescription: (description: string) => void; // <-- Linha corrigida
+  setDescription: (description: string) => void;
 }
 
 export default function UploadForm({
@@ -256,7 +255,7 @@ export default function UploadForm({
           <textarea
             id="description"
             value={description}
-            onChange={(e) => setDescription(e.target.value)}
+            onChange={(_e) => setDescription(_e.target.value)} // <-- Variável corrigida
             rows={3}
             className="mt-1 block w-full bg-gray-900 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-teal-500 focus:border-teal-500"
           />
