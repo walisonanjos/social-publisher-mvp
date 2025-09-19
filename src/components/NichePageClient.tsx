@@ -17,6 +17,8 @@ import EditVideoModal from "./EditVideoModal";
 import ViewLogsModal from "./ViewLogsModal";
 import { toast } from "sonner";
 import { useSearchParams } from "next/navigation";
+import TimezoneSelector from "./TimezoneSelector";
+import { timeZones } from "@/lib/timezones";
 
 export default function NichePageClient({ nicheId }: { nicheId: string }) {
   const supabase = createClient();
@@ -32,7 +34,7 @@ export default function NichePageClient({ nicheId }: { nicheId: string }) {
   const [viewingLogsForVideo, setViewingLogsForVideo] = useState<Video | null>(null);
   const [formTitle, setFormTitle] = useState("");
   const [formDescription, setFormDescription] = useState("");
-  const [nicheTimezone, setNicheTimezone] = useState("America/Sao_Paulo"); // <-- NOVO: Estado para o fuso horário
+  const [nicheTimezone, setNicheTimezone] = useState(timeZones[0]);
 
   const groupedVideos = useMemo(() => {
     const sortedVideos = [...videos].sort((a, b) => new Date(a.scheduled_at).getTime() - new Date(b.scheduled_at).getTime());
@@ -70,7 +72,6 @@ export default function NichePageClient({ nicheId }: { nicheId: string }) {
     setIsInstagramConnected(connections?.some(c => c.platform === 'instagram') || false);
     setIsTikTokConnected(connections?.some(c => c.platform === 'tiktok') || false);
 
-    // <-- NOVO: Buscar o nome e o fuso horário do nicho
     const { data: nicheData } = await supabase
       .from('niches')
       .select('name, timezone')
@@ -271,6 +272,14 @@ export default function NichePageClient({ nicheId }: { nicheId: string }) {
       <MainHeader user={user} pageTitle={nicheName} backLink="/niches" />
       <main className="container mx-auto p-4 md:p-8">
         <Navbar nicheId={nicheId} />
+        <div className="my-8">
+          <TimezoneSelector
+            nicheId={nicheId}
+            initialTimezone={nicheTimezone}
+            onTimezoneChange={setNicheTimezone}
+          />
+        </div>
+        <hr className="my-8 border-gray-700" />
         <div className="mt-8">
           <UploadForm
             nicheId={nicheId}
@@ -282,9 +291,10 @@ export default function NichePageClient({ nicheId }: { nicheId: string }) {
             setTitle={setFormTitle}
             description={formDescription}
             setDescription={setFormDescription}
-            nicheTimezone={nicheTimezone} // <-- A prop agora está sendo passada
+            nicheTimezone={nicheTimezone}
           />
         </div>
+        <hr className="my-8 border-gray-700" />
         <div className="mt-8">
           <AccountConnection
             nicheId={nicheId}
