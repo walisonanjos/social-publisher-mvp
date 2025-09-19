@@ -43,7 +43,7 @@ export default function MainHeader({
             <Link
               href={backLink}
               className="text-gray-400 hover:text-white transition-colors"
-              title={t("back")} // <-- TRADUZINDO A MENSAGEM
+              title={t("back")}
             >
               <ArrowLeft size={20} />
             </Link>
@@ -53,15 +53,16 @@ export default function MainHeader({
           )}
         </div>
         <div className="flex items-center gap-4">
-          <LanguageSwitcher /> {/* <-- ADICIONANDO O COMPONENTE */}
+          <LanguageSwitcher />
           <span className="text-gray-300 hidden sm:inline">
-            {t("hello_user", { user_name: user.email?.split("@")[0] })} {/* <-- TRADUZINDO A SAUDAÇÃO */}
+            {t("hello_user", { user_name: user.email?.split("@")[0] })}
           </span>
           <button
             onClick={handleSignOut}
-            className="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-lg transition-colors"
+            className="flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-lg transition-colors"
           >
-            {t("sign_out")} {/* <-- TRADUZINDO O BOTÃO */}
+            <LogOut size={20} />
+            <span>{t("sign_out")}</span>
           </button>
         </div>
       </div>
