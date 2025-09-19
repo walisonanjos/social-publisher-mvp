@@ -1,3 +1,4 @@
+// src/components/VideoGrid.tsx
 "use client";
 
 import { Video } from "@/types";
@@ -21,6 +22,7 @@ import Link from "next/link";
 import { format, isToday } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { Tooltip } from "react-tooltip";
+import { formatTimeInTimezone } from "../lib/utils"; // <-- IMPORTANDO A FUNÇÃO DE UTILIDADE
 
 interface VideoGridProps {
   groupedVideos: { [key: string]: Video[] };
@@ -29,6 +31,7 @@ interface VideoGridProps {
   onDuplicate: (video: Video) => void;
   onViewLogs: (video: Video) => void;
   sortOrder?: "asc" | "desc";
+  nicheTimezone: string; // <-- NOVA PROP
 }
 
 const getPlatformError = (fullError: string | null, platform: string): string | null => {
@@ -60,20 +63,24 @@ const PlatformStatus = ({ platformName, status, error }: { platformName: 'YouTub
   );
 };
 
+// COMPONENTE VIDEOCARD ATUALIZADO
 function VideoCard({
   video,
   onDelete,
   onEdit,
   onDuplicate,
   onViewLogs,
+  nicheTimezone, // <-- RECEBENDO A NOVA PROP
 }: {
   video: Video;
   onDelete: (id: number) => void;
   onEdit: (video: Video) => void;
   onDuplicate: (video: Video) => void;
   onViewLogs: (video: Video) => void;
+  nicheTimezone: string; // <-- NOVA PROP
 }) {
   const isScheduled = video.youtube_status === 'agendado' || video.instagram_status === 'agendado' || video.facebook_status === 'agendado' || video.tiktok_status === 'agendado';
+  const formattedTime = formatTimeInTimezone(video.scheduled_at, nicheTimezone);
 
   return (
     <div className="bg-gray-800/50 p-4 rounded-lg flex flex-col justify-between gap-3 border border-gray-700/80 h-full">
@@ -98,16 +105,16 @@ function VideoCard({
         </div>
       </div>
       <div className="flex justify-between items-end mt-auto">
-        <div className="flex items-center gap-2 text-gray-400 text-sm flex-wrap min-w-0"> {/* Reduzido gap para 2, adicionado flex-wrap e min-w-0 */}
-          <span className="whitespace-nowrap">{format(new Date(video.scheduled_at), "HH:mm")}</span>
-          <div className="flex items-center gap-1 border-l border-gray-700 pl-2"> {/* Reduzido gap para 1, pl para 2 */}
+        <div className="flex items-center gap-2 text-gray-400 text-sm flex-wrap min-w-0">
+          <span className="whitespace-nowrap">{formattedTime}</span> {/* APLICANDO A FUNÇÃO AQUI */}
+          <div className="flex items-center gap-1 border-l border-gray-700 pl-2">
             {video.target_youtube && <PlatformStatus platformName="YouTube" status={video.youtube_status} error={video.post_error} />}
             {video.target_instagram && <PlatformStatus platformName="Instagram" status={video.instagram_status} error={video.post_error} />}
             {video.target_facebook && <PlatformStatus platformName="Facebook" status={video.facebook_status} error={video.post_error} />}
             {video.target_tiktok && <PlatformStatus platformName="TikTok" status={video.tiktok_status} error={video.post_error} />}
           </div>
         </div>
-        <div className="flex items-center gap-2 flex-shrink-0"> {/* Reduzido gap para 2, adicionado flex-shrink-0 */}
+        <div className="flex items-center gap-2 flex-shrink-0">
           <button onClick={() => onViewLogs(video)} title="Ver Histórico de Postagem" className="text-gray-400 hover:text-white transition-colors">
             <ScrollText size={14} />
           </button>
@@ -123,7 +130,7 @@ function VideoCard({
           )}
 
           {isScheduled && (
-            <div className="flex items-center gap-2 text-xs flex-shrink-0"> {/* Reduzido gap para 2, adicionado flex-shrink-0 */}
+            <div className="flex items-center gap-2 text-xs flex-shrink-0">
               <button onClick={() => onEdit(video)} className="text-blue-400 hover:text-blue-300">
                 Editar
               </button>
@@ -145,6 +152,7 @@ export default function VideoGrid({
   onDuplicate,
   onViewLogs,
   sortOrder = "desc",
+  nicheTimezone, // <-- RECEBENDO A NOVA PROP
 }: VideoGridProps) {
   const [openGroups, setOpenGroups] = useState<{ [key: string]: boolean }>({});
 
@@ -212,7 +220,15 @@ export default function VideoGrid({
             {isGroupOpen && (
               <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                 {groupedVideos[dateKey].map((video) => (
-                  <VideoCard key={video.id} video={video} onDelete={onDelete} onEdit={onEdit} onDuplicate={onDuplicate} onViewLogs={onViewLogs} />
+                  <VideoCard 
+                    key={video.id} 
+                    video={video} 
+                    onDelete={onDelete} 
+                    onEdit={onEdit} 
+                    onDuplicate={onDuplicate} 
+                    onViewLogs={onViewLogs}
+                    nicheTimezone={nicheTimezone} // <-- PASSANDO A PROP PARA O VIDEOCARD
+                  />
                 ))}
               </div>
             )}

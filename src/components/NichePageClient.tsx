@@ -18,7 +18,7 @@ import ViewLogsModal from "./ViewLogsModal";
 import { toast } from "sonner";
 import { useSearchParams } from "next/navigation";
 import TimezoneSelector from "./TimezoneSelector";
-import { timeZones } from "@/lib/timezones";
+import { timeZones } from "../lib/timezones";
 
 export default function NichePageClient({ nicheId }: { nicheId: string }) {
   const supabase = createClient();
@@ -294,7 +294,7 @@ export default function NichePageClient({ nicheId }: { nicheId: string }) {
             description={formDescription}
             setDescription={setFormDescription}
             nicheTimezone={nicheTimezone.split(') ')[1] || nicheTimezone}
-            existingAppointments={videos} // <-- NOVA PROP
+            existingAppointments={videos}
           />
         </div>
         <hr className="my-8 border-gray-700" />
@@ -321,6 +321,7 @@ export default function NichePageClient({ nicheId }: { nicheId: string }) {
           onDuplicate={handleDuplicate}
           onViewLogs={handleViewLogs}
           sortOrder="asc"
+          nicheTimezone={nicheTimezone.split(') ')[1] || nicheTimezone}
         />
       </main>
     </div>
