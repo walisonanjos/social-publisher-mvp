@@ -32,6 +32,7 @@ export default function NichePageClient({ nicheId }: { nicheId: string }) {
   const [viewingLogsForVideo, setViewingLogsForVideo] = useState<Video | null>(null);
   const [formTitle, setFormTitle] = useState("");
   const [formDescription, setFormDescription] = useState("");
+  const [nicheTimezone, setNicheTimezone] = useState("America/Sao_Paulo"); // <-- NOVO: Estado para o fuso horário
 
   const groupedVideos = useMemo(() => {
     const sortedVideos = [...videos].sort((a, b) => new Date(a.scheduled_at).getTime() - new Date(b.scheduled_at).getTime());
@@ -69,19 +70,24 @@ export default function NichePageClient({ nicheId }: { nicheId: string }) {
     setIsInstagramConnected(connections?.some(c => c.platform === 'instagram') || false);
     setIsTikTokConnected(connections?.some(c => c.platform === 'tiktok') || false);
 
+    // <-- NOVO: Buscar o nome e o fuso horário do nicho
     const { data: nicheData } = await supabase
       .from('niches')
-      .select('name')
+      .select('name, timezone')
       .eq('id', nicheId)
       .single();
-      
-    if (nicheData) setNicheName(nicheData.name);
+    
+    if (nicheData) {
+      setNicheName(nicheData.name);
+      if (nicheData.timezone) {
+        setNicheTimezone(nicheData.timezone);
+      }
+    }
   }, [nicheId, supabase]);
 
   useEffect(() => {
     const setupPage = async () => {
       setLoading(true);
-      // CORREÇÃO AQUI: A variável 'data' é usada para extrair 'user'
       const { data } = await supabase.auth.getUser(); 
       setUser(data.user);
       if (data.user) {
@@ -113,7 +119,6 @@ export default function NichePageClient({ nicheId }: { nicheId: string }) {
   useEffect(() => {
     if (!user) return;
 
-    // Listener para atualizações (UPDATE) na tabela de vídeos
     const videosChannel = supabase
       .channel(`videos-updates-niche-${nicheId}`)
       .on(
@@ -137,7 +142,6 @@ export default function NichePageClient({ nicheId }: { nicheId: string }) {
       )
       .subscribe();
 
-    // Listener para deleções (DELETE) na tabela de vídeos
     const videosDeleteChannel = supabase
       .channel(`videos-deletes-niche-${nicheId}`)
       .on(
@@ -157,7 +161,6 @@ export default function NichePageClient({ nicheId }: { nicheId: string }) {
       )
       .subscribe();
 
-    // Listener para conexões/desconexões de contas sociais
     const connectionsChannel = supabase
       .channel(`connections-niche-${nicheId}`)
       .on(
@@ -279,6 +282,7 @@ export default function NichePageClient({ nicheId }: { nicheId: string }) {
             setTitle={setFormTitle}
             description={formDescription}
             setDescription={setFormDescription}
+            nicheTimezone={nicheTimezone} // <-- A prop agora está sendo passada
           />
         </div>
         <div className="mt-8">
