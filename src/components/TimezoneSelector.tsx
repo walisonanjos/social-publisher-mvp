@@ -21,7 +21,7 @@ export default function TimezoneSelector({
   const supabase = createClient();
   const [selectedTimezone, setSelectedTimezone] = useState(initialTimezone);
   const [isSaving, setIsSaving] = useState(false);
-  const [searchQuery, setSearchQuery] = useState("");
+  const [searchQuery, setSearchQuery] = useState(initialTimezone);
   const [showDropdown, setShowDropdown] = useState(false);
 
   useEffect(() => {
@@ -89,7 +89,10 @@ export default function TimezoneSelector({
             setSearchQuery(e.target.value);
             setShowDropdown(true);
           }}
-          onFocus={() => setShowDropdown(true)}
+          onFocus={() => {
+            setSearchQuery("");
+            setShowDropdown(true);
+          }}
           onBlur={() => setTimeout(() => setShowDropdown(false), 200)}
           className="flex-grow md:flex-grow-0 bg-gray-900 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-teal-500 focus:border-teal-500"
           disabled={isSaving}
