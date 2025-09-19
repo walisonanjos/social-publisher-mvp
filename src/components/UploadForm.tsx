@@ -54,32 +54,34 @@ export default function UploadForm({
   today.setHours(0, 0, 0, 0);
   const tenDaysFromNow = addDays(today, 9);
   
-  const availableTimes = useMemo(() => {
+  const allTimesAndStatus = useMemo(() => {
     const allAvailableTimes = ["09:00", "11:00", "13:00", "15:00", "17:00"];
-    
-    if (!scheduleDate) return allAvailableTimes;
     const nowInNicheTimezone = toZonedTime(new Date(), nicheTimezone);
     
-    if (isSameDay(scheduleDate, nowInNicheTimezone)) {
-      const currentHour = nowInNicheTimezone.getHours();
-      const currentMinutes = nowInNicheTimezone.getMinutes();
-      
-      return allAvailableTimes.filter(time => {
-        const [hours, minutes] = time.split(":").map(Number);
-        return hours > currentHour || (hours === currentHour && minutes > currentMinutes);
-      });
+    if (!scheduleDate || !isSameDay(scheduleDate, nowInNicheTimezone)) {
+      return allAvailableTimes.map(time => ({ time, disabled: false }));
     }
     
-    return allAvailableTimes;
+    const currentHour = nowInNicheTimezone.getHours();
+    const currentMinutes = nowInNicheTimezone.getMinutes();
+    
+    return allAvailableTimes.map(time => {
+      const [hours, minutes] = time.split(":").map(Number);
+      const disabled = hours < currentHour || (hours === currentHour && minutes <= currentMinutes);
+      return { time, disabled };
+    });
   }, [scheduleDate, nicheTimezone]);
   
   useEffect(() => {
-    if (!availableTimes.includes(scheduleTime)) {
-        if (availableTimes.length > 0) {
-            setScheduleTime(availableTimes[0]);
-        }
+    const available = allTimesAndStatus.filter(t => !t.disabled);
+    if (!available.find(t => t.time === scheduleTime)) {
+      if (available.length > 0) {
+        setScheduleTime(available[0].time);
+      } else {
+        setScheduleTime("");
+      }
     }
-  }, [availableTimes, scheduleTime]);
+  }, [allTimesAndStatus, scheduleTime]);
   
   const displayTimezone = useMemo(() => {
     try {
@@ -90,8 +92,8 @@ export default function UploadForm({
       });
       const offset = formatter.format(nowInTimezone).split(' ')[1];
       return `(${nicheTimezone} ${offset})`;
-    } catch (error) { // <-- CORREÇÃO: Variável 'e' alterada para 'error'
-      console.error(error); // <-- CORREÇÃO: Usando 'error' para log
+    } catch (error) {
+      console.error(error);
       return nicheTimezone;
     }
   }, [nicheTimezone]);
@@ -127,11 +129,11 @@ export default function UploadForm({
       );
       return;
     }
-    if (availableTimes.length === 0) {
+    if (!scheduleTime) {
       toast.error("Não há horários disponíveis para o dia selecionado.");
       return;
     }
-
+    
     setIsUploading(true);
 
     try {
@@ -342,9 +344,14 @@ export default function UploadForm({
                 onChange={(_e) => setScheduleTime(_e.target.value)}
                 className="mt-1 block w-full bg-gray-900 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-teal-500 focus:border-teal-500"
               >
-                {availableTimes.map((time) => (
-                  <option key={time} value={time}>
-                    {time}
+                {allTimesAndStatus.map((time) => (
+                  <option
+                    key={time.time}
+                    value={time.time}
+                    disabled={time.disabled}
+                    className={time.disabled ? "text-gray-500" : ""}
+                  >
+                    {time.time}
                   </option>
                 ))}
               </select>
