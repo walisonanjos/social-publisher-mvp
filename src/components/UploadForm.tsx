@@ -53,23 +53,11 @@ export default function UploadForm({
   const today = new Date();
   today.setHours(0, 0, 0, 0);
   const tenDaysFromNow = addDays(today, 9);
-  const allAvailableTimes = ["09:00", "11:00", "13:00", "15:00", "17:00"];
-
-  const displayTimezone = useMemo(() => {
-    try {
-      const nowInTimezone = toZonedTime(new Date(), nicheTimezone);
-      const formatter = new Intl.DateTimeFormat("pt-BR", {
-        timeZone: nicheTimezone,
-        timeZoneName: "shortOffset",
-      });
-      const offset = formatter.format(nowInTimezone).split(' ')[1];
-      return `(${nicheTimezone} ${offset})`;
-    } catch (e) {
-      return nicheTimezone;
-    }
-  }, [nicheTimezone]);
-
+  
+  // A constante 'allAvailableTimes' agora está dentro do useMemo para resolver o aviso.
   const availableTimes = useMemo(() => {
+    const allAvailableTimes = ["09:00", "11:00", "13:00", "15:00", "17:00"];
+    
     if (!scheduleDate) return allAvailableTimes;
     const nowInNicheTimezone = toZonedTime(new Date(), nicheTimezone);
     
@@ -84,8 +72,9 @@ export default function UploadForm({
     }
     
     return allAvailableTimes;
-  }, [scheduleDate, nicheTimezone, allAvailableTimes]); // <-- dependência 'allAvailableTimes' adicionada
+  }, [scheduleDate, nicheTimezone]); // <-- dependências atualizadas
   
+  // Atualiza o scheduleTime se a hora atual não estiver mais disponível
   useEffect(() => {
     if (!availableTimes.includes(scheduleTime)) {
         if (availableTimes.length > 0) {
@@ -93,6 +82,20 @@ export default function UploadForm({
         }
     }
   }, [availableTimes, scheduleTime]);
+  
+  const displayTimezone = useMemo(() => {
+    try {
+      const nowInTimezone = toZonedTime(new Date(), nicheTimezone);
+      const formatter = new Intl.DateTimeFormat("pt-BR", {
+        timeZone: nicheTimezone,
+        timeZoneName: "shortOffset",
+      });
+      const offset = formatter.format(nowInTimezone).split(' ')[1];
+      return `(${nicheTimezone} ${offset})`;
+    } catch (e) {
+      return nicheTimezone;
+    }
+  }, [nicheTimezone]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
