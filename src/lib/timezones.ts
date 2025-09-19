@@ -9,7 +9,8 @@ export const timeZones = zones.map(tz => {
         const zonedDate = toZonedTime(now, tz);
         const offset = format(zonedDate, 'z', { timeZone: tz });
         return `(${offset}) ${tz}`;
-    } catch (e) {
+    } catch (error) {
+        console.error(error);
         return tz;
     }
 }).sort((a, b) => {
