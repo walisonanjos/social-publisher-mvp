@@ -305,7 +305,7 @@ export default function UploadForm({
               <select
                 id="scheduleTime"
                 value={scheduleTime}
-                onChange={(e) => setScheduleTime(e.target.value)}
+                onChange={(_e) => setScheduleTime(_e.target.value)}
                 className="mt-1 block w-full bg-gray-900 border border-gray-600 rounded-md shadow-sm py-2 px-3 text-white focus:outline-none focus:ring-teal-500 focus:border-teal-500"
               >
                 {availableTimes.map((time) => (
