@@ -12,5 +12,8 @@
   "new_appointment": "Novo Agendamento",
   "scheduling": "Agendando...",
   "youtube_connected": "YouTube Conectado",
-  "history": "Histórico"
+  "history": "Histórico",
+  "back": "Voltar",
+  "sign_out": "Sair",
+  "hello_user": "Olá, {{user_name}}"
 }

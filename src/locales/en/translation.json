@@ -12,5 +12,8 @@
   "new_appointment": "New Appointment",
   "scheduling": "Scheduling...",
   "youtube_connected": "YouTube Connected",
-  "history": "History"
+  "history": "History",
+  "back": "Back",
+  "sign_out": "Sign Out",
+  "hello_user": "Hello, {{user_name}}"
 }
