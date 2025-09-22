@@ -153,7 +153,6 @@ export default function VideoGrid({
   sortOrder = "desc",
   nicheTimezone,
 }: VideoGridProps) {
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const { i18n, t } = useTranslation();
   const [openGroups, setOpenGroups] = useState<{ [key: string]: boolean }>({});
 
