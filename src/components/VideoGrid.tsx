@@ -22,6 +22,7 @@ import { useState } from "react";
 import Link from "next/link";
 import { format, isToday } from "date-fns";
 import { ptBR, enUS, es, fr } from "date-fns/locale";
+// eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { useTranslation, TFunction } from "react-i18next";
 import { Tooltip } from "react-tooltip";
 import { formatTimeInTimezone } from "../lib/utils";
@@ -78,7 +79,7 @@ function VideoCard({
   onViewLogs: (video: Video) => void;
   nicheTimezone: string;
 }) {
-  const { t } = useTranslation(); // Esta linha está correta e é necessária
+  const { t } = useTranslation();
   const isScheduled = video.youtube_status === 'agendado' || video.instagram_status === 'agendado' || video.facebook_status === 'agendado' || video.tiktok_status === 'agendado';
 
   return (
