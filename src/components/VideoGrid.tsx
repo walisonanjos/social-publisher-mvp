@@ -18,7 +18,7 @@ import {
   RefreshCw,
 } from "lucide-react";
 import { IconBrandTiktok } from "@tabler/icons-react";
-import { useState } from "react"; // Esta importação é usada na linha 144
+import { useState } from "react";
 import Link from "next/link";
 import { format, isToday } from "date-fns";
 import { ptBR, enUS, es, fr } from "date-fns/locale";
@@ -78,7 +78,7 @@ function VideoCard({
   onViewLogs: (video: Video) => void;
   nicheTimezone: string;
 }) {
-  const { t } = useTranslation();
+  const { t } = useTranslation(); // Esta linha está correta e é necessária
   const isScheduled = video.youtube_status === 'agendado' || video.instagram_status === 'agendado' || video.facebook_status === 'agendado' || video.tiktok_status === 'agendado';
 
   return (
