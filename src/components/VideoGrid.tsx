@@ -18,7 +18,7 @@ import {
   RefreshCw,
 } from "lucide-react";
 import { IconBrandTiktok } from "@tabler/icons-react";
-import { useState } from "react";
+import { useState } from "react"; // Esta importação é usada na linha 144
 import Link from "next/link";
 import { format, isToday } from "date-fns";
 import { ptBR, enUS, es, fr } from "date-fns/locale";

@@ -1,9 +1,7 @@
 // src/components/AccountConnection.tsx
 "use client";
 
-import { useState } from "react";
 import { Youtube, Instagram, Facebook } from "lucide-react";
-import { createClient } from "../lib/supabaseClient";
 import { IconBrandTiktok } from "@tabler/icons-react";
 import { useTranslation, TFunction } from "react-i18next";
 import Link from "next/link";
