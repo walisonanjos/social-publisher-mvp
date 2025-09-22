@@ -1,5 +1,4 @@
 // src/components/NichePageClient.tsx
-
 "use client";
 
 import { useEffect, useState, useMemo, useCallback } from "react";
@@ -19,6 +18,7 @@ import { toast } from "sonner";
 import { useSearchParams } from "next/navigation";
 import TimezoneSelector from "./TimezoneSelector";
 import { timeZones } from "../lib/timezones";
+import { useTranslation } from "react-i18next";
 
 export default function NichePageClient({ nicheId }: { nicheId: string }) {
   const supabase = createClient();
@@ -26,7 +26,8 @@ export default function NichePageClient({ nicheId }: { nicheId: string }) {
   const [user, setUser] = useState<User | null>(null);
   const [videos, setVideos] = useState<Video[]>([]);
   const [loading, setLoading] = useState(true);
-  const [nicheName, setNicheName] = useState("Carregando...");
+  const { t } = useTranslation(); // Adicionado aqui
+  const [nicheName, setNicheName] = useState(t("loading"));
   const [isYouTubeConnected, setIsYouTubeConnected] = useState(false);
   const [isInstagramConnected, setIsInstagramConnected] = useState(false);
   const [isTikTokConnected, setIsTikTokConnected] = useState(false);
@@ -113,11 +114,10 @@ export default function NichePageClient({ nicheId }: { nicheId: string }) {
       if (formElement) {
         formElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
       }
-      toast.info("Formulário preenchido. Selecione um novo vídeo e data.");
-
+      toast.info(t("form_filled")); // Texto traduzido
       window.history.replaceState({}, '', `/niche/${nicheId}`);
     }
-  }, [searchParams, nicheId]);
+  }, [searchParams, nicheId, t]);
 
   useEffect(() => {
     if (!user) return;
@@ -195,22 +195,22 @@ export default function NichePageClient({ nicheId }: { nicheId: string }) {
   };
   
   const handleDeleteVideo = async (videoId: number) => {
-    if (!window.confirm("Tem certeza que deseja excluir este agendamento?")) return;
+    if (!window.confirm(t("delete_confirmation"))) return; // Texto traduzido
     
     setVideos(currentVideos => currentVideos.filter(v => v.id !== videoId));
 
     const { error } = await supabase.from('videos').delete().eq('id', videoId);
     if (error) {
-      toast.error("Não foi possível excluir o agendamento.");
+      toast.error(t("delete_error")); // Texto traduzido
     } else {
-      toast.success("Agendamento excluído com sucesso.");
+      toast.success(t("delete_success")); // Texto traduzido
     }
   };
   
   const handleDisconnect = async (platform: 'youtube' | 'instagram' | 'tiktok') => {
     if (!user) return;
     const platformName = platform === 'youtube' ? 'YouTube' : (platform === 'instagram' ? 'Instagram/Facebook' : 'TikTok');
-    if (!window.confirm(`Tem certeza que deseja desconectar a conta do ${platformName}?`)) return;
+    if (!window.confirm(t("disconnect_confirmation", { platform: platformName }))) return; // Texto traduzido
 
     const { error } = await supabase
       .from('social_connections')
@@ -218,9 +218,9 @@ export default function NichePageClient({ nicheId }: { nicheId: string }) {
       .match({ user_id: user.id, niche_id: nicheId, platform: platform });
     
     if (error) {
-      toast.error(`Erro ao desconectar a conta.`);
+      toast.error(t("disconnect_error")); // Texto traduzido
     } else {
-      toast.success(`Conta do ${platformName} desconectada com sucesso!`);
+      toast.success(t("disconnect_success", { platform: platformName })); // Texto traduzido
     }
   };
 
@@ -235,11 +235,11 @@ export default function NichePageClient({ nicheId }: { nicheId: string }) {
       const { error } = await supabase.from('videos').update(updatedData).eq('id', editingVideo.id).select().single();
       if (error) throw error;
       
-      toast.success("Agendamento atualizado com sucesso!");
+      toast.success(t("update_success_message")); // Texto traduzido
       handleCloseEditModal();
     } catch (e) {
-      if (e instanceof Error) { toast.error(`Erro ao salvar: ${e.message}`); }
-      else { toast.error("Ocorreu um erro inesperado ao salvar as alterações."); }
+      if (e instanceof Error) { toast.error(t("save_error", { error: e.message })); } // Texto traduzido
+      else { toast.error(t("unexpected_error")); } // Texto traduzido
     }
   };
 
@@ -250,7 +250,7 @@ export default function NichePageClient({ nicheId }: { nicheId: string }) {
     if (formElement) {
       formElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
-    toast.info("Formulário preenchido. Selecione um novo vídeo e data.");
+    toast.info(t("form_filled")); // Texto traduzido
   };
 
   const handleViewLogs = (video: Video) => {
@@ -309,9 +309,9 @@ export default function NichePageClient({ nicheId }: { nicheId: string }) {
         </div>
         <hr className="my-8 border-gray-700" />
         <div className="flex justify-between items-center mb-6">
-          <h2 className="text-2xl font-bold tracking-tight text-white">Meus Agendamentos</h2>
-          <button onClick={() => user && fetchPageData(user.id)} className="flex items-center gap-2 px-3 py-1.5 text-sm bg-gray-700/50 hover:bg-gray-700 border border-gray-600 rounded-lg transition-colors" title="Atualizar lista">
-            <RefreshCw size={14} /><span>Atualizar</span>
+          <h2 className="text-2xl font-bold tracking-tight text-white">{t("my_appointments")}</h2>
+          <button onClick={() => user && fetchPageData(user.id)} className="flex items-center gap-2 px-3 py-1.5 text-sm bg-gray-700/50 hover:bg-gray-700 border border-gray-600 rounded-lg transition-colors" title={t("update_list")}>
+            <RefreshCw size={14} /><span>{t("update")}</span>
           </button>
         </div>
         <VideoGrid
