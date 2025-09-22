@@ -22,7 +22,6 @@ import { useState } from "react";
 import Link from "next/link";
 import { format, isToday } from "date-fns";
 import { ptBR, enUS, es, fr } from "date-fns/locale";
-// eslint-disable-next-line @typescript-eslint/no-unused-vars
 import { useTranslation, TFunction } from "react-i18next";
 import { Tooltip } from "react-tooltip";
 import { formatTimeInTimezone } from "../lib/utils";
@@ -154,6 +153,7 @@ export default function VideoGrid({
   sortOrder = "desc",
   nicheTimezone,
 }: VideoGridProps) {
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const { i18n, t } = useTranslation();
   const [openGroups, setOpenGroups] = useState<{ [key: string]: boolean }>({});
 
