@@ -40,55 +40,7 @@ export default function AccountConnection({
   onDisconnect,
 }: AccountConnectionProps) {
   const { t } = useTranslation();
-  const [isLoading, setIsLoading] = useState<null | 'youtube' | 'instagram' | 'tiktok'>(null);
-  const supabase = createClient();
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL;
-
-  const handleConnect = async (platform: 'youtube' | 'instagram' | 'tiktok') => {
-    setIsLoading(platform);
-    try {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (!user) {
-        throw new Error(t("not_authenticated_login_again"));
-      }
-
-      let functionName: string;
-      switch (platform) {
-        case 'youtube':
-          functionName = 'generate-youtube-auth-url';
-          break;
-        case 'instagram':
-          functionName = 'generate-facebook-auth-url';
-          break;
-        case 'tiktok':
-          functionName = 'generate-tiktok-auth-url';
-          break;
-        default:
-          throw new Error(t("unknown_platform"));
-      }
-
-      const { data, error } = await supabase.functions.invoke(functionName, {
-        method: 'POST',
-        body: { nicheId: nicheId, userId: user.id }
-      });
-
-      if (error) throw error;
-      
-      if (data && data.authUrl) {
-        window.location.href = data.authUrl;
-      } else {
-        throw new Error(t("auth_url_not_returned"));
-      }
-    } catch (error: unknown) {
-      console.error(`Erro ao gerar URL de autorização para ${platform}:`, error);
-      let errorMessage = t("failed_to_connect_try_again", { platform: platform });
-      if (error instanceof Error) {
-        errorMessage = t("failed_to_connect_with_error", { platform: platform, message: error.message });
-      }
-      alert(errorMessage);
-      setIsLoading(null);
-    }
-  };
 
   return (
     <div className="bg-gray-800 p-8 rounded-lg shadow-lg border border-gray-700">
@@ -132,7 +84,7 @@ export default function AccountConnection({
             className="w-full flex items-center justify-center gap-3 py-3 px-4 border border-gray-600/50 bg-gray-600/20 hover:bg-gray-600/30 text-white font-bold rounded-lg transition-colors disabled:opacity-50"
           >
             <IconBrandTiktok size={20} />
-            <span>{isLoading === 'tiktok' ? t("please_wait") : t("connect_with_platform", { platform: "TikTok" })}</span>
+            <span>{t("connect_with_platform", { platform: "TikTok" })}</span>
           </Link>
         )}
       </div>
