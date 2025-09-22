@@ -1,4 +1,3 @@
-// src/components/UploadForm.tsx
 "use client";
 
 import { useState, FormEvent, useMemo, useEffect } from "react";
@@ -293,7 +292,9 @@ export default function UploadForm({
             accept="video/mp4,video/quicktime"
             onChange={handleFileChange}
             className="block w-full text-sm text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-teal-500/10 file:text-teal-300 hover:file:bg-teal-500/20"
+            required
           />
+          <p className="mt-1 text-xs text-gray-500">{file?.name || t("no_file_chosen")}</p>
         </div>
         <div>
           <label

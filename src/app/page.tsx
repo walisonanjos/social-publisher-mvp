@@ -7,6 +7,7 @@ import { User } from "@supabase/supabase-js";
 import Auth from "../components/Auth";
 import { Loader2 } from "lucide-react";
 import { Niche } from "@/types";
+import { useTranslation } from "react-i18next";
 
 export default function HomePage() {
   const supabase = createClient();
@@ -16,18 +17,14 @@ export default function HomePage() {
   const [loading, setLoading] = useState(true);
   const [newNicheName, setNewNicheName] = useState("");
   const [isCreating, setIsCreating] = useState(false);
+  const { t } = useTranslation();
 
-  // --- INÍCIO DA MUDANÇA ---
-
-  // 1. Este useEffect agora ouve as mudanças de autenticação em tempo real.
   useEffect(() => {
-    // Pega o estado inicial do usuário ao carregar a página
     supabase.auth.getUser().then(({ data: { user } }) => {
       setUser(user);
       setLoading(false);
     });
 
-    // Cria o "ouvinte" que reage a eventos de LOGIN e LOGOUT
     const { data: authListener } = supabase.auth.onAuthStateChange(
       (event, session) => {
         setUser(session?.user ?? null);
@@ -35,15 +32,12 @@ export default function HomePage() {
       },
     );
 
-    // Desliga o "ouvinte" quando o componente é fechado para evitar vazamento de memória
     return () => {
       authListener?.subscription.unsubscribe();
     };
   }, [supabase]);
 
-  // 2. Este useEffect reage quando o estado do 'user' muda, e faz o redirecionamento.
   useEffect(() => {
-    // Se não estivermos carregando e o 'user' existir...
     if (!loading && user) {
       const checkNichesAndRedirect = async () => {
         const { data: nichesData, error } = await supabase
@@ -52,18 +46,13 @@ export default function HomePage() {
           .eq("user_id", user.id);
 
         if (error) {
-          console.error("Erro ao buscar nichos:", error);
+          console.log("Erro ao buscar nichos:", error);
         } else if (nichesData) {
-          // Se o usuário tem 1 workspace, vá direto para ele.
           if (nichesData.length === 1) {
             router.push(`/niche/${nichesData[0].id}`);
-          }
-          // Se tiver mais de 1, vá para a página de seleção de workspaces.
-          else if (nichesData.length > 1) {
+          } else if (nichesData.length > 1) {
             router.push("/niches");
-          }
-          // Se não tiver nenhum (length === 0), o código abaixo vai renderizar o formulário de criação.
-          else {
+          } else {
             setNichesState([]);
           }
         }
@@ -71,8 +60,6 @@ export default function HomePage() {
       checkNichesAndRedirect();
     }
   }, [user, loading, supabase, router]);
-
-  // --- FIM DA MUDANÇA ---
 
   const handleCreateNiche = async (e: FormEvent) => {
     e.preventDefault();
@@ -86,8 +73,8 @@ export default function HomePage() {
       .single();
 
     if (error) {
-      console.error("Erro ao criar nicho:", error);
-      alert("Não foi possível criar o workspace.");
+      console.log("Erro ao criar nicho:", error);
+      alert(t("could_not_create_workspace"));
       setIsCreating(false);
     } else if (data) {
       router.push(`/niche/${data.id}`);
@@ -102,22 +89,19 @@ export default function HomePage() {
     );
   }
 
-  // Se, após o carregamento, não houver usuário, mostre a tela de login.
   if (!user) {
     return <Auth />;
   }
 
-  // Se houver usuário, mas ele não tiver workspaces, mostre a tela de criação.
-  // A lógica de redirecionamento no useEffect já cuidou dos casos de 1 ou mais workspaces.
   if (niches.length === 0) {
     return (
       <div className="min-h-screen bg-gray-900 text-white flex flex-col justify-center items-center p-4">
         <div className="w-full max-w-md text-center">
           <h1 className="text-4xl font-bold text-teal-400 mb-2">
-            Bem-vindo(a)!
+            {t("welcome_message")}
           </h1>
           <p className="text-lg text-gray-300 mb-8">
-            Vamos começar criando seu primeiro workspace.
+            {t("let's_create_first_workspace")}
           </p>
           <form
             onSubmit={handleCreateNiche}
@@ -125,7 +109,7 @@ export default function HomePage() {
           >
             <input
               type="text"
-              placeholder="Ex: Cliente de Restaurante"
+              placeholder={t("workspace_name_placeholder")}
               value={newNicheName}
               onChange={(e) => setNewNicheName(e.target.value)}
               className="w-full bg-gray-800 border border-gray-600 rounded-md shadow-sm py-3 px-4 text-white focus:outline-none focus:ring-2 focus:ring-teal-500"
@@ -139,7 +123,7 @@ export default function HomePage() {
               {isCreating ? (
                 <Loader2 className="animate-spin" />
               ) : (
-                "Criar Workspace e Entrar"
+                t("create_workspace_and_enter")
               )}
             </button>
           </form>
@@ -147,17 +131,16 @@ export default function HomePage() {
             onClick={() => supabase.auth.signOut()}
             className="mt-12 text-sm text-gray-500 hover:text-white transition-colors"
           >
-            Sair
+            {t("sign_out")}
           </button>
         </div>
       </div>
     );
   }
 
-  // Este retorno serve como um fallback enquanto a lógica de redirecionamento está acontecendo.
   return (
     <div className="flex items-center justify-center min-h-screen bg-gray-900">
-      <p className="text-white">Redirecionando...</p>
+      <p className="text-white">{t("redirecting")}</p>
     </div>
   );
 }
