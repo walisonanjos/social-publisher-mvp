@@ -12,6 +12,8 @@ export default function LanguageSwitcher() {
   const languages = {
     pt: 'Português',
     en: 'English',
+    fr: 'Français',
+    es: 'Español',
   };
 
   const changeLanguage = (lng: string) => {

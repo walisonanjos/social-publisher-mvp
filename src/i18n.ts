@@ -6,6 +6,8 @@ import LanguageDetector from 'i18next-browser-languagedetector';
 // Importe seus arquivos de tradução
 import translationEN from './locales/en/translation.json';
 import translationPT from './locales/pt/translation.json';
+import translationFR from './locales/fr/translation.json';
+import translationES from './locales/es/translation.json';
 
 const resources = {
   en: {
@@ -14,6 +16,12 @@ const resources = {
   pt: {
     translation: translationPT,
   },
+  fr: {
+    translation: translationFR,
+  },
+  es: {
+    translation: translationES,
+  },
 };
 
 i18n
@@ -21,9 +29,9 @@ i18n
   .use(initReactI18next)
   .init({
     resources,
-    fallbackLng: 'pt', // Idioma padrão caso o idioma do usuário não seja detectado
+    fallbackLng: 'pt',
     interpolation: {
-      escapeValue: false, // Não é necessário para React
+      escapeValue: false,
     },
   });
 
