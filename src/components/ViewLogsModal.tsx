@@ -17,11 +17,6 @@ interface PostLog {
   details: string | null;
 }
 
-interface ViewLogsModalProps {
-  video: Video;
-  onClose: () => void;
-}
-
 const statusStyles = {
   sucesso: "bg-green-500/20 text-green-300",
   falha: "bg-red-500/20 text-red-300",

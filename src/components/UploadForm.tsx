@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, FormEvent, useMemo, useEffect } from "react";
+import { useState, FormEvent, useMemo, useEffect, useRef } from "react";
 import { createClient } from "../lib/supabaseClient";
 import { DayPicker } from "react-day-picker";
 import "react-day-picker/dist/style.css";
@@ -40,6 +40,7 @@ export default function UploadForm({
   existingAppointments,
 }: UploadFormProps) {
   const { i18n, t } = useTranslation();
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [file, setFile] = useState<File | null>(null);
   const [scheduleDate, setScheduleDate] = useState<Date | undefined>(
@@ -286,15 +287,21 @@ export default function UploadForm({
           >
             {t("file_upload_label")}
           </label>
-          <input
-            id="file-upload"
-            type="file"
-            accept="video/mp4,video/quicktime"
-            onChange={handleFileChange}
-            className="block w-full text-sm text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-semibold file:bg-teal-500/10 file:text-teal-300 hover:file:bg-teal-500/20"
-            required
-          />
-          <p className="mt-1 text-xs text-gray-500">{file?.name || t("no_file_chosen")}</p>
+          <div className="flex items-center gap-4">
+            <label htmlFor="file-upload" className="w-auto cursor-pointer flex items-center justify-center py-2 px-4 rounded-lg border border-teal-500/30 text-sm font-semibold text-teal-300 bg-teal-500/10 hover:bg-teal-500/20 transition-colors">
+              {t("select_file")}
+              <input
+                id="file-upload"
+                type="file"
+                accept="video/mp4,video/quicktime"
+                onChange={handleFileChange}
+                className="sr-only"
+                ref={fileInputRef}
+                required
+              />
+            </label>
+            <p className="text-sm text-gray-400">{file?.name || t("no_file_chosen")}</p>
+          </div>
         </div>
         <div>
           <label
