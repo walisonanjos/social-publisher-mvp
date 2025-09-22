@@ -39,7 +39,7 @@ export default function TermsOfServicePage() {
 
   return (
     <div className="bg-gray-900 min-h-screen text-white">
-      <MainHeader pageTitle={t("terms_of_service")} backLink="/" />
+      <MainHeader pageTitle={t("terms_of_service")} backLink="/" user={null} />
       <main className="container mx-auto p-4 md:p-8">
         <div className="prose dark:prose-invert max-w-none text-gray-300">
           <ReactMarkdown>{markdownContent}</ReactMarkdown>
