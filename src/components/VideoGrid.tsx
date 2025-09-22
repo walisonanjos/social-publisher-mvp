@@ -211,13 +211,6 @@ export default function VideoGrid({
 
   return (
     <div className="space-y-6">
-      <div className="flex justify-between items-center mb-6">
-          <h2 className="text-2xl font-bold tracking-tight text-white">{t("my_appointments")}</h2>
-          <button onClick={() => {}} className="flex items-center gap-2 px-3 py-1.5 text-sm bg-gray-700/50 hover:bg-gray-700 border border-gray-600 rounded-lg transition-colors" title={t("update")}>
-            <RefreshCw size={14} /><span>{t("update")}</span>
-          </button>
-        </div>
-
       {sortedGroupKeys.map((dateKey) => {
         const date = new Date(dateKey + "T12:00:00");
         const defaultState = sortOrder === "asc" ? isToday(date) : false;
