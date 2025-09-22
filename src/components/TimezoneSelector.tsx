@@ -1,4 +1,3 @@
-// src/components/TimezoneSelector.tsx
 "use client";
 
 import { useState, useEffect, useMemo } from "react";
@@ -6,6 +5,7 @@ import { createClient } from "@/lib/supabaseClient";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
 import { timeZones } from "@/lib/timezones";
+import { useTranslation } from "react-i18next";
 
 interface TimezoneSelectorProps {
   nicheId: string;
@@ -19,6 +19,7 @@ export default function TimezoneSelector({
   onTimezoneChange,
 }: TimezoneSelectorProps) {
   const supabase = createClient();
+  const { t } = useTranslation();
   const [selectedTimezone, setSelectedTimezone] = useState(initialTimezone);
   const [isSaving, setIsSaving] = useState(false);
   const [searchQuery, setSearchQuery] = useState(initialTimezone);
@@ -62,13 +63,13 @@ export default function TimezoneSelector({
       if (data) {
         const savedTimezone = timeZones.find(tz => tz.endsWith(data.timezone));
         onTimezoneChange(savedTimezone || data.timezone);
-        toast.success("Fuso horário atualizado!");
+        toast.success(t("timezone_updated_success"));
       }
     } catch (e) {
       if (e instanceof Error) {
-        toast.error(`Erro ao salvar: ${e.message}`);
+        toast.error(`${t("save_error")}: ${e.message}`);
       } else {
-        toast.error("Ocorreu um erro inesperado.");
+        toast.error(t("unexpected_error"));
       }
     } finally {
       setIsSaving(false);
@@ -78,7 +79,7 @@ export default function TimezoneSelector({
   return (
     <div className="flex flex-col md:flex-row items-start md:items-center gap-4 p-4 bg-gray-800 rounded-lg border border-gray-700">
       <label htmlFor="timezone-input" className="text-sm font-medium text-gray-300">
-        Fuso Horário do Nicho:
+        {t("niche_timezone")}
       </label>
       <div className="relative flex items-center gap-2 w-full md:w-auto">
         <input
@@ -115,7 +116,7 @@ export default function TimezoneSelector({
           className="flex-shrink-0 flex items-center justify-center h-10 w-10 md:w-auto px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-teal-600 hover:bg-teal-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-gray-800 focus:ring-teal-500 disabled:opacity-50"
           disabled={isSaving || selectedTimezone === initialTimezone}
         >
-          {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : "Salvar"}
+          {isSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : t("save")}
         </button>
       </div>
     </div>

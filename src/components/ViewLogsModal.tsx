@@ -1,4 +1,3 @@
-// src/components/ViewLogsModal.tsx
 "use client";
 
 import { Video } from "@/types";
@@ -6,8 +5,9 @@ import { X, Loader2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabaseClient";
 import { format } from "date-fns";
-import { ptBR } from "date-fns/locale";
-import { toast } from "sonner"; // <-- A CORREÇÃO ESTÁ AQUI
+import { ptBR, enUS, es, fr } from "date-fns/locale";
+import { toast } from "sonner";
+import { useTranslation } from "react-i18next";
 
 interface PostLog {
   id: number;
@@ -28,10 +28,30 @@ const statusStyles = {
   retentativa: "bg-yellow-500/20 text-yellow-300",
 };
 
+const statusTranslationKey = {
+    sucesso: "status_success",
+    falha: "status_failed",
+    retentativa: "status_retry"
+};
+
 export default function ViewLogsModal({ video, onClose }: ViewLogsModalProps) {
   const [logs, setLogs] = useState<PostLog[]>([]);
   const [loading, setLoading] = useState(true);
   const supabase = createClient();
+  const { i18n, t } = useTranslation();
+
+  const getLocale = () => {
+    switch (i18n.language) {
+      case 'en':
+        return enUS;
+      case 'es':
+        return es;
+      case 'fr':
+        return fr;
+      default:
+        return ptBR;
+    }
+  };
 
   useEffect(() => {
     const fetchLogs = async () => {
@@ -44,7 +64,7 @@ export default function ViewLogsModal({ video, onClose }: ViewLogsModalProps) {
 
       if (error) {
         console.error("Erro ao buscar logs:", error);
-        toast.error("Não foi possível carregar os logs.");
+        toast.error(t("error_loading_logs"));
       } else {
         setLogs(data);
       }
@@ -52,7 +72,7 @@ export default function ViewLogsModal({ video, onClose }: ViewLogsModalProps) {
     };
 
     fetchLogs();
-  }, [video.id, supabase]);
+  }, [video.id, supabase, t]);
   
   useEffect(() => {
     const handleEsc = (event: KeyboardEvent) => {
@@ -74,12 +94,12 @@ export default function ViewLogsModal({ video, onClose }: ViewLogsModalProps) {
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex justify-between items-center mb-4">
-          <h2 className="text-xl font-bold text-white">Histórico de Atividade</h2>
+          <h2 className="text-xl font-bold text-white">{t("activity_history")}</h2>
           <button onClick={onClose} className="text-gray-400 hover:text-white">
             <X size={24} />
           </button>
         </div>
-        <p className="text-gray-400 mb-6 truncate">Logs para o vídeo: <span className="font-medium text-gray-200">{video.title}</span></p>
+        <p className="text-gray-400 mb-6 truncate">{t("logs_for_video")}: <span className="font-medium text-gray-200">{video.title}</span></p>
 
         <div className="flex-grow overflow-y-auto pr-4 -mr-4">
           {loading ? (
@@ -88,7 +108,7 @@ export default function ViewLogsModal({ video, onClose }: ViewLogsModalProps) {
             </div>
           ) : logs.length === 0 ? (
             <div className="flex justify-center items-center h-full text-gray-500">
-              Nenhum registro encontrado.
+              {t("no_records_found")}
             </div>
           ) : (
             <div className="space-y-4">
@@ -97,12 +117,12 @@ export default function ViewLogsModal({ video, onClose }: ViewLogsModalProps) {
                   <div className="flex justify-between items-center">
                     <div className="flex items-center gap-3">
                       <span className={`text-xs font-bold px-2 py-1 rounded-full ${statusStyles[log.status as keyof typeof statusStyles]}`}>
-                        {log.status.toUpperCase()}
+                        {t(statusTranslationKey[log.status as keyof typeof statusTranslationKey])}
                       </span>
                       <span className="font-semibold text-white capitalize">{log.platform}</span>
                     </div>
                     <span className="text-xs text-gray-400">
-                      {format(new Date(log.created_at), "dd/MM/yy 'às' HH:mm:ss", { locale: ptBR })}
+                      {format(new Date(log.created_at), "dd/MM/yy 'às' HH:mm:ss", { locale: getLocale() })}
                     </span>
                   </div>
                   <p className="text-sm text-gray-300 mt-2 break-words">{log.details}</p>
