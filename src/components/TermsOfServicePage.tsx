@@ -14,10 +14,21 @@ export default function TermsOfServicePage() {
 
   useEffect(() => {
     const fetchContent = async () => {
+      setLoading(true);
+      const lang = i18n.language;
+      let content = '';
+
       try {
-        const response = await fetch('/docs/terms-of-service-${i18n.language}.md');
-        const text = await response.text();
-        setMarkdownContent(text);
+        let response = await fetch(`/docs/terms-of-service-${lang}.md`);
+        
+        // Se a resposta não for OK, tenta carregar o arquivo em português como fallback
+        if (!response.ok) {
+          console.warn(`File for language ${lang} not found, falling back to pt.`);
+          response = await fetch(`/docs/terms-of-service-pt.md`);
+        }
+
+        content = await response.text();
+        setMarkdownContent(content);
       } catch (error) {
         console.error("Failed to load terms of service:", error);
         setMarkdownContent(t("document_load_error"));
