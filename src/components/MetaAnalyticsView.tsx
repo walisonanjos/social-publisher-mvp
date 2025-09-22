@@ -1,10 +1,10 @@
-// src/components/MetaAnalyticsView.tsx
 "use client";
 
 import { useMemo } from "react";
 import Link from 'next/link';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { BarChart2 as ChartIcon, Eye, ThumbsUp, MessageSquare, Instagram, Facebook } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
 // Tipos
 interface MetaInsightValue { value: number; }
@@ -12,7 +12,19 @@ interface MetaInsight { name: string; period: string; values: MetaInsightValue[]
 interface MetaAnalyticsVideo { id: number; title: string; scheduled_at: string; instagram_post_id: string | null; facebook_post_id: string | null; instagram_insights: MetaInsight[] | null; facebook_insights: MetaInsight[] | null; }
 
 // Componente StatCard
-const StatCard = ({ icon: Icon, label, value }: { icon: React.ElementType, label: string, value: string | number }) => ( <div className="bg-gray-800 p-6 rounded-lg border border-gray-700"> <div className="flex items-center"> <div className="p-3 rounded-full bg-teal-500/10 text-teal-400"> <Icon className="h-6 w-6" /> </div> <div className="ml-4"> <p className="text-sm font-medium text-gray-400">{label}</p> <p className="text-2xl font-bold text-white">{value}</p> </div> </div> </div> );
+const StatCard = ({ icon: Icon, label, value }: { icon: React.ElementType, label: string, value: string | number }) => ( 
+  <div className="bg-gray-800 p-6 rounded-lg border border-gray-700"> 
+    <div className="flex items-center"> 
+      <div className="p-3 rounded-full bg-teal-500/10 text-teal-400"> 
+        <Icon className="h-6 w-6" /> 
+      </div> 
+      <div className="ml-4"> 
+        <p className="text-sm font-medium text-gray-400">{label}</p> 
+        <p className="text-2xl font-bold text-white">{value}</p> 
+      </div> 
+    </div> 
+  </div> 
+);
 
 const getMetaInsightValue = (insights: MetaInsight[] | null, metricName: string): number => {
   if (!insights) return 0;
@@ -21,6 +33,8 @@ const getMetaInsightValue = (insights: MetaInsight[] | null, metricName: string)
 };
 
 export default function MetaAnalyticsView({ data, nicheId }: { data: MetaAnalyticsVideo[], nicheId: string }) {
+  const { i18n, t } = useTranslation();
+
   const dataForDisplay = useMemo(() => data.map(video => {
     const igViews = getMetaInsightValue(video.instagram_insights, 'video_views');
     const fbViews = getMetaInsightValue(video.facebook_insights, 'total_video_views');
@@ -41,21 +55,21 @@ export default function MetaAnalyticsView({ data, nicheId }: { data: MetaAnalyti
   
   const chartData = dataForDisplay.map(video => ({
     name: video.title.length > 15 ? `${video.title.substring(0, 15)}...` : video.title,
-    Visualizações: video.totalViews,
-    Curtidas: video.totalLikes,
+    [t("views")]: video.totalViews,
+    [t("likes")]: video.totalLikes,
   })).slice(0, 10);
   
   if (dataForDisplay.length === 0) {
     return (
       <div className="text-center bg-gray-800 p-8 rounded-lg border border-gray-700">
         <Instagram className="mx-auto h-12 w-12 text-gray-500" />
-        <h3 className="mt-4 text-lg font-medium text-white">Nenhum dado para exibir</h3>
+        <h3 className="mt-4 text-lg font-medium text-white">{t("no_data_to_display")}</h3>
         <p className="mt-2 text-sm text-gray-400">
-          Ainda não há posts do Instagram/Facebook para analisar.
+          {t("no_meta_posts_to_analyze")}
         </p>
         <Link href={`/niche/${nicheId}`}>
           <button className="mt-6 inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-teal-600 hover:bg-teal-700">
-            Ir para a página de agendamentos
+            {t("go_to_appointments_page")}
           </button>
         </Link>
       </div>
@@ -63,60 +77,58 @@ export default function MetaAnalyticsView({ data, nicheId }: { data: MetaAnalyti
   }
   
   return (
-      <>
-      <div className="grid w-full grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4 mb-8">
-        <StatCard icon={ChartIcon} label="Posts Analisados" value={summaryStats.totalVideos} />
-        <StatCard icon={Eye} label="Total de Visualizações" value={summaryStats.totalViews.toLocaleString('pt-BR')} />
-        <StatCard icon={ThumbsUp} label="Total de Curtidas" value={summaryStats.totalLikes.toLocaleString('pt-BR')} />
-        <StatCard icon={MessageSquare} label="Total de Comentários" value={summaryStats.totalComments.toLocaleString('pt-BR')} />
-      </div>
-      <div className="bg-gray-800 rounded-lg border border-gray-700 p-6 mb-8">
-        <ResponsiveContainer width="100%" height={300}>
-          <BarChart data={chartData} margin={{ top: 5, right: 20, left: -10, bottom: 5 }}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
-            <XAxis dataKey="name" stroke="#9ca3af" fontSize={12} tickLine={false} axisLine={false} />
-            <YAxis stroke="#9ca3af" fontSize={12} tickLine={false} axisLine={false} />
-            {/* Correção do any: Adicionado as React.CSSProperties */}
-            <Tooltip contentStyle={{ backgroundColor: '#1f2937', border: '1px solid #374151' } as React.CSSProperties} />
-            {/* Correção do any: Adicionado as React.CSSProperties */}
-            <Legend wrapperStyle={{ fontSize: '14px' } as React.CSSProperties} />
-            <Bar dataKey="Visualizações" fill="#e1306c" radius={[4, 4, 0, 0]} />
-            <Bar dataKey="Curtidas" fill="#4a90e2" radius={[4, 4, 0, 0]} />
-          </BarChart>
-        </ResponsiveContainer>
-      </div>
-      <div className="bg-gray-800 rounded-lg border border-gray-700 overflow-hidden">
-        <table className="min-w-full divide-y divide-gray-700">
-          <thead className="bg-gray-800/50">
-            <tr>
-              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Vídeo</th>
-              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Plataformas</th>
-              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Visualizações</th>
-              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Curtidas</th>
-              <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Comentários</th>
+    <>
+    <div className="grid w-full grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4 mb-8">
+      <StatCard icon={ChartIcon} label={t("posts_analyzed")} value={summaryStats.totalVideos} />
+      <StatCard icon={Eye} label={t("total_views")} value={summaryStats.totalViews.toLocaleString(i18n.language)} />
+      <StatCard icon={ThumbsUp} label={t("total_likes")} value={summaryStats.totalLikes.toLocaleString(i18n.language)} />
+      <StatCard icon={MessageSquare} label={t("total_comments")} value={summaryStats.totalComments.toLocaleString(i18n.language)} />
+    </div>
+    <div className="bg-gray-800 rounded-lg border border-gray-700 p-6 mb-8">
+      <ResponsiveContainer width="100%" height={300}>
+        <BarChart data={chartData} margin={{ top: 5, right: 20, left: -10, bottom: 5 }}>
+          <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
+          <XAxis dataKey="name" stroke="#9ca3af" fontSize={12} tickLine={false} axisLine={false} />
+          <YAxis stroke="#9ca3af" fontSize={12} tickLine={false} axisLine={false} />
+          <Tooltip contentStyle={{ backgroundColor: '#1f2937', border: '1px solid #374151' } as React.CSSProperties} />
+          <Legend wrapperStyle={{ fontSize: '14px' } as React.CSSProperties} />
+          <Bar dataKey={t("views")} fill="#e1306c" radius={[4, 4, 0, 0]} />
+          <Bar dataKey={t("likes")} fill="#4a90e2" radius={[4, 4, 0, 0]} />
+        </BarChart>
+      </ResponsiveContainer>
+    </div>
+    <div className="bg-gray-800 rounded-lg border border-gray-700 overflow-hidden">
+      <table className="min-w-full divide-y divide-gray-700">
+        <thead className="bg-gray-800/50">
+          <tr>
+            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">{t("video")}</th>
+            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">{t("platforms")}</th>
+            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">{t("views")}</th>
+            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">{t("likes")}</th>
+            <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">{t("comments")}</th>
+          </tr>
+        </thead>
+        <tbody className="bg-gray-800 divide-y divide-gray-700">
+          {dataForDisplay.map((video) => (
+            <tr key={video.id} className="hover:bg-gray-700/50">
+              <td className="px-6 py-4 whitespace-nowrap">
+                <div className="text-sm font-medium text-white max-w-xs truncate" title={video.title}>{video.title}</div>
+                <div className="text-xs text-gray-400">{new Date(video.scheduled_at).toLocaleDateString(i18n.language)}</div>
+              </td>
+              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
+                <div className="flex items-center gap-2">
+                  {video.instagram_post_id && <Instagram size={16} className="text-pink-500"/>}
+                  {video.facebook_post_id && <Facebook size={16} className="text-blue-500"/>}
+                </div>
+              </td>
+              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">{video.totalViews.toLocaleString(i18n.language)}</td>
+              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">{video.totalLikes.toLocaleString(i18n.language)}</td>
+              <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">{video.totalComments.toLocaleString(i18n.language)}</td>
             </tr>
-          </thead>
-          <tbody className="bg-gray-800 divide-y divide-gray-700">
-            {dataForDisplay.map((video) => (
-              <tr key={video.id} className="hover:bg-gray-700/50">
-                <td className="px-6 py-4 whitespace-nowrap">
-                  <div className="text-sm font-medium text-white max-w-xs truncate" title={video.title}>{video.title}</div>
-                  <div className="text-xs text-gray-400">{new Date(video.scheduled_at).toLocaleDateString('pt-BR')}</div>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
-                  <div className="flex items-center gap-2">
-                    {video.instagram_post_id && <Instagram size={16} className="text-pink-500"/>}
-                    {video.facebook_post_id && <Facebook size={16} className="text-blue-500"/>}
-                  </div>
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">{video.totalViews.toLocaleString('pt-BR')}</td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">{video.totalLikes.toLocaleString('pt-BR')}</td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-300">{video.totalComments.toLocaleString('pt-BR')}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+          ))}
+        </tbody>
+      </table>
+    </div>
     </>
   );
 }
