@@ -57,9 +57,9 @@ export default function YouTubeAnalyticsView({ data, nicheId }: { data: YouTubeA
 
   const chartData = useMemo(() => data.map(video => ({
     name: video.title.length > 15 ? `${video.title.substring(0, 15)}...` : video.title,
-    [t("views")]: safeParseInt(video.statistics.viewCount),
-    [t("likes")]: safeParseInt(video.statistics.likeCount),
-  })).sort((a,b) => (b[t("views")] || 0) - (a[t("views")] || 0)).slice(0, 10), [data, t]);
+    views: safeParseInt(video.statistics.viewCount),
+    likes: safeParseInt(video.statistics.likeCount),
+  })).sort((a,b) => b.views - a.views).slice(0, 10), [data]);
 
   if (data.length === 0) {
     return (
@@ -94,8 +94,8 @@ export default function YouTubeAnalyticsView({ data, nicheId }: { data: YouTubeA
             <YAxis stroke="#9ca3af" fontSize={12} tickLine={false} axisLine={false} />
             <Tooltip contentStyle={{ backgroundColor: '#1f2937', border: '1px solid #374151' } as React.CSSProperties} />
             <Legend wrapperStyle={{ fontSize: '14px' } as React.CSSProperties} />
-            <Bar dataKey={t("views")} fill="#2dd4bf" radius={[4, 4, 0, 0]} />
-            <Bar dataKey={t("likes")} fill="#818cf8" radius={[4, 4, 0, 0]} />
+            <Bar dataKey="views" name={t("views")} fill="#2dd4bf" radius={[4, 4, 0, 0]} />
+            <Bar dataKey="likes" name={t("likes")} fill="#818cf8" radius={[4, 4, 0, 0]} />
           </BarChart>
         </ResponsiveContainer>
       </div>
