@@ -6,11 +6,12 @@ import { createClient } from "../lib/supabaseClient";
 import { DayPicker } from "react-day-picker";
 import "react-day-picker/dist/style.css";
 import { addDays, isSameDay } from "date-fns";
-import { ptBR } from "date-fns/locale";
+import { ptBR, enUS, es, fr } from "date-fns/locale";
 import { fromZonedTime, toZonedTime } from "date-fns-tz";
 import { Video } from "@/types";
 import { toast } from "sonner";
 import { Loader2 } from "lucide-react";
+import { useTranslation } from "react-i18next";
 
 interface UploadFormProps {
   nicheId: string;
@@ -23,7 +24,7 @@ interface UploadFormProps {
   setTitle: (title: string) => void;
   description: string;
   setDescription: (description: string) => void;
-  existingAppointments: Video[]; // <-- NOVA PROP
+  existingAppointments: Video[];
 }
 
 export default function UploadForm({
@@ -37,8 +38,10 @@ export default function UploadForm({
   setTitle,
   description,
   setDescription,
-  existingAppointments, // <-- Usando a nova prop
+  existingAppointments,
 }: UploadFormProps) {
+  const { i18n, t } = useTranslation();
+
   const [file, setFile] = useState<File | null>(null);
   const [scheduleDate, setScheduleDate] = useState<Date | undefined>(
     new Date()
@@ -60,7 +63,6 @@ export default function UploadForm({
     const allAvailableTimes = ["09:00", "11:00", "13:00", "15:00", "17:00"];
     const nowInNicheTimezone = toZonedTime(new Date(), nicheTimezone);
     
-    // Lista de horários já agendados para o dia selecionado
     const bookedTimes = existingAppointments
       .filter(video => isSameDay(toZonedTime(new Date(video.scheduled_at), nicheTimezone), scheduleDate || nowInNicheTimezone))
       .map(video => {
@@ -130,7 +132,7 @@ export default function UploadForm({
   const handleSubmit = async (e: FormEvent) => {
     e.preventDefault();
     if (!file || !title || !scheduleDate) {
-      toast.error("Por favor, preencha todos os campos obrigatórios.");
+      toast.error(t("fill_all_fields"));
       return;
     }
     if (
@@ -140,26 +142,26 @@ export default function UploadForm({
       !postToTikTok
     ) {
       toast.error(
-        "Por favor, selecione pelo menos uma rede social para postar."
+        t("select_at_least_one_platform")
       );
       return;
     }
     if (!scheduleTime) {
-      toast.error("Não há horários disponíveis para o dia selecionado.");
+      toast.error(t("no_available_times"));
       return;
     }
-    
+
     setIsUploading(true);
 
     try {
-      if (!nicheId) throw new Error("O ID do workspace é inválido.");
+      if (!nicheId) throw new Error(t("invalid_workspace_id"));
 
       const [hours, minutes] = scheduleTime.split(":");
       const parsedHours = parseInt(hours, 10);
       const parsedMinutes = parseInt(minutes, 10);
 
       if (isNaN(parsedHours) || isNaN(parsedMinutes)) {
-        throw new Error("O valor da hora é inválido.");
+        throw new Error(t("invalid_time_value"));
       }
       
       const finalScheduleDate = new Date(scheduleDate);
@@ -180,7 +182,7 @@ export default function UploadForm({
       }
       if (existingPost) {
         throw new Error(
-          "Já existe um agendamento para este workspace neste mesmo dia e hora."
+          t("appointment_already_exists")
         );
       }
 
@@ -196,7 +198,7 @@ export default function UploadForm({
         { method: "POST", body: formData }
       );
       if (!cloudinaryResponse.ok)
-        throw new Error("Falha no upload para o Cloudinary.");
+        throw new Error(t("cloudinary_upload_failed"));
 
       const cloudinaryData = await cloudinaryResponse.json();
       const videoUrl = cloudinaryData.secure_url;
@@ -206,7 +208,7 @@ export default function UploadForm({
       const {
         data: { user },
       } = await supabase.auth.getUser();
-      if (!user) throw new Error("Usuário não autenticado.");
+      if (!user) throw new Error(t("not_authenticated"));
 
       const { data: newVideo, error: insertError } = await supabase
         .from("videos")
@@ -234,27 +236,40 @@ export default function UploadForm({
       if (insertError) {
         if (insertError.code === "23505") {
           throw new Error(
-            "Já existe um agendamento para este workspace neste mesmo dia e hora."
+            t("appointment_already_exists")
           );
         }
         throw insertError;
       }
       if (!newVideo)
         throw new Error(
-          "Não foi possível obter os dados do agendamento criado."
+          t("failed_to_get_appointment")
         );
 
-      toast.success("Seu vídeo foi agendado com sucesso!");
+      toast.success(t("video_scheduled_success"));
 
       onScheduleSuccess(newVideo as Video, clearFile);
     } catch (err) {
       if (err instanceof Error) {
-        toast.error(`Ocorreu um erro: ${err.message}`);
+        toast.error(t("error_occurred", { message: err.message }));
       } else {
-        toast.error("Ocorreu um erro inesperado.");
+        toast.error(t("unexpected_error"));
       }
     } finally {
       setIsUploading(false);
+    }
+  };
+
+  const getLocale = () => {
+    switch (i18n.language) {
+      case 'en':
+        return enUS;
+      case 'es':
+        return es;
+      case 'fr':
+        return fr;
+      default:
+        return ptBR;
     }
   };
 
@@ -263,14 +278,14 @@ export default function UploadForm({
       id="upload-form"
       className="bg-gray-800 p-8 rounded-lg shadow-lg border border-gray-700"
     >
-      <h2 className="text-xl font-bold text-white mb-6">Novo Agendamento</h2>
+      <h2 className="text-xl font-bold text-white mb-6">{t("new_appointment")}</h2>
       <form onSubmit={handleSubmit} className="space-y-6">
         <div>
           <label
             htmlFor="file-upload"
             className="block text-sm font-medium text-gray-300 mb-2"
           >
-            Arquivo de Vídeo
+            {t("file_upload_label")}
           </label>
           <input
             id="file-upload"
@@ -285,7 +300,7 @@ export default function UploadForm({
             htmlFor="title"
             className="block text-sm font-medium text-gray-300"
           >
-            Título
+            {t("post_title")}
           </label>
           <input
             type="text"
@@ -301,7 +316,7 @@ export default function UploadForm({
             htmlFor="description"
             className="block text-sm font-medium text-gray-300"
           >
-            Descrição
+            {t("post_description")}
           </label>
           <textarea
             id="description"
@@ -314,13 +329,13 @@ export default function UploadForm({
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
           <div>
             <label className="block text-sm font-medium text-gray-300 mb-2">
-              Data do Agendamento
+              {t("scheduling_date")}
             </label>
             <DayPicker
               mode="single"
               selected={scheduleDate}
               onSelect={setScheduleDate}
-              locale={ptBR}
+              locale={i18n.language === 'en' ? enUS : i18n.language === 'es' ? es : i18n.language === 'fr' ? fr : ptBR}
               disabled={{ before: today, after: tenDaysFromNow }}
               className="bg-gray-900 p-2 rounded-md"
               classNames={{
@@ -350,7 +365,7 @@ export default function UploadForm({
               htmlFor="scheduleTime"
               className="block text-sm font-medium text-gray-300 mb-2"
             >
-              Hora do Agendamento
+              {t("scheduling_time")}
             </label>
             <div className="flex items-center gap-2">
               <select
@@ -375,7 +390,7 @@ export default function UploadForm({
           </div>
         </div>
         <div>
-          <h3 className="text-sm font-medium text-gray-300 mb-2">Postar em:</h3>
+          <h3 className="text-sm font-medium text-gray-300 mb-2">{t("post_to")}</h3>
           <div className="flex flex-wrap gap-x-6 gap-y-2">
             <label
               className={`flex items-center gap-2 ${
@@ -460,10 +475,10 @@ export default function UploadForm({
             {isUploading ? (
               <>
                 <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                Agendando...
+                {t("scheduling")}
               </>
             ) : (
-              "Agendar Post"
+              t("schedule_post")
             )}
           </button>
         </div>
