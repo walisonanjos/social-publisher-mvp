@@ -114,5 +114,9 @@
   "no_meta_posts_to_analyze": "There are no Instagram/Facebook posts to analyze yet.",
   "posts_analyzed": "Posts Analyzed",
   "platforms": "Platforms",
-  "timezone_updated_success": "Timezone updated!"
+  "timezone_updated_success": "Timezone updated!",
+  "terms_of_service": "Terms of Service",
+  "privacy_policy": "Privacy Policy",
+  "all_rights_reserved": "All rights reserved.",
+  "document_load_error": "Could not load the document."
 }

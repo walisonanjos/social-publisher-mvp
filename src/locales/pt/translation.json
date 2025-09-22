@@ -114,5 +114,9 @@
   "no_meta_posts_to_analyze": "Ainda não há posts do Instagram/Facebook para analisar.",
   "posts_analyzed": "Posts Analisados",
   "platforms": "Plataformas",
-  "timezone_updated_success": "Fuso horário atualizado!"
+  "timezone_updated_success": "Fuso horário atualizado!",
+  "terms_of_service": "Termos de Serviço",
+  "privacy_policy": "Política de Privacidade",
+  "all_rights_reserved": "Todos os direitos reservados.",
+  "document_load_error": "Não foi possível carregar o documento."
 }
