@@ -15,7 +15,7 @@ export default function PrivacyPolicyPage() {
   useEffect(() => {
     const fetchContent = async () => {
       try {
-        const response = await fetch(`/locales/docs/privacy-policy-${i18n.language}.md`);
+        const response = await fetch('/docs/privacy-policy-${i18n.language}.md');
         const text = await response.text();
         setMarkdownContent(text);
       } catch (error) {

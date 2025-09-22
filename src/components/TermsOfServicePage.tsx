@@ -15,7 +15,7 @@ export default function TermsOfServicePage() {
   useEffect(() => {
     const fetchContent = async () => {
       try {
-        const response = await fetch(`/locales/docs/terms-of-service-${i18n.language}.md`);
+        const response = await fetch('/docs/terms-of-service-${i18n.language}.md');
         const text = await response.text();
         setMarkdownContent(text);
       } catch (error) {
