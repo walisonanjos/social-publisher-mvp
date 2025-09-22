@@ -100,10 +100,13 @@ export default function AccountConnection({
         {isYouTubeConnected ? (
           <ConnectionStatus icon={Youtube} platformName="YouTube" onDisconnect={() => onDisconnect('youtube')} iconColorClass="text-red-500" t={t} />
         ) : (
-          <button onClick={() => handleConnect('youtube')} disabled={isLoading !== null} className="w-full flex items-center justify-center gap-3 py-3 px-4 border border-red-600/50 bg-red-600/20 hover:bg-red-600/30 text-white font-bold rounded-lg transition-colors disabled:opacity-50">
+          <Link
+            href={`${baseUrl}/api/auth/youtube?nicheId=${nicheId}`}
+            className="w-full flex items-center justify-center gap-3 py-3 px-4 border border-red-600/50 bg-red-600/20 hover:bg-red-600/30 text-white font-bold rounded-lg transition-colors disabled:opacity-50"
+          >
             <Youtube size={20} />
-            <span>{isLoading === 'youtube' ? t("please_wait") : t("connect_with_platform", { platform: "YouTube" })}</span>
-          </button>
+            <span>{t("connect_with_platform", { platform: "YouTube" })}</span>
+          </Link>
         )}
 
         {isInstagramConnected ? (
@@ -112,19 +115,25 @@ export default function AccountConnection({
             <ConnectionStatus icon={Facebook} platformName="Facebook" onDisconnect={() => onDisconnect('instagram')} iconColorClass="text-blue-500" t={t} />
           </>
         ) : (
-          <button onClick={() => handleConnect('instagram')} disabled={isLoading !== null} className="w-full flex items-center justify-center gap-3 py-3 px-4 border border-purple-600/50 bg-purple-600/20 hover:bg-purple-600/30 text-white font-bold rounded-lg transition-colors disabled:opacity-50">
+          <Link
+            href={`${baseUrl}/api/auth/instagram?nicheId=${nicheId}`}
+            className="w-full flex items-center justify-center gap-3 py-3 px-4 border border-purple-600/50 bg-purple-600/20 hover:bg-purple-600/30 text-white font-bold rounded-lg transition-colors disabled:opacity-50"
+          >
             <Instagram size={20} />
-            <span>{isLoading === 'instagram' ? t("please_wait") : t("connect_with_platform", { platform: "Instagram / Facebook" })}</span>
-          </button>
+            <span>{t("connect_with_platform", { platform: "Instagram / Facebook" })}</span>
+          </Link>
         )}
 
         {isTikTokConnected ? (
           <ConnectionStatus icon={IconBrandTiktok} platformName="TikTok" onDisconnect={() => onDisconnect('tiktok')} iconColorClass="text-gray-200" t={t} />
         ) : (
-          <button onClick={() => handleConnect('tiktok')} disabled={isLoading !== null} className="w-full flex items-center justify-center gap-3 py-3 px-4 border border-gray-600/50 bg-gray-600/20 hover:bg-gray-600/30 text-white font-bold rounded-lg transition-colors disabled:opacity-50">
+          <Link
+            href={`${baseUrl}/api/auth/tiktok?nicheId=${nicheId}`}
+            className="w-full flex items-center justify-center gap-3 py-3 px-4 border border-gray-600/50 bg-gray-600/20 hover:bg-gray-600/30 text-white font-bold rounded-lg transition-colors disabled:opacity-50"
+          >
             <IconBrandTiktok size={20} />
-            <span>{isLoading === 'tiktok' ? t("please_wait") : t("connect_with_platform", { platform: "TikTok" })}</span>
-          </button>
+            <span>{t("connect_with_platform", { platform: "TikTok" })}</span>
+          </Link>
         )}
       </div>
     </div>

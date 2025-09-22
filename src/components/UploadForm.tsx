@@ -103,7 +103,7 @@ export default function UploadForm({
   const displayTimezone = useMemo(() => {
     try {
       const nowInTimezone = toZonedTime(new Date(), nicheTimezone);
-      const formatter = new Intl.DateTimeFormat("pt-BR", {
+      const formatter = new Intl.DateTimeFormat(i18n.language, {
         timeZone: nicheTimezone,
         timeZoneName: "shortOffset",
       });
@@ -113,7 +113,7 @@ export default function UploadForm({
       console.error(error);
       return nicheTimezone;
     }
-  }, [nicheTimezone]);
+  }, [nicheTimezone, i18n.language]);
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
@@ -335,7 +335,7 @@ export default function UploadForm({
               mode="single"
               selected={scheduleDate}
               onSelect={setScheduleDate}
-              locale={i18n.language === 'en' ? enUS : i18n.language === 'es' ? es : i18n.language === 'fr' ? fr : ptBR}
+              locale={getLocale()}
               disabled={{ before: today, after: tenDaysFromNow }}
               className="bg-gray-900 p-2 rounded-md"
               classNames={{
