@@ -1,4 +1,3 @@
-// src/components/NichePageClient.tsx
 "use client";
 
 import { useEffect, useState, useMemo, useCallback } from "react";
@@ -10,7 +9,6 @@ import UploadForm from "./UploadForm";
 import VideoGrid from "./VideoGrid";
 import Navbar from "./Navbar";
 import AccountConnection from "./AccountConnection";
-import MainHeader from "./MainHeader";
 import { Video } from "@/types";
 import EditVideoModal from "./EditVideoModal";
 import ViewLogsModal from "./ViewLogsModal";
@@ -26,7 +24,7 @@ export default function NichePageClient({ nicheId }: { nicheId: string }) {
   const [user, setUser] = useState<User | null>(null);
   const [videos, setVideos] = useState<Video[]>([]);
   const [loading, setLoading] = useState(true);
-  const { t } = useTranslation(); // Adicionado aqui
+  const { t } = useTranslation();
   const [nicheName, setNicheName] = useState(t("loading"));
   const [isYouTubeConnected, setIsYouTubeConnected] = useState(false);
   const [isInstagramConnected, setIsInstagramConnected] = useState(false);
@@ -114,7 +112,7 @@ export default function NichePageClient({ nicheId }: { nicheId: string }) {
       if (formElement) {
         formElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
       }
-      toast.info(t("form_filled")); // Texto traduzido
+      toast.info(t("form_filled"));
       window.history.replaceState({}, '', `/niche/${nicheId}`);
     }
   }, [searchParams, nicheId, t]);
@@ -195,22 +193,22 @@ export default function NichePageClient({ nicheId }: { nicheId: string }) {
   };
   
   const handleDeleteVideo = async (videoId: number) => {
-    if (!window.confirm(t("delete_confirmation"))) return; // Texto traduzido
+    if (!window.confirm(t("delete_confirmation"))) return;
     
     setVideos(currentVideos => currentVideos.filter(v => v.id !== videoId));
 
     const { error } = await supabase.from('videos').delete().eq('id', videoId);
     if (error) {
-      toast.error(t("delete_error")); // Texto traduzido
+      toast.error(t("delete_error"));
     } else {
-      toast.success(t("delete_success")); // Texto traduzido
+      toast.success(t("delete_success"));
     }
   };
   
   const handleDisconnect = async (platform: 'youtube' | 'instagram' | 'tiktok') => {
     if (!user) return;
     const platformName = platform === 'youtube' ? 'YouTube' : (platform === 'instagram' ? 'Instagram/Facebook' : 'TikTok');
-    if (!window.confirm(t("disconnect_confirmation", { platform: platformName }))) return; // Texto traduzido
+    if (!window.confirm(t("disconnect_confirmation", { platform: platformName }))) return;
 
     const { error } = await supabase
       .from('social_connections')
@@ -218,9 +216,9 @@ export default function NichePageClient({ nicheId }: { nicheId: string }) {
       .match({ user_id: user.id, niche_id: nicheId, platform: platform });
     
     if (error) {
-      toast.error(t("disconnect_error")); // Texto traduzido
+      toast.error(t("disconnect_error"));
     } else {
-      toast.success(t("disconnect_success", { platform: platformName })); // Texto traduzido
+      toast.success(t("disconnect_success", { platform: platformName }));
     }
   };
 
@@ -235,11 +233,11 @@ export default function NichePageClient({ nicheId }: { nicheId: string }) {
       const { error } = await supabase.from('videos').update(updatedData).eq('id', editingVideo.id).select().single();
       if (error) throw error;
       
-      toast.success(t("update_success_message")); // Texto traduzido
+      toast.success(t("update_success_message"));
       handleCloseEditModal();
     } catch (e) {
-      if (e instanceof Error) { toast.error(t("save_error", { error: e.message })); } // Texto traduzido
-      else { toast.error(t("unexpected_error")); } // Texto traduzido
+      if (e instanceof Error) { toast.error(t("save_error", { error: e.message })); }
+      else { toast.error(t("unexpected_error")); }
     }
   };
 
@@ -250,7 +248,7 @@ export default function NichePageClient({ nicheId }: { nicheId: string }) {
     if (formElement) {
       formElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
-    toast.info(t("form_filled")); // Texto traduzido
+    toast.info(t("form_filled"));
   };
 
   const handleViewLogs = (video: Video) => {
@@ -271,7 +269,6 @@ export default function NichePageClient({ nicheId }: { nicheId: string }) {
           onClose={() => setViewingLogsForVideo(null)}
         />
       )}
-      <MainHeader user={user} pageTitle={nicheName} backLink="/niches" />
       <main className="container mx-auto p-4 md:p-8">
         <Navbar nicheId={nicheId} />
         <div className="my-8">

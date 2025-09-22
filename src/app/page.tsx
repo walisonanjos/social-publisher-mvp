@@ -8,6 +8,7 @@ import Auth from "../components/Auth";
 import { Loader2 } from "lucide-react";
 import { Niche } from "@/types";
 import { useTranslation } from "react-i18next";
+import MainHeader from "../components/MainHeader"; // Esta importação será removida
 
 export default function HomePage() {
   const supabase = createClient();
