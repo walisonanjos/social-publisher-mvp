@@ -1,9 +1,12 @@
 // src/components/AccountConnection.tsx
 "use client";
 
+import { useState } from "react";
 import { Youtube, Instagram, Facebook } from "lucide-react";
+import { createClient } from "../lib/supabaseClient";
 import { IconBrandTiktok } from "@tabler/icons-react";
-import { useTranslation, TFunction } from "react-i18next";
+import { useTranslation } from "react-i18next";
+import { TFunction } from "i18next"; // A CORREÇÃO ESTÁ AQUI
 import Link from "next/link";
 
 interface AccountConnectionProps {
