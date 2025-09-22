@@ -132,7 +132,7 @@ export default function AccountConnection({
             className="w-full flex items-center justify-center gap-3 py-3 px-4 border border-gray-600/50 bg-gray-600/20 hover:bg-gray-600/30 text-white font-bold rounded-lg transition-colors disabled:opacity-50"
           >
             <IconBrandTiktok size={20} />
-            <span>{t("connect_with_platform", { platform: "TikTok" })}</span>
+            <span>{isLoading === 'tiktok' ? t("please_wait") : t("connect_with_platform", { platform: "TikTok" })}</span>
           </Link>
         )}
       </div>
