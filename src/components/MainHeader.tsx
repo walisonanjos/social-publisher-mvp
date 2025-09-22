@@ -1,4 +1,3 @@
-// src/components/MainHeader.tsx
 "use client";
 
 import Link from "next/link";
@@ -27,13 +26,9 @@ export default function MainHeader({
 
   const handleSignOut = async () => {
     await supabase.auth.signOut();
-    // Força a atualização da página para refletir o estado de deslogado
-    // e te envia para a página inicial, evitando o bug de redirect.
     router.push("/");
     router.refresh();
   };
-
-  if (!user) return null; // Não mostra nada se não houver usuário
 
   return (
     <header className="bg-gray-800/80 backdrop-blur-sm p-4 border-b border-gray-700 sticky top-0 z-20">
@@ -54,16 +49,20 @@ export default function MainHeader({
         </div>
         <div className="flex items-center gap-4">
           <LanguageSwitcher />
-          <span className="text-gray-300 hidden sm:inline">
-            {t("hello_user", { user_name: user.email?.split("@")[0] })}
-          </span>
-          <button
-            onClick={handleSignOut}
-            className="flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-lg transition-colors"
-          >
-            <LogOut size={20} />
-            <span>{t("sign_out")}</span>
-          </button>
+          {user && (
+            <>
+              <span className="text-gray-300 hidden sm:inline">
+                {t("hello_user", { user_name: user.email?.split("@")[0] })}
+              </span>
+              <button
+                onClick={handleSignOut}
+                className="flex items-center gap-2 bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-lg transition-colors"
+              >
+                <LogOut size={20} />
+                <span>{t("sign_out")}</span>
+              </button>
+            </>
+          )}
         </div>
       </div>
     </header>
