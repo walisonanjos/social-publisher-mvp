@@ -22,7 +22,8 @@ import { useState } from "react";
 import Link from "next/link";
 import { format, isToday } from "date-fns";
 import { ptBR, enUS, es, fr } from "date-fns/locale";
-import { useTranslation, TFunction } from "react-i18next";
+import { useTranslation } from "react-i18next";
+import { TFunction } from "i18next";
 import { Tooltip } from "react-tooltip";
 import { formatTimeInTimezone } from "../lib/utils";
 
