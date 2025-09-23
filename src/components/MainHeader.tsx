@@ -8,7 +8,6 @@ import { ArrowLeft, LogOut } from "lucide-react";
 import LanguageSwitcher from "./LanguageSwitcher";
 import { useTranslation } from "react-i18next";
 
-// O Header agora recebe o usuário e opcionalmente um título e link de 'voltar'
 interface MainHeaderProps {
   user: User | null;
   pageTitle?: string;

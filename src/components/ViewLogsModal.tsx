@@ -12,7 +12,7 @@ import { useTranslation } from "react-i18next";
 interface PostLog {
   id: number;
   created_at: string;
-  platform: string;
+  platform: 'youtube' | 'instagram' | 'facebook';
   status: 'sucesso' | 'falha' | 'retentativa';
   details: string | null;
 }
@@ -32,6 +32,25 @@ const statusTranslationKey = {
     sucesso: "status_success",
     falha: "status_failed",
     retentativa: "status_retry"
+};
+
+const logDetailsTranslationKeys: { [key: string]: string } = {
+  "Vídeo postado diretamente (privado).": "log_posted_directly_private",
+  "Reel postado com sucesso.": "log_reel_posted_success",
+  "Vídeo postado.": "log_video_posted_success",
+  "ID no YouTube:": "log_youtube_id"
+};
+
+const translateLogDetails = (details: string | null, t: Function) => {
+  if (!details) return null;
+  
+  for (const key in logDetailsTranslationKeys) {
+    if (details.includes(key)) {
+      const translated = t(logDetailsTranslationKeys[key]);
+      return details.replace(key, translated);
+    }
+  }
+  return details;
 };
 
 export default function ViewLogsModal({ video, onClose }: ViewLogsModalProps) {
@@ -125,7 +144,7 @@ export default function ViewLogsModal({ video, onClose }: ViewLogsModalProps) {
                       {format(new Date(log.created_at), "dd/MM/yy 'às' HH:mm:ss", { locale: getLocale() })}
                     </span>
                   </div>
-                  <p className="text-sm text-gray-300 mt-2 break-words">{log.details}</p>
+                  <p className="text-sm text-gray-300 mt-2 break-words">{translateLogDetails(log.details, t)}</p>
                 </div>
               ))}
             </div>
