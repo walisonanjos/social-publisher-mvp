@@ -118,5 +118,18 @@
   "terms_of_service": "Conditions Générales d'Utilisation",
   "privacy_policy": "Politique de Confidentialité",
   "all_rights_reserved": "Tous droits réservés.",
-  "document_load_error": "Impossible de charger le document."
+  "document_load_error": "Impossible de charger le document.",
+  "access_your_workspace": "Accédez à votre espace de travail",
+  "email_address_placeholder": "Adresse e-mail",
+  "password_placeholder": "Mot de passe",
+  "logging_in": "Connexion en cours...",
+  "log_in_button": "Se connecter",
+  "no_account_question": "Vous n'avez pas de compte ?",
+  "sign_up_link": "S'inscrire",
+  "create_your_account": "Créez votre compte",
+  "already_have_an_account": "Vous avez déjà un compte ?",
+  "log_in_link": "Se connecter",
+  "sign_up": "S'inscrire",
+  "signup_success_check_email": "Inscription réussie ! Veuillez vérifier votre e-mail pour confirmer votre compte.",
+  "unknown_error_occurred": "Une erreur inconnue est survenue."
 }

@@ -5,7 +5,6 @@ import Link from 'next/link';
 import { createClient } from "@/lib/supabaseClient";
 import { User } from "@supabase/supabase-js";
 import { Loader2, BarChart2 as ChartIcon, Youtube, Instagram } from "lucide-react";
-import MainHeader from "@/components/MainHeader";
 import Navbar from "@/components/Navbar";
 import Auth from "@/components/Auth";
 import YouTubeAnalyticsView from "./YouTubeAnalyticsView";
@@ -157,7 +156,6 @@ export default function AnalyticsPageClient({ nicheId }: { nicheId: string }) {
   
   return (
     <div className="bg-gray-900 min-h-screen text-white">
-      <MainHeader pageTitle={`${nicheName} - ${t("analytics")}`} backLink={`/niche/${nicheId}`} />
       <main className="container mx-auto p-4 md:p-8">
         <Navbar nicheId={nicheId} />
         <div className="mt-8">

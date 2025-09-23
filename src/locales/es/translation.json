@@ -118,5 +118,18 @@
   "terms_of_service": "Términos de Servicio",
   "privacy_policy": "Política de Privacidad",
   "all_rights_reserved": "Todos los derechos reservados.",
-  "document_load_error": "No se pudo cargar el documento."
+  "document_load_error": "No se pudo cargar el documento.",
+  "access_your_workspace": "Accede a tu espacio de trabajo",
+  "email_address_placeholder": "Dirección de correo electrónico",
+  "password_placeholder": "Contraseña",
+  "logging_in": "Iniciando sesión...",
+  "log_in_button": "Entrar",
+  "no_account_question": "¿No tienes una cuenta?",
+  "sign_up_link": "Regístrate",
+  "create_your_account": "Crea tu cuenta",
+  "already_have_an_account": "¿Ya tienes una cuenta?",
+  "log_in_link": "Entrar",
+  "sign_up": "Registrarse",
+  "signup_success_check_email": "Registro exitoso. Por favor, verifica tu correo electrónico para confirmar tu cuenta.",
+  "unknown_error_occurred": "Ha ocurrido un error desconocido."
 }

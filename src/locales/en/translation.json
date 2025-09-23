@@ -118,5 +118,18 @@
   "terms_of_service": "Terms of Service",
   "privacy_policy": "Privacy Policy",
   "all_rights_reserved": "All rights reserved.",
-  "document_load_error": "Could not load the document."
+  "document_load_error": "Could not load the document.",
+  "access_your_workspace": "Access your workspace",
+  "email_address_placeholder": "Email address",
+  "password_placeholder": "Password",
+  "logging_in": "Logging in...",
+  "log_in_button": "Log In",
+  "no_account_question": "Don't have an account?",
+  "sign_up_link": "Sign Up",
+  "create_your_account": "Create your account",
+  "already_have_an_account": "Already have an account?",
+  "log_in_link": "Log In",
+  "sign_up": "Sign Up",
+  "signup_success_check_email": "Sign up successful! Please check your email to confirm your account.",
+  "unknown_error_occurred": "An unknown error occurred."
 }

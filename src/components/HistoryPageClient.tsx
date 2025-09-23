@@ -5,7 +5,6 @@ import { createClient } from "@/lib/supabaseClient";
 import { User } from "@supabase/supabase-js";
 import { Loader2 } from "lucide-react";
 import { Video } from "@/types";
-import MainHeader from "./MainHeader";
 import Navbar from "./Navbar";
 import VideoGrid from "./VideoGrid";
 import Auth from "./Auth";
@@ -106,8 +105,6 @@ export default function HistoryPageClient({ nicheId }: { nicheId: string }) {
           onClose={() => setViewingLogsForVideo(null)} 
         />
       )}
-
-      <MainHeader pageTitle={`${nicheName} - ${t("history")}`} backLink={`/niche/${nicheId}`} />
 
       <main className="container mx-auto p-4 md:p-8">
         <Navbar nicheId={nicheId} />
