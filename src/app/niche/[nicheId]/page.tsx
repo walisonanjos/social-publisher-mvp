@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabaseClient";
 import NichePageClient from "@/components/NichePageClient";
 import { notFound } from "next/navigation";
 import { Metadata } from 'next';
+import { useTranslation } from 'react-i18next'; // Importando a tradução para uso em generateMetadata
 
 interface PageProps {
   params: {
@@ -29,9 +30,12 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
 export default async function NichePage({ params }: PageProps) {
   const supabase = createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+
+  if (!user) {
+    return <div>Acesso negado. Faça login para continuar.</div>;
+  }
   
-  // A correção está aqui: removemos a checagem de usuário para evitar que a página quebre.
-  // A checagem será feita no componente cliente, como era antes.
   const { data: nicheData } = await supabase.from('niches').select('name').eq('id', params.nicheId).single();
   
   if (!nicheData) {
