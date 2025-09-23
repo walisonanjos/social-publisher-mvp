@@ -1,5 +1,3 @@
-// src/components/HistoryPageClient.tsx
-
 "use client";
 
 import { useEffect, useState, useMemo } from "react";
@@ -14,14 +12,16 @@ import Auth from "./Auth";
 import { useRouter } from "next/navigation";
 import ViewLogsModal from "./ViewLogsModal";
 import { timeZones } from "../lib/timezones";
+import { useTranslation } from "react-i18next";
 
 export default function HistoryPageClient({ nicheId }: { nicheId: string }) {
   const supabase = createClient();
   const router = useRouter();
+  const { t } = useTranslation();
   const [user, setUser] = useState<User | null>(null);
   const [videos, setVideos] = useState<Video[]>([]);
   const [loading, setLoading] = useState(true);
-  const [nicheName, setNicheName] = useState("Carregando...");
+  const [nicheName, setNicheName] = useState(t("loading"));
   const [viewingLogsForVideo, setViewingLogsForVideo] = useState<Video | null>(null);
   const initialTimezoneName = timeZones[0].split(') ')[1];
   const [nicheTimezone, setNicheTimezone] = useState(timeZones.find(tz => tz.endsWith(initialTimezoneName)) || timeZones[0]);
@@ -73,7 +73,7 @@ export default function HistoryPageClient({ nicheId }: { nicheId: string }) {
       setLoading(false);
     };
     fetchPageData();
-  }, [supabase, nicheId]);
+  }, [supabase, nicheId, t]);
   
   const handleDuplicate = (video: Video) => {
     const params = new URLSearchParams({
@@ -107,14 +107,14 @@ export default function HistoryPageClient({ nicheId }: { nicheId: string }) {
         />
       )}
 
-      <MainHeader user={user} pageTitle={`${nicheName} - Histórico`} backLink={`/niche/${nicheId}`} />
+      <MainHeader pageTitle={`${nicheName} - ${t("history")}`} backLink={`/niche/${nicheId}`} />
 
       <main className="container mx-auto p-4 md:p-8">
         <Navbar nicheId={nicheId} />
 
         <div className="mt-8">
           <h2 className="text-2xl font-bold tracking-tight text-white mb-6">
-            Histórico de Posts
+            {t("post_history")}
           </h2>
           <VideoGrid
             groupedVideos={groupedVideos}
@@ -123,7 +123,7 @@ export default function HistoryPageClient({ nicheId }: { nicheId: string }) {
             onDuplicate={handleDuplicate}
             onViewLogs={handleViewLogs}
             sortOrder="desc"
-            nicheTimezone={nicheTimezone.split(') ')[1] || nicheTimezone} // <-- PASSANDO A PROP AQUI
+            nicheTimezone={nicheTimezone.split(') ')[1] || nicheTimezone}
           />
         </div>
       </main>
