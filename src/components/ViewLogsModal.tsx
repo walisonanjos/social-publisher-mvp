@@ -7,7 +7,7 @@ import { createClient } from "@/lib/supabaseClient";
 import { format } from "date-fns";
 import { ptBR, enUS, es, fr } from "date-fns/locale";
 import { toast } from "sonner";
-import { useTranslation } from "react-i18next";
+import { useTranslation, type TFunction } from "react-i18next";
 
 interface PostLog {
   id: number;
@@ -41,7 +41,7 @@ const logDetailsTranslationKeys: { [key: string]: string } = {
   "ID no YouTube:": "log_youtube_id"
 };
 
-const translateLogDetails = (details: string | null, t: Function) => {
+const translateLogDetails = (details: string | null, t: TFunction) => {
   if (!details) return null;
   
   for (const key in logDetailsTranslationKeys) {
