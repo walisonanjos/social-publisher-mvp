@@ -6,7 +6,7 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
+} from "@radix-ui/react-dropdown-menu"; // Caminho corrigido
 import { ChevronDown } from "lucide-react";
 
 export default function LanguageSwitcher() {
