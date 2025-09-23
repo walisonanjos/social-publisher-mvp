@@ -9,6 +9,7 @@ import UploadForm from "./UploadForm";
 import VideoGrid from "./VideoGrid";
 import Navbar from "./Navbar";
 import AccountConnection from "./AccountConnection";
+import MainHeader from "./MainHeader";
 import { Video } from "@/types";
 import EditVideoModal from "./EditVideoModal";
 import ViewLogsModal from "./ViewLogsModal";
@@ -18,14 +19,13 @@ import TimezoneSelector from "./TimezoneSelector";
 import { timeZones } from "../lib/timezones";
 import { useTranslation } from "react-i18next";
 
-export default function NichePageClient({ nicheId }: { nicheId: string }) {
+export default function NichePageClient({ nicheId, nicheName }: { nicheId: string, nicheName: string }) {
   const supabase = createClient();
   const searchParams = useSearchParams();
   const [user, setUser] = useState<User | null>(null);
   const [videos, setVideos] = useState<Video[]>([]);
   const [loading, setLoading] = useState(true);
   const { t } = useTranslation();
-  const [nicheName, setNicheName] = useState(t("loading"));
   const [isYouTubeConnected, setIsYouTubeConnected] = useState(false);
   const [isInstagramConnected, setIsInstagramConnected] = useState(false);
   const [isTikTokConnected, setIsTikTokConnected] = useState(false);
@@ -79,7 +79,6 @@ export default function NichePageClient({ nicheId }: { nicheId: string }) {
       .single();
     
     if (nicheData) {
-      setNicheName(nicheData.name);
       if (nicheData.timezone) {
         const fullTimezone = timeZones.find(tz => tz.endsWith(nicheData.timezone));
         setNicheTimezone(fullTimezone || nicheData.timezone);
