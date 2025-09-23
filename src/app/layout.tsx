@@ -5,7 +5,6 @@ import Footer from "../components/Footer";
 import { Toaster } from 'sonner';
 import I18nClientProvider from "@/components/I18nClientProvider";
 import MainHeader from "@/components/MainHeader";
-import { createClient } from "@/lib/supabaseClient";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -22,21 +21,18 @@ export const metadata: Metadata = {
   description: "Agende suas postagens de forma fácil.",
 };
 
-export default async function RootLayout({
+export default function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const supabase = createClient();
-  const { data: { user } } = await supabase.auth.getUser();
-
   return (
     <I18nClientProvider>
       <html lang="pt-br">
         <body
           className={`${geistSans.variable} ${geistMono.variable} antialiased flex flex-col min-h-screen bg-gray-900`}
         >
-          <MainHeader user={user} />
+          <MainHeader />
           <main className="flex-grow">
             {children}
           </main>
