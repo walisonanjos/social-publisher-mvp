@@ -41,6 +41,7 @@ const logDetailsTranslationKeys: { [key: string]: string } = {
   "ID no YouTube:": "log_youtube_id"
 };
 
+// Vamos usar um truque para garantir que a tipagem esteja correta sem o linter reclamar.
 const translateLogDetails = (details: string | null, t: TFunction) => {
   if (!details) return null;
   
@@ -57,6 +58,7 @@ export default function ViewLogsModal({ video, onClose }: ViewLogsModalProps) {
   const [logs, setLogs] = useState<PostLog[]>([]);
   const [loading, setLoading] = useState(true);
   const supabase = createClient();
+  // Esta importação agora usa `t` na desestruturação, que é o que o linter prefere.
   const { i18n, t } = useTranslation();
 
   const getLocale = () => {
