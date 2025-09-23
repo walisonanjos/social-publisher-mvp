@@ -4,24 +4,34 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabaseClient";
 import { User } from "@supabase/supabase-js";
-import { ArrowLeft, LogOut } from "lucide-react";
+import { ArrowLeft, LogOut, Loader2 } from "lucide-react";
 import LanguageSwitcher from "./LanguageSwitcher";
 import { useTranslation } from "react-i18next";
+import { useEffect, useState } from "react";
 
 interface MainHeaderProps {
-  user: User | null;
   pageTitle?: string;
   backLink?: string;
 }
 
 export default function MainHeader({
-  user,
   pageTitle,
   backLink,
 }: MainHeaderProps) {
   const supabase = createClient();
   const router = useRouter();
   const { t } = useTranslation();
+  const [user, setUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchUser = async () => {
+      const { data: { user: fetchedUser } } = await supabase.auth.getUser();
+      setUser(fetchedUser);
+      setLoading(false);
+    };
+    fetchUser();
+  }, [supabase]);
 
   const handleSignOut = async () => {
     await supabase.auth.signOut();
@@ -48,7 +58,9 @@ export default function MainHeader({
         </div>
         <div className="flex items-center gap-4">
           <LanguageSwitcher />
-          {user && (
+          {loading ? (
+            <Loader2 className="h-4 w-4 text-gray-400 animate-spin" />
+          ) : user ? (
             <>
               <span className="text-gray-300 hidden sm:inline">
                 {t("hello_user", { user_name: user.email?.split("@")[0] })}
@@ -61,7 +73,7 @@ export default function MainHeader({
                 <span>{t("sign_out")}</span>
               </button>
             </>
-          )}
+          ) : null}
         </div>
       </div>
     </header>
