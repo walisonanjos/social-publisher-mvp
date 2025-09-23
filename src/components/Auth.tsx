@@ -4,6 +4,8 @@ import { useState, FormEvent } from "react";
 import { useRouter } from "next/navigation";
 import { createClient } from "@/lib/supabaseClient";
 import { Loader2 } from "lucide-react";
+import { useTranslation } from "react-i18next";
+import Link from "next/link";
 
 export default function Auth() {
   const supabase = createClient();
@@ -13,6 +15,7 @@ export default function Auth() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [isSignUp, setIsSignUp] = useState(false);
+  const { t } = useTranslation();
 
   const handleAuthAction = async (e: FormEvent) => {
     e.preventDefault();
@@ -27,7 +30,7 @@ export default function Auth() {
         });
         if (signUpError) throw signUpError;
         alert(
-          "Cadastro realizado! Por favor, verifique seu e-mail para confirmar a conta.",
+          t("signup_success_check_email"),
         );
       } else {
         const { error: signInError } = await supabase.auth.signInWithPassword({
@@ -38,12 +41,10 @@ export default function Auth() {
         router.refresh();
       }
     } catch (err: unknown) {
-      // CORREÇÃO: Trocamos 'any' por 'unknown'
-      // Verificamos se o erro tem o formato esperado
       if (typeof err === "object" && err !== null && "message" in err) {
         setError((err as { message: string }).message);
       } else {
-        setError("Ocorreu um erro desconhecido.");
+        setError(t("unknown_error_occurred"));
       }
     } finally {
       setLoading(false);
@@ -58,7 +59,7 @@ export default function Auth() {
             Social Publisher
           </h2>
           <p className="mt-1 text-center text-gray-400">
-            {isSignUp ? "Crie sua conta" : "Acesse seu workspace"}
+            {isSignUp ? t("create_your_account") : t("access_your_workspace")}
           </p>
 
           <form onSubmit={handleAuthAction}>
@@ -66,7 +67,7 @@ export default function Auth() {
               <input
                 className="block w-full px-4 py-2 mt-2 text-gray-200 placeholder-gray-500 bg-gray-700 border border-gray-600 rounded-lg focus:border-teal-400 focus:ring-opacity-40 focus:outline-none focus:ring focus:ring-teal-300"
                 type="email"
-                placeholder="Endereço de e-mail"
+                placeholder={t("email_address_placeholder")}
                 aria-label="Email Address"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
@@ -78,7 +79,7 @@ export default function Auth() {
               <input
                 className="block w-full px-4 py-2 mt-2 text-gray-200 placeholder-gray-500 bg-gray-700 border border-gray-600 rounded-lg focus:border-teal-400 focus:ring-opacity-40 focus:outline-none focus:ring focus:ring-teal-300"
                 type="password"
-                placeholder="Senha"
+                placeholder={t("password_placeholder")}
                 aria-label="Password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
@@ -96,9 +97,9 @@ export default function Auth() {
                 {loading ? (
                   <Loader2 className="mx-auto animate-spin" />
                 ) : isSignUp ? (
-                  "Cadastrar"
+                  t("sign_up")
                 ) : (
-                  "Entrar"
+                  t("log_in_button")
                 )}
               </button>
             </div>
@@ -106,13 +107,13 @@ export default function Auth() {
 
           <div className="flex items-center justify-center py-4 text-center bg-gray-800">
             <span className="text-sm text-gray-400">
-              {isSignUp ? "Já tem uma conta?" : "Não tem uma conta?"}
+              {isSignUp ? t("already_have_an_account") : t("no_account_question")}
             </span>
             <button
               onClick={() => setIsSignUp(!isSignUp)}
               className="mx-2 text-sm font-bold text-teal-400 hover:underline"
             >
-              {isSignUp ? "Entrar" : "Cadastre-se"}
+              {isSignUp ? t("log_in_link") : t("sign_up_link")}
             </button>
           </div>
         </div>

@@ -25,12 +25,26 @@ export default function MainHeader({
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    // Sincroniza o estado do usuário ao carregar a página
     const fetchUser = async () => {
       const { data: { user: fetchedUser } } = await supabase.auth.getUser();
       setUser(fetchedUser);
       setLoading(false);
     };
     fetchUser();
+    
+    // Ouve as mudanças de estado de autenticação em tempo real
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (session) {
+        setUser(session.user);
+      } else {
+        setUser(null);
+      }
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
   }, [supabase]);
 
   const handleSignOut = async () => {
