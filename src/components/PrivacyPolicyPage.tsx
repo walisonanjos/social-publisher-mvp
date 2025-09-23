@@ -4,7 +4,6 @@
 import { useState, useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import ReactMarkdown from 'react-markdown';
-import MainHeader from "./MainHeader";
 import { Loader2 } from "lucide-react";
 
 export default function PrivacyPolicyPage() {
@@ -20,8 +19,7 @@ export default function PrivacyPolicyPage() {
 
       try {
         let response = await fetch(`/docs/privacy-policy-${lang}.md`);
-
-        // Se a resposta não for OK, tenta carregar o arquivo em português como fallback
+        
         if (!response.ok) {
           console.warn(`File for language ${lang} not found, falling back to pt.`);
           response = await fetch(`/docs/privacy-policy-pt.md`);
@@ -49,8 +47,7 @@ export default function PrivacyPolicyPage() {
   }
 
   return (
-    <div className="bg-gray-900 min-h-screen text-white">
-      <MainHeader pageTitle={t("privacy_policy")} backLink="/" user={null} />
+    <div className="min-h-screen">
       <main className="container mx-auto p-4 md:p-8">
         <div className="prose dark:prose-invert max-w-none text-gray-300">
           <ReactMarkdown>{markdownContent}</ReactMarkdown>
