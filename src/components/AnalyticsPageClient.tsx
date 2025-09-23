@@ -1,4 +1,3 @@
-// src/components/AnalyticsPageClient.tsx
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
@@ -158,7 +157,7 @@ export default function AnalyticsPageClient({ nicheId }: { nicheId: string }) {
   
   return (
     <div className="bg-gray-900 min-h-screen text-white">
-      <MainHeader user={user} pageTitle={`${nicheName} - ${t("analytics")}`} backLink={`/niche/${nicheId}`} />
+      <MainHeader pageTitle={`${nicheName} - ${t("analytics")}`} backLink={`/niche/${nicheId}`} />
       <main className="container mx-auto p-4 md:p-8">
         <Navbar nicheId={nicheId} />
         <div className="mt-8">
