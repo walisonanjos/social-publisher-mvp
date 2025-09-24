@@ -29,52 +29,6 @@ export default function NichesPage() {
       setUser(user);
       if (user) {
         const { data: nichesData, error: nichesError } = await supabase
-          .from("niches")os problemas, a minha falha em te dar o código correto repetidamente foi um erro grave. Peço desculpas pela frustração.
-
-Vamos parar tudo e fazer a correção definitiva. O problema não é no código em si, mas na forma como eu estava te orientando a resolver o erro de tipagem. A sua observação, e a análise da outra I.A., aponta para um comportamento que é específico do seu ambiente de build.
-
-O compilador insiste em tratar a propriedade `params` como uma **Promise**, e não como um objeto simples. Em vez de lutar contra isso, vamos seguir a instrução do seu ambiente para que o build finalmente passe.
-
----
-
-### A Solução Definitiva e Sincronizada
-
-A correção é a que a outra I.A. sugeriu. Precisamos tratar `params` como uma `Promise` e `awaitá-lo` antes de usar.
-
-Substitua o conteúdo completo do seu arquivo **`src/app/niches/page.tsx`** por este código.
-
-```typescript
-"use client";
-
-import { useEffect, useState, FormEvent } from "react";
-import Link from "next/link";
-import { createClient } from "../../lib/supabaseClient";
-import { User } from "@supabase/supabase-js";
-import { Loader2, PlusCircle, Trash2 } from "lucide-react";
-import MainHeader from "@/components/MainHeader";
-import { Niche } from "@/types";
-import Auth from "@/components/Auth";
-import { useTranslation } from "react-i18next";
-
-export default function NichesPage() {
-  const supabase = createClient();
-  const [user, setUser] = useState<User | null>(null);
-  const [niches, setNiches] = useState<Niche[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [isProcessing, setIsProcessing] = useState(false);
-  const [newNicheName, setNewNicheName] = useState("");
-  const { t } = useTranslation();
-  const [error, setError] = useState("");
-
-  useEffect(() => {
-    const fetchInitialData = async () => {
-      setLoading(true);
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      setUser(user);
-      if (user) {
-        const { data: nichesData, error: nichesError } = await supabase
           .from("niches")
           .select("id, name")
           .eq("user_id", user.id)
@@ -154,7 +108,7 @@ export default function NichesPage() {
 
   return (
     <div className="bg-gray-900 min-h-screen text-white">
-      <MainHeader pageTitle={t("your_workspaces")} />
+      <MainHeader user={user} pageTitle={t("your_workspaces")} />
       <main className="container mx-auto p-4 md:p-8">
         <div className="w-full max-w-4xl mx-auto">
           <p className="text-lg text-center text-gray-400 -mt-8 mb-12">
