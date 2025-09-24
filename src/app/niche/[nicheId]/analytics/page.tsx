@@ -7,18 +7,21 @@ import { Metadata } from 'next';
 export const dynamic = 'force-dynamic';
 
 interface PageProps {
-  params: {
+  params: Promise<{
     nicheId: string;
-  };
+  }>;
 }
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
-  const supabase = createClient();
+  const resolvedParams = await params;
+  const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
+  
   if (!user) {
     return { title: 'Acesso negado' };
   }
-  const { data: nicheData } = await supabase.from('niches').select('name').eq('id', params.nicheId).single();
+  
+  const { data: nicheData } = await supabase.from('niches').select('name').eq('id', resolvedParams.nicheId).single();
   
   if (!nicheData) {
     return { title: 'Nicho não encontrado' };
@@ -30,6 +33,7 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 }
 
 export default async function AnalyticsPage({ params }: PageProps) {
+  const resolvedParams = await params;
   const supabase = await createClient();
   const { data: { user } } = await supabase.auth.getUser();
 
@@ -37,11 +41,11 @@ export default async function AnalyticsPage({ params }: PageProps) {
     redirect('/auth/login');
   }
   
-  const { data: nicheData } = await supabase.from('niches').select('name').eq('id', params.nicheId).single();
+  const { data: nicheData } = await supabase.from('niches').select('name').eq('id', resolvedParams.nicheId).single();
   
   if (!nicheData) {
     notFound();
   }
 
-  return <AnalyticsPageClient nicheId={params.nicheId} nicheName={nicheData.name} />;
+  return <AnalyticsPageClient nicheId={resolvedParams.nicheId} nicheName={nicheData.name} />;
 }
