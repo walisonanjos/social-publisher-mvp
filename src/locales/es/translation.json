@@ -132,5 +132,6 @@
   "sign_up": "Registrarse",
   "signup_success_check_email": "Registro exitoso. Por favor, verifica tu correo electrónico para confirmar tu cuenta.",
   "unknown_error_occurred": "Ha ocurrido un error desconocido",
-  "home": "Inicio"
+  "home": "Inicio", 
+  "post_history": "Historial de publicaciones"
 }

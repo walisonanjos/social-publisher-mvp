@@ -132,5 +132,6 @@
   "sign_up": "Cadastrar",
   "signup_success_check_email": "Cadastro realizado! Por favor, verifique seu e-mail para confirmar a conta.",
   "unknown_error_occurred": "Ocorreu um erro desconhecido",
-   "home": "Início"
+   "home": "Início", 
+   "post_history": "Histórico de Posts"
 }
