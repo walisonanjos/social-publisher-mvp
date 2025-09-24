@@ -4,7 +4,6 @@ import "./globals.css";
 import Footer from "../components/Footer";
 import { Toaster } from 'sonner';
 import I18nClientProvider from "@/components/I18nClientProvider";
-import MainHeader from "@/components/MainHeader";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -32,7 +31,7 @@ export default function RootLayout({
         <body
           className={`${geistSans.variable} ${geistMono.variable} antialiased flex flex-col min-h-screen bg-gray-900`}
         >
-          <MainHeader />
+          {/* MainHeader foi removido daqui */}
           <main className="flex-grow">
             {children}
           </main>
