@@ -131,5 +131,6 @@
   "log_in_link": "Log In",
   "sign_up": "Sign Up",
   "signup_success_check_email": "Sign up successful! Please check your email to confirm your account.",
-  "unknown_error_occurred": "An unknown error occurred."
+  "unknown_error_occurred": "An unknown error occurred",
+  "home": "Home"
 }

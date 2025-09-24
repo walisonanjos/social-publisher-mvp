@@ -131,5 +131,6 @@
   "log_in_link": "Se connecter",
   "sign_up": "S'inscrire",
   "signup_success_check_email": "Inscription réussie ! Veuillez vérifier votre e-mail pour confirmer votre compte.",
-  "unknown_error_occurred": "Une erreur inconnue est survenue."
+  "unknown_error_occurred": "Une erreur inconnue est survenue",
+  "home": "Accueil"
 }

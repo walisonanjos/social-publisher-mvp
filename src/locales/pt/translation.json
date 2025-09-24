@@ -131,5 +131,6 @@
   "log_in_link": "Entrar",
   "sign_up": "Cadastrar",
   "signup_success_check_email": "Cadastro realizado! Por favor, verifique seu e-mail para confirmar a conta.",
-  "unknown_error_occurred": "Ocorreu um erro desconhecido."
+  "unknown_error_occurred": "Ocorreu um erro desconhecido",
+   "home": "Início"
 }
