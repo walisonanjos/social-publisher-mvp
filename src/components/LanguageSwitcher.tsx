@@ -32,15 +32,17 @@ export default function LanguageSwitcher() {
       </DropdownMenuTrigger>
       <DropdownMenuContent 
         className="bg-gray-800 border border-gray-700 w-32" 
-        align="end"
+        align="center" // ✅ MUDAR de "end" para "center"
       >
         {languages.map((lng) => (
           <DropdownMenuItem
             key={lng.code}
             onClick={() => handleLanguageChange(lng.code)}
-            className={`cursor-pointer text-white hover:bg-gray-700 ${currentLanguage === lng.code ? 'bg-gray-700' : ''}`}
+            className={`cursor-pointer text-white hover:bg-gray-700 px-3 py-2 text-sm ${currentLanguage === lng.code ? 'bg-gray-700' : ''}`} // ✅ Adicionar padding
           >
-            {lng.name}
+            <span className="flex justify-center w-full"> {/* ✅ Centralizar texto */}
+              {lng.name}
+            </span>
           </DropdownMenuItem>
         ))}
       </DropdownMenuContent>
