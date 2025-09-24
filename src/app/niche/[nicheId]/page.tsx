@@ -3,7 +3,8 @@ import { createClient } from "@/lib/supabaseClient";
 import NichePageClient from "@/components/NichePageClient";
 import { notFound } from "next/navigation";
 import { Metadata } from 'next';
-import { useTranslation } from 'react-i18next'; // Importando a tradução para uso em generateMetadata
+
+export const dynamic = 'force-dynamic';
 
 interface PageProps {
   params: {
