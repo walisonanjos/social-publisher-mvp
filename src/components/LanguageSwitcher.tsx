@@ -26,21 +26,23 @@ export default function LanguageSwitcher() {
 
   return (
     <DropdownMenu>
-      <DropdownMenuTrigger className="flex items-center justify-between gap-2 text-white bg-gray-700 hover:bg-gray-600 py-2 px-3 rounded-lg focus:outline-none transition-colors w-32">
-        <span className="text-sm">{languages.find(l => l.code === currentLanguage)?.name || "Idioma"}</span>
-        <ChevronDown size={16} />
+      <DropdownMenuTrigger className="flex items-center justify-center gap-2 text-white bg-gray-700 hover:bg-gray-600 py-2 px-3 rounded-lg focus:outline-none transition-colors w-32 relative">
+        <span className="text-sm flex-1 text-center"> {/* ✅ Centralizado */}
+          {languages.find(l => l.code === currentLanguage)?.name || "Idioma"}
+        </span>
+        <ChevronDown size={16} className="flex-shrink-0" /> {/* ✅ Não afeta o centramento */}
       </DropdownMenuTrigger>
       <DropdownMenuContent 
         className="bg-gray-800 border border-gray-700 w-32" 
-        align="center" // ✅ MUDAR de "end" para "center"
+        align="center"
       >
         {languages.map((lng) => (
           <DropdownMenuItem
             key={lng.code}
             onClick={() => handleLanguageChange(lng.code)}
-            className={`cursor-pointer text-white hover:bg-gray-700 px-3 py-2 text-sm ${currentLanguage === lng.code ? 'bg-gray-700' : ''}`} // ✅ Adicionar padding
+            className={`cursor-pointer text-white hover:bg-gray-700 px-3 py-2 text-sm ${currentLanguage === lng.code ? 'bg-gray-700' : ''}`}
           >
-            <span className="flex justify-center w-full"> {/* ✅ Centralizar texto */}
+            <span className="flex justify-center w-full">
               {lng.name}
             </span>
           </DropdownMenuItem>
