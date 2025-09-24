@@ -30,7 +30,10 @@ export default function LanguageSwitcher() {
         <span className="text-sm">{languages.find(l => l.code === currentLanguage)?.name || "Idioma"}</span>
         <ChevronDown size={16} />
       </DropdownMenuTrigger>
-      <DropdownMenuContent className="bg-gray-800 border border-gray-700 w-32">
+      <DropdownMenuContent 
+        className="bg-gray-800 border border-gray-700 w-32" 
+        align="end"
+      >
         {languages.map((lng) => (
           <DropdownMenuItem
             key={lng.code}
