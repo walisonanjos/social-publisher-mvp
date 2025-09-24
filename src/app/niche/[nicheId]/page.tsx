@@ -30,6 +30,11 @@ export async function generateMetadata({ params }: PageProps): Promise<Metadata>
 
 export default async function NichePage({ params }: PageProps) {
   const supabase = createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+
+  if (!user) {
+    return <div>Acesso negado. Faça login para continuar.</div>;
+  }
   
   const { data: nicheData } = await supabase.from('niches').select('name').eq('id', params.nicheId).single();
   
