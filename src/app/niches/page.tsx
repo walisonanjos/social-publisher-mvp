@@ -5,6 +5,7 @@ import Link from "next/link";
 import { createClient } from "../../lib/supabaseClient";
 import { User } from "@supabase/supabase-js";
 import { Loader2, PlusCircle, Trash2 } from "lucide-react";
+import MainHeader from "@/components/MainHeader";
 import { Niche } from "@/types";
 import Auth from "@/components/Auth";
 import { useTranslation } from "react-i18next";
@@ -107,6 +108,7 @@ export default function NichesPage() {
 
   return (
     <div className="bg-gray-900 min-h-screen text-white">
+      <MainHeader user={user} pageTitle={t("your_workspaces")} />
       <main className="container mx-auto p-4 md:p-8">
         <div className="w-full max-w-4xl mx-auto">
           <p className="text-lg text-center text-gray-400 -mt-8 mb-12">
