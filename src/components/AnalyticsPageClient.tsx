@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { createClient } from "@/lib/supabaseClient";
 import { User } from "@supabase/supabase-js";
 import { Loader2, BarChart2 as ChartIcon, Youtube, Instagram } from "lucide-react";
+import MainHeader from "./MainHeader"; // Importação adicionada
 import Navbar from "@/components/Navbar";
 import Auth from "@/components/Auth";
 import YouTubeAnalyticsView from "./YouTubeAnalyticsView";
@@ -18,11 +19,10 @@ interface MetaInsightValue { value: number; }
 interface MetaInsight { name: string; period: string; values: MetaInsightValue[]; }
 interface MetaAnalyticsVideo { id: number; title: string; scheduled_at: string; instagram_post_id: string | null; facebook_post_id: string | null; instagram_insights: MetaInsight[] | null; facebook_insights: MetaInsight[] | null; }
 
-export default function AnalyticsPageClient({ nicheId }: { nicheId: string }) {
+export default function AnalyticsPageClient({ nicheId, nicheName }: { nicheId: string, nicheName: string }) { // nicheName adicionado aqui
   const supabase = createClient();
   const [user, setUser] = useState<User | null>(null);
   const { t } = useTranslation();
-  const [nicheName, setNicheName] = useState(t("analytics"));
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   
@@ -31,6 +31,7 @@ export default function AnalyticsPageClient({ nicheId }: { nicheId: string }) {
   
   const [isYouTubeConnected, setIsYouTubeConnected] = useState(false);
   const [isInstagramConnected, setIsInstagramConnected] = useState(false);
+  const [isTikTokConnected, setIsTikTokConnected] = useState(false);
   const [activeTab, setActiveTab] = useState<'youtube' | 'meta'>('youtube');
 
   const fetchPageData = useCallback(async (userId: string) => {
@@ -39,7 +40,7 @@ export default function AnalyticsPageClient({ nicheId }: { nicheId: string }) {
 
     try {
       const { data: nicheData } = await supabase.from('niches').select('name').eq('id', nicheId).single();
-      if (nicheData) setNicheName(nicheData.name);
+      if (nicheData) { /* nicheName já é passado por prop, não precisa de setNicheName aqui */ }
 
       const { data: connections } = await supabase.from('social_connections').select('platform').eq('user_id', userId).eq('niche_id', nicheId);
       
@@ -156,6 +157,7 @@ export default function AnalyticsPageClient({ nicheId }: { nicheId: string }) {
   
   return (
     <div className="bg-gray-900 min-h-screen text-white">
+      <MainHeader pageTitle={`${nicheName} - ${t("analytics")}`} backLink={`/niche/${nicheId}`} />
       <main className="container mx-auto p-4 md:p-8">
         <Navbar nicheId={nicheId} />
         <div className="mt-8">
