@@ -1,12 +1,27 @@
 // src/app/niche/[nicheId]/analytics/page.tsx
-
+import { createClient } from "@/lib/supabaseServerClient";
 import AnalyticsPageClient from "@/components/AnalyticsPageClient";
+import { notFound, redirect } from "next/navigation";
 
-// A correção é marcar a função como 'async' e tipar os params como uma 'Promise'
-export default async function AnalyticsPage({ params }: { params: Promise<{ nicheId:string }> }) {
+interface PageProps {
+  params: {
+    nicheId: string;
+  };
+}
+
+export default async function AnalyticsPage({ params }: PageProps) {
+  const supabase = createClient();
+  const { data: { user } } = await supabase.auth.getUser();
+
+  if (!user) {
+    redirect('/auth/login');
+  }
+
+  const { data: nicheData } = await supabase.from('niches').select('name').eq('id', params.nicheId).single();
   
-  // E então usar 'await' para extrair o valor do nicheId
-  const { nicheId } = await params;
-  
-  return <AnalyticsPageClient nicheId={nicheId} />;
+  if (!nicheData) {
+    notFound();
+  }
+
+  return <AnalyticsPageClient nicheId={params.nicheId} nicheName={nicheData.name} />;
 }
