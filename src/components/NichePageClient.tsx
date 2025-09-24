@@ -268,7 +268,7 @@ export default function NichePageClient({ nicheId, nicheName }: { nicheId: strin
           onClose={() => setViewingLogsForVideo(null)}
         />
       )}
-      <MainHeader user={user} pageTitle={nicheName} backLink="/niches" />
+      <MainHeader pageTitle={nicheName} backLink="/niches" />
       <main className="container mx-auto p-4 md:p-8">
         <Navbar nicheId={nicheId} />
         <div className="my-8">
