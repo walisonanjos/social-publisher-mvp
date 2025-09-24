@@ -271,8 +271,8 @@ export default function NichePageClient({ nicheId, nicheName }: { nicheId: strin
       
       {/* ✅ MAINHEADER ADICIONADO */}
       <MainHeader 
-        user={user} 
-        pageTitle={nicheName} 
+        user={user}
+        pageTitle={nicheName}
         backLink="/dashboard"
       />
       
