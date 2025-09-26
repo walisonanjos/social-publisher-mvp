@@ -5,7 +5,7 @@ import { createClient } from "@/lib/supabaseClient";
 import { User } from "@supabase/supabase-js";
 import { Loader2 } from "lucide-react";
 import { Video } from "@/types";
-import MainHeader from "./MainHeader"; // Importação adicionada
+import MainHeader from "./MainHeader";
 import Navbar from "./Navbar";
 import VideoGrid from "./VideoGrid";
 import Auth from "./Auth";
@@ -13,14 +13,16 @@ import { useRouter } from "next/navigation";
 import ViewLogsModal from "./ViewLogsModal";
 import { timeZones } from "../lib/timezones";
 import { useTranslation } from "react-i18next";
+import { toast } from "sonner"; // Necessário para toast.error
 
-export default function HistoryPageClient({ nicheId, nicheName }: { nicheId: string, nicheName: string }) { // nicheName adicionado aqui
+export default function HistoryPageClient({ nicheId }: { nicheId: string }) {
   const supabase = createClient();
   const router = useRouter();
   const { t } = useTranslation();
   const [user, setUser] = useState<User | null>(null);
   const [videos, setVideos] = useState<Video[]>([]);
   const [loading, setLoading] = useState(true);
+  const [nicheName, setNicheName] = useState(t("loading"));
   const [viewingLogsForVideo, setViewingLogsForVideo] = useState<Video | null>(null);
   const initialTimezoneName = timeZones[0].split(') ')[1];
   const [nicheTimezone, setNicheTimezone] = useState(timeZones.find(tz => tz.endsWith(initialTimezoneName)) || timeZones[0]);
@@ -55,10 +57,15 @@ export default function HistoryPageClient({ nicheId, nicheName }: { nicheId: str
           .lt("scheduled_at", todayISO)
           .order("scheduled_at", { ascending: false });
         setVideos(videosData || []);
-        
-        const { data: nicheData } = await supabase.from("niches").select("name, timezone").eq("id", nicheId).single();
+
+        const { data: nicheData } = await supabase
+          .from("niches")
+          .select("name, timezone")
+          .eq("id", nicheId)
+          .single();
         if (nicheData) {
-           if (nicheData.timezone) {
+          setNicheName(nicheData.name);
+          if (nicheData.timezone) {
             const fullTimezone = timeZones.find(tz => tz.endsWith(nicheData.timezone));
             setNicheTimezone(fullTimezone || nicheData.timezone);
           }
@@ -98,6 +105,7 @@ export default function HistoryPageClient({ nicheId, nicheName }: { nicheId: str
         <ViewLogsModal 
           video={viewingLogsForVideo} 
           onClose={() => setViewingLogsForVideo(null)} 
+          nicheTimezone={nicheTimezone.split(') ')[1] || nicheTimezone} // ✅ CORREÇÃO APLICADA AQUI
         />
       )}
 
