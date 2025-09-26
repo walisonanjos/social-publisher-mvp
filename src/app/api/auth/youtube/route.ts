@@ -1,8 +1,6 @@
 // src/app/api/auth/youtube/route.ts
-
 import { NextResponse } from 'next/server';
 
-// URL da sua Edge Function que GERA o URL do Google (generate-youtube-auth-url)
 const GENERATE_YOUTUBE_AUTH_URL = `https://${process.env.NEXT_PUBLIC_SUPABASE_PROJECT_REF}.supabase.co/functions/v1/generate-youtube-auth-url`;
 
 const getFinalRedirectUrl = () => {
@@ -26,15 +24,12 @@ export async function GET(request: Request) {
 
     const finalSiteUrl = getFinalRedirectUrl(); 
 
-    if (!nicheId) {
-        return NextResponse.json({ error: 'Niche ID is missing.' }, { status: 400 });
-    }
-    if (!authHeader) {
+    if (!nicheId || !authHeader) {
         return NextResponse.redirect(`${finalSiteUrl}/?error_message=User_Unauthorized`);
     }
 
     try {
-        // CORREÇÃO: Vamos INVOCAR a função Edge via INVOKE (POST), mas o retorno não é um redirect do Next.js
+        // 1. Chama a Edge Function para obter o URL de redirecionamento do Google
         const response = await fetch(GENERATE_YOUTUBE_AUTH_URL, {
             method: 'POST', 
             headers: {
@@ -49,14 +44,15 @@ export async function GET(request: Request) {
             throw new Error(errorData.error || 'Failed to get Google Auth URL from Edge Function.');
         }
 
-        // A Edge Function retorna o authUrl no corpo do JSON
+        // 2. CORREÇÃO CRÍTICA: LÊ O CORPO E RETORNA O URL DO GOOGLE COMO JSON
         const { authUrl } = await response.json(); 
         
-        // Redireciona o usuário para o Google
-        return NextResponse.redirect(authUrl);
+        // Retorna a URL do Google no corpo do JSON (Status 200 OK)
+        return NextResponse.json({ authUrl });
 
     } catch (error: unknown) {
         console.error("Erro ao gerar URL OAuth do YouTube:", error instanceof Error ? error.message : String(error));
+        // Se houver qualquer erro na Edge Function, redireciona o usuário para a página de erro
         return NextResponse.redirect(`${finalSiteUrl}/?error_message=${encodeURIComponent(error instanceof Error ? error.message : String(error))}`);
     }
 }
