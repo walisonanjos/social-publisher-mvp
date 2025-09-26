@@ -8,6 +8,7 @@ import { IconBrandTiktok } from "@tabler/icons-react";
 import { useTranslation } from "react-i18next";
 import { TFunction } from "i18next";
 import Link from "next/link";
+import { toast } from "sonner"; // Adicionado: Para mostrar erros de forma mais amigável
 
 interface AccountConnectionProps {
   nicheId: string;
@@ -41,6 +42,63 @@ export default function AccountConnection({
   onDisconnect,
 }: AccountConnectionProps) {
   const { t } = useTranslation();
+  const [isConnecting, setIsConnecting] = useState(false);
+  const supabase = createClient();
+
+  // ✅ NOVA FUNÇÃO: Inicia o fluxo OAuth de forma autenticada
+  const handleYouTubeConnect = async () => {
+    setIsConnecting(true);
+    try {
+        const { data: { session } } = await supabase.auth.getSession();
+
+        if (!session || !session.access_token) {
+            toast.error(t("not_authenticated_login_again"));
+            return;
+        }
+
+        // 1. CHAMA A API ROUTE PASSANDO O TOKEN NO HEADER
+        const authResponse = await fetch(`/api/auth/youtube?nicheId=${nicheId}`, {
+            method: 'GET',
+            headers: {
+                'Authorization': `Bearer ${session.access_token}`, // ✅ ENVIA O TOKEN JWT
+            },
+        });
+
+        if (authResponse.ok) {
+            // 2. A API Route retorna um redirect para o Google, e o cliente deve seguir.
+            const data = await authResponse.json();
+            if (data.authUrl) {
+                window.location.href = data.authUrl;
+            } else {
+                // Caso a API Route retorne diretamente a URL do Google (pode ser o caso)
+                const location = authResponse.headers.get('Location');
+                if (location) {
+                    window.location.href = location;
+                } else {
+                     throw new Error(t("auth_url_not_returned"));
+                }
+            }
+        } else {
+            const errorText = await authResponse.text();
+            let errorMessage = t("failed_to_connect_try_again", { platform: "YouTube" });
+
+            try {
+                const errorJson = JSON.parse(errorText);
+                errorMessage = errorJson.error || errorMessage;
+            } catch {
+                // Se não for JSON, usamos o texto
+                errorMessage = errorText;
+            }
+            toast.error(t("failed_to_connect_with_error", { platform: "YouTube", message: errorMessage }));
+        }
+
+    } catch (error) {
+        console.error("Connection initiation failed:", error);
+        toast.error(t("failed_to_connect_try_again", { platform: "YouTube" }));
+    } finally {
+        setIsConnecting(false);
+    }
+  };
 
   return (
     <div className="bg-gray-800 p-8 rounded-lg shadow-lg border border-gray-700">
@@ -52,16 +110,18 @@ export default function AccountConnection({
         {isYouTubeConnected ? (
           <ConnectionStatus icon={Youtube} platformName="YouTube" onDisconnect={() => onDisconnect('youtube')} iconColorClass="text-red-500" t={t} />
         ) : (
-          <Link
-            // ✅ CORRIGIDO: Aponta para a rota de API do Next.js.
-            href={`/api/auth/youtube?nicheId=${nicheId}`} 
+            // ✅ MUDANÇA CRÍTICA: De Link para Button com onClick
+          <button
+            onClick={handleYouTubeConnect}
+            disabled={isConnecting}
             className="w-full flex items-center justify-center gap-3 py-3 px-4 border border-red-600/50 bg-red-600/20 hover:bg-red-600/30 text-white font-bold rounded-lg transition-colors disabled:opacity-50"
           >
             <Youtube size={20} />
-            <span>{t("connect_with_platform", { platform: "YouTube" })}</span>
-          </Link>
+            <span>{isConnecting ? t("please_wait") : t("connect_with_platform", { platform: "YouTube" })}</span>
+          </button>
         )}
 
+        {/* MUDANÇA: Instagram e TikTok permanecem como Link por enquanto, mas podem precisar ser Button mais tarde */}
         {isInstagramConnected ? (
           <>
             <ConnectionStatus icon={Instagram} platformName="Instagram" onDisconnect={() => onDisconnect('instagram')} iconColorClass="text-pink-500" t={t} />
