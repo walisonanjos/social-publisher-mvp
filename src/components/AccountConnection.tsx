@@ -19,7 +19,7 @@ interface AccountConnectionProps {
 
 const ConnectionStatus = ({ icon: Icon, platformName, onDisconnect, iconColorClass, t }: { icon: React.ElementType, platformName: string, onDisconnect: () => void, iconColorClass: string, t: TFunction }) => (
   <div className={`p-4 bg-green-900/50 border ${iconColorClass}/30 rounded-lg flex items-center justify-between`}>
-    <div className="flex items-center gap-3"> {/* ✅ CORRIGIDO: Propriedade 'className' duplicada removida */}
+    <div className="flex items-center gap-3">
       <Icon className={`${iconColorClass}`} size={24} />
       <span className="font-medium text-green-300">{platformName} {t("connected")}</span>
     </div>
@@ -42,15 +42,6 @@ export default function AccountConnection({
 }: AccountConnectionProps) {
   const { t } = useTranslation();
 
-  // ✅ CORREÇÃO CRÍTICA: Chamando a Edge Function do Supabase diretamente.
-  // Isso garante que o URL de início do fluxo OAuth seja sempre o correto,
-  // contornando ambiguidades de roteamento do Next.js.
-  const SUPABASE_FUNCTION_BASE = process.env.NEXT_PUBLIC_SUPABASE_URL + '/functions/v1';
-  const youtubeAuthUrl = `${SUPABASE_FUNCTION_BASE}/exchange-auth-code?nicheId=${nicheId}`;
-  
-  // Note que as outras plataformas (Instagram/TikTok) ainda usam a rota API do Next.js, 
-  // pois não tivemos problemas de 404 nelas.
-
   return (
     <div className="bg-gray-800 p-8 rounded-lg shadow-lg border border-gray-700">
       <h2 className="text-xl font-bold text-white mb-4">{t("connect_accounts")}</h2>
@@ -62,8 +53,8 @@ export default function AccountConnection({
           <ConnectionStatus icon={Youtube} platformName="YouTube" onDisconnect={() => onDisconnect('youtube')} iconColorClass="text-red-500" t={t} />
         ) : (
           <Link
-            // ✅ Linka diretamente para a Edge Function do Supabase.
-            href={youtubeAuthUrl}
+            // ✅ CORRIGIDO: Aponta para a rota de API do Next.js.
+            href={`/api/auth/youtube?nicheId=${nicheId}`} 
             className="w-full flex items-center justify-center gap-3 py-3 px-4 border border-red-600/50 bg-red-600/20 hover:bg-red-600/30 text-white font-bold rounded-lg transition-colors disabled:opacity-50"
           >
             <Youtube size={20} />
