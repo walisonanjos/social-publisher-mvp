@@ -15,14 +15,13 @@ import { timeZones } from "../lib/timezones";
 import { useTranslation } from "react-i18next";
 import { toast } from "sonner"; // Necessário para toast.error
 
-export default function HistoryPageClient({ nicheId }: { nicheId: string }) {
+export default function HistoryPageClient({ nicheId, nicheName }: { nicheId: string, nicheName: string }) { // ✅ CORRIGIDO: Aceita nicheName
   const supabase = createClient();
   const router = useRouter();
   const { t } = useTranslation();
   const [user, setUser] = useState<User | null>(null);
   const [videos, setVideos] = useState<Video[]>([]);
   const [loading, setLoading] = useState(true);
-  const [nicheName, setNicheName] = useState(t("loading"));
   const [viewingLogsForVideo, setViewingLogsForVideo] = useState<Video | null>(null);
   const initialTimezoneName = timeZones[0].split(') ')[1];
   const [nicheTimezone, setNicheTimezone] = useState(timeZones.find(tz => tz.endsWith(initialTimezoneName)) || timeZones[0]);
@@ -64,7 +63,6 @@ export default function HistoryPageClient({ nicheId }: { nicheId: string }) {
           .eq("id", nicheId)
           .single();
         if (nicheData) {
-          setNicheName(nicheData.name);
           if (nicheData.timezone) {
             const fullTimezone = timeZones.find(tz => tz.endsWith(nicheData.timezone));
             setNicheTimezone(fullTimezone || nicheData.timezone);
@@ -105,7 +103,7 @@ export default function HistoryPageClient({ nicheId }: { nicheId: string }) {
         <ViewLogsModal 
           video={viewingLogsForVideo} 
           onClose={() => setViewingLogsForVideo(null)} 
-          nicheTimezone={nicheTimezone.split(') ')[1] || nicheTimezone} // ✅ CORREÇÃO APLICADA AQUI
+          nicheTimezone={nicheTimezone.split(') ')[1] || nicheTimezone}
         />
       )}
 
