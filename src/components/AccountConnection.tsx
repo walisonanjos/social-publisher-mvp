@@ -41,7 +41,14 @@ export default function AccountConnection({
   onDisconnect,
 }: AccountConnectionProps) {
   const { t } = useTranslation();
-  // ✅ baseUrl removido para usar rotas relativas, corrigindo o 404
+  
+  // ✅ CORREÇÃO: Usamos o URL da API Route do Next.js (que o Next.js reconhece)
+  // O URL que inicia o fluxo OAuth (que o Next.js deve reconhecer)
+  const youtubeAuthUrl = `/api/auth/youtube?nicheId=${nicheId}`; 
+  
+  // Se você estiver usando o Edge Function do Supabase diretamente (o que estava funcionando):
+  // const youtubeAuthUrl = `https://${process.env.NEXT_PUBLIC_SUPABASE_PROJECT_REF}.supabase.co/functions/v1/exchange-auth-code?nicheId=${nicheId}`; 
+
 
   return (
     <div className="bg-gray-800 p-8 rounded-lg shadow-lg border border-gray-700">
@@ -54,8 +61,7 @@ export default function AccountConnection({
           <ConnectionStatus icon={Youtube} platformName="YouTube" onDisconnect={() => onDisconnect('youtube')} iconColorClass="text-red-500" t={t} />
         ) : (
           <Link
-            // ✅ CORRIGIDO: Agora usa o caminho relativo /api/auth/youtube
-            href={`/api/auth/youtube?nicheId=${nicheId}`} 
+            href={youtubeAuthUrl}
             className="w-full flex items-center justify-center gap-3 py-3 px-4 border border-red-600/50 bg-red-600/20 hover:bg-red-600/30 text-white font-bold rounded-lg transition-colors disabled:opacity-50"
           >
             <Youtube size={20} />
@@ -70,7 +76,6 @@ export default function AccountConnection({
           </>
         ) : (
           <Link
-            // ✅ CORRIGIDO: Agora usa o caminho relativo /api/auth/instagram
             href={`/api/auth/instagram?nicheId=${nicheId}`}
             className="w-full flex items-center justify-center gap-3 py-3 px-4 border border-purple-600/50 bg-purple-600/20 hover:bg-purple-600/30 text-white font-bold rounded-lg transition-colors disabled:opacity-50"
           >
@@ -83,7 +88,6 @@ export default function AccountConnection({
           <ConnectionStatus icon={IconBrandTiktok} platformName="TikTok" onDisconnect={() => onDisconnect('tiktok')} iconColorClass="text-gray-200" t={t} />
         ) : (
           <Link
-            // ✅ CORRIGIDO: Agora usa o caminho relativo /api/auth/tiktok
             href={`/api/auth/tiktok?nicheId=${nicheId}`}
             className="w-full flex items-center justify-center gap-3 py-3 px-4 border border-gray-600/50 bg-gray-600/20 hover:bg-gray-600/30 text-white font-bold rounded-lg transition-colors disabled:opacity-50"
           >
