@@ -1,4 +1,4 @@
-// src/app/api/auth/youtube/route.ts
+// src/app/api/auth/youtube/route.ts código ok. 
 import { NextResponse } from 'next/server';
 
 const GENERATE_YOUTUBE_AUTH_URL = `https://${process.env.NEXT_PUBLIC_SUPABASE_PROJECT_REF}.supabase.co/functions/v1/generate-youtube-auth-url`;
