@@ -14,12 +14,9 @@ import { formatInTimeZone } from 'date-fns-tz';
 
 // Função auxiliar para formatar a data/hora do log no fuso horário do nicho
 const formatLogTime = (utcDateString: string, nicheTimezone: string, locale: Locale): string => {
-    // Se o timezone não for válido ou for "UTC", usa UTC. Caso contrário, formata.
     const timezoneToUse = nicheTimezone && nicheTimezone !== 'UTC' ? nicheTimezone : 'UTC';
 
     try {
-        // Assume-se que nicheTimezone é um string IANA válido (ex: 'Europe/Paris')
-        // formatInTimeZone converte a string UTC para a timezone e formata.
         return formatInTimeZone(
             utcDateString, 
             timezoneToUse,
@@ -27,7 +24,6 @@ const formatLogTime = (utcDateString: string, nicheTimezone: string, locale: Loc
             { locale }
         );
     } catch (e) {
-        // Fallback: se houver erro (timezone inválido), usa a formatação padrão em UTC
         return format(new Date(utcDateString), "dd/MM/yy 'às' HH:mm:ss", { locale });
     }
 };
@@ -60,27 +56,29 @@ const statusTranslationKey = {
 };
 
 const logDetailsTranslationKeys: { [key: string]: string } = {
-  // Logs de Sucesso (Português/Base)
+  // Logs de Sucesso
   "Vídeo postado diretamente (privado). ID:": "log_posted_directly_private",
   "Reel postado com sucesso. ID do post:": "log_reel_posted_success",
   "Vídeo postado. ID no YouTube:": "log_video_posted_success_youtube_id",
-  // Erros de Token (Português/Inglês)
+  // Erros de Token
   "Token inválido. Desconectando conta automaticamente.": "log_error_token_invalid_auto_disconnect",
   "Token has been expired or revoked.": "log_error_token_expired_or_revoked",
+  // Novos termos para erro, se houver
+  "Token expired or revoked.": "log_error_token_expired_or_revoked", // Versão em inglês sem "has been"
 };
 
 const translateLogDetails = (details: string | null, t: TFunction) => {
   if (!details) return null;
   
   for (const key in logDetailsTranslationKeys) {
-    if (details.includes(key)) {
+    if (details.startsWith(key)) { // Usar startsWith para cobrir casos onde o ID é adicionado no final
       const translatedKey = logDetailsTranslationKeys[key];
-      const dynamicValue = details.replace(key, '').trim(); 
-
-      return `${t(translatedKey)} ${dynamicValue}`;
+      const dynamicValue = details.substring(key.length).trim(); 
+      // Se o dynamicValue for um ID longo e puder ser quebrado, garantimos isso
+      return `${t(translatedKey)} ${dynamicValue}`;
     }
   }
-  return details;
+  return details; // Retorna os detalhes originais se nenhuma chave de tradução corresponder
 };
 
 export default function ViewLogsModal({ video, onClose, nicheTimezone }: ViewLogsModalProps) {
@@ -149,7 +147,8 @@ export default function ViewLogsModal({ video, onClose, nicheTimezone }: ViewLog
             <X size={24} />
           </button>
         </div>
-        <p className="text-gray-400 mb-6 truncate">{t("logs_for_video")}: <span className="font-medium text-gray-200">{video.title}</span></p>
+        {/* REMOVIDO 'truncate' para garantir que o título do vídeo não seja cortado */}
+        <p className="text-gray-400 mb-6">{t("logs_for_video")}: <span className="font-medium text-gray-200">{video.title}</span></p>
 
         <div className="flex-grow overflow-y-auto pr-4 -mr-4">
           {loading ? (
@@ -164,18 +163,17 @@ export default function ViewLogsModal({ video, onClose, nicheTimezone }: ViewLog
             <div className="space-y-4">
               {logs.map((log) => (
                 <div key={log.id} className="bg-gray-900/70 p-4 rounded-lg">
-                  <div className="flex justify-between items-center mb-1">
-                    <div className="flex items-center gap-3">
-                      <span className={`text-xs font-bold px-2 py-1 rounded-full ${statusStyles[log.status as keyof typeof statusStyles]}`}>
+                  <div className="flex justify-between items-start mb-1 gap-2 flex-wrap"> {/* Adicionado flex-wrap para quebra flexível */}
+                    <div className="flex items-center gap-3 flex-1 min-w-0"> {/* ✅ Adicionado flex-1 min-w-0 */}
+                      <span className={`text-xs font-bold px-2 py-1 rounded-full ${statusStyles[log.status as keyof typeof statusStyles]} flex-shrink-0`}>
                         {t(statusTranslationKey[log.status as keyof typeof statusTranslationKey])}
                       </span>
-                      <span className="font-semibold text-white capitalize">{log.platform}</span>
+                      <span className="font-semibold text-white capitalize flex-1 min-w-0">{log.platform}</span> {/* ✅ Adicionado flex-1 min-w-0 */}
                     </div>
-                    <span className="text-xs text-gray-400">
-                      {formatLogTime(log.created_at, nicheTimezone, getLocale())}
-                    </span>
+                    <span className="text-xs text-gray-400 flex-shrink-0">{formatLogTime(log.created_at, nicheTimezone, getLocale())}</span>
                   </div>
-                  <p className="text-sm text-gray-300 break-words">{translateLogDetails(log.details, t)}</p>
+                  {/* ✅ A classe break-words já estava aqui, agora com mais espaço devido ao flex-1 min-w-0 acima */}
+                  <p className="text-sm text-gray-300 break-words flex-1 min-w-0">{translateLogDetails(log.details, t)}</p> 
                 </div>
               ))}
             </div>
