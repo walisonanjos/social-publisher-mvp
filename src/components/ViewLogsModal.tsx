@@ -60,7 +60,7 @@ const statusTranslationKey = {
 };
 
 const logDetailsTranslationKeys: { [key: string]: string } = {
-  // Log de Sucesso (Português/Base)
+  // Logs de Sucesso (Português/Base)
   "Vídeo postado diretamente (privado). ID:": "log_posted_directly_private",
   "Reel postado com sucesso. ID do post:": "log_reel_posted_success",
   "Vídeo postado. ID no YouTube:": "log_video_posted_success_youtube_id",
