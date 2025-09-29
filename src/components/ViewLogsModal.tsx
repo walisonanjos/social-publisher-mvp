@@ -63,22 +63,20 @@ const logDetailsTranslationKeys: { [key: string]: string } = {
   // Erros de Token
   "Token inválido. Desconectando conta automaticamente.": "log_error_token_invalid_auto_disconnect",
   "Token has been expired or revoked.": "log_error_token_expired_or_revoked",
-  // Novos termos para erro, se houver
-  "Token expired or revoked.": "log_error_token_expired_or_revoked", // Versão em inglês sem "has been"
 };
 
 const translateLogDetails = (details: string | null, t: TFunction) => {
   if (!details) return null;
   
   for (const key in logDetailsTranslationKeys) {
-    if (details.startsWith(key)) { // Usar startsWith para cobrir casos onde o ID é adicionado no final
+    if (details.startsWith(key)) { 
       const translatedKey = logDetailsTranslationKeys[key];
       const dynamicValue = details.substring(key.length).trim(); 
-      // Se o dynamicValue for um ID longo e puder ser quebrado, garantimos isso
-      return `${t(translatedKey)} ${dynamicValue}`;
+
+      return `${t(translatedKey)} ${dynamicValue}`;
     }
   }
-  return details; // Retorna os detalhes originais se nenhuma chave de tradução corresponder
+  return details; 
 };
 
 export default function ViewLogsModal({ video, onClose, nicheTimezone }: ViewLogsModalProps) {
@@ -147,7 +145,6 @@ export default function ViewLogsModal({ video, onClose, nicheTimezone }: ViewLog
             <X size={24} />
           </button>
         </div>
-        {/* REMOVIDO 'truncate' para garantir que o título do vídeo não seja cortado */}
         <p className="text-gray-400 mb-6">{t("logs_for_video")}: <span className="font-medium text-gray-200">{video.title}</span></p>
 
         <div className="flex-grow overflow-y-auto pr-4 -mr-4">
@@ -163,17 +160,17 @@ export default function ViewLogsModal({ video, onClose, nicheTimezone }: ViewLog
             <div className="space-y-4">
               {logs.map((log) => (
                 <div key={log.id} className="bg-gray-900/70 p-4 rounded-lg">
-                  <div className="flex justify-between items-start mb-1 gap-2 flex-wrap"> {/* Adicionado flex-wrap para quebra flexível */}
-                    <div className="flex items-center gap-3 flex-1 min-w-0"> {/* ✅ Adicionado flex-1 min-w-0 */}
+                  <div className="flex justify-between items-start gap-2"> {/* ✅ START para alinhar ao topo */}
+                    <div className="flex items-center gap-3 flex-1 min-w-0">
                       <span className={`text-xs font-bold px-2 py-1 rounded-full ${statusStyles[log.status as keyof typeof statusStyles]} flex-shrink-0`}>
                         {t(statusTranslationKey[log.status as keyof typeof statusTranslationKey])}
                       </span>
-                      <span className="font-semibold text-white capitalize flex-1 min-w-0">{log.platform}</span> {/* ✅ Adicionado flex-1 min-w-0 */}
+                      <span className="font-semibold text-white capitalize flex-1 min-w-0">{log.platform}</span>
                     </div>
                     <span className="text-xs text-gray-400 flex-shrink-0">{formatLogTime(log.created_at, nicheTimezone, getLocale())}</span>
                   </div>
-                  {/* ✅ A classe break-words já estava aqui, agora com mais espaço devido ao flex-1 min-w-0 acima */}
-                  <p className="text-sm text-gray-300 break-words flex-1 min-w-0">{translateLogDetails(log.details, t)}</p> 
+                  {/* ✅ Removido mb-1 e adicionado pt-1 para uma separação mínima */}
+                  <p className="text-sm text-gray-300 break-words pt-1">{translateLogDetails(log.details, t)}</p> 
                 </div>
               ))}
             </div>
