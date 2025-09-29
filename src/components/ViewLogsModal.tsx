@@ -162,9 +162,9 @@ export default function ViewLogsModal({ video, onClose, nicheTimezone }: ViewLog
           ) : (
             <div className="space-y-4">
               {logs.map((log) => (
-                <div key={log.id} className="bg-gray-900/70 p-4 rounded-lg">
-                  <div className="flex justify-between items-center gap-2"> {/* ✅ itens-center para alinha o texto da data ao centro da linha */}
-                    <div className="flex items-center gap-3"> {/* ✅ Removido flex-1 para que o texto não empurre a data */}
+                <div key={log.id} className="bg-gray-900/70 px-4 py-3 rounded-lg"> {/* ✅ Ajuste de Padding */}
+                  <div className="flex justify-between items-center gap-3">
+                    <div className="flex items-center gap-3">
                       <span className={`text-xs font-bold px-2 py-1 rounded-full ${statusStyles[log.status as keyof typeof statusStyles]} flex-shrink-0`}>
                         {t(statusTranslationKey[log.status as keyof typeof statusTranslationKey])}
                       </span>
@@ -172,8 +172,7 @@ export default function ViewLogsModal({ video, onClose, nicheTimezone }: ViewLog
                     </div>
                     <span className="text-xs text-gray-400 flex-shrink-0">{formatLogTime(log.created_at, nicheTimezone, getLocale())}</span>
                   </div>
-                  {/* ✅ Removemos o flex-1 min-w-0 da tag P para resolver o problema de quebra de linha */}
-                  <p className="text-sm text-gray-300 break-words pt-1">{translateLogDetails(log.details, t)}</p> 
+                  <p className="text-sm text-gray-300 break-words">{translateLogDetails(log.details, t)}</p>
                 </div>
               ))}
             </div>
