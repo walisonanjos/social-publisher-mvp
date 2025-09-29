@@ -75,6 +75,10 @@ const translateLogDetails = (details: string | null, t: TFunction) => {
 
       return `${t(translatedKey)} ${dynamicValue}`;
     }
+    if (details.startsWith('Token expired or revoked.')) {
+        // Tratar variações de erros comuns em inglês que o backend pode enviar
+        return t("log_error_token_expired_or_revoked");
+    }
   }
   return details; 
 };
@@ -160,7 +164,7 @@ export default function ViewLogsModal({ video, onClose, nicheTimezone }: ViewLog
             <div className="space-y-4">
               {logs.map((log) => (
                 <div key={log.id} className="bg-gray-900/70 p-4 rounded-lg">
-                  <div className="flex justify-between items-start gap-2"> {/* ✅ START para alinhar ao topo */}
+                  <div className="flex justify-between items-center gap-2"> {/* ✅ itens-center para alinhar tudo na vertical */}
                     <div className="flex items-center gap-3 flex-1 min-w-0">
                       <span className={`text-xs font-bold px-2 py-1 rounded-full ${statusStyles[log.status as keyof typeof statusStyles]} flex-shrink-0`}>
                         {t(statusTranslationKey[log.status as keyof typeof statusTranslationKey])}
@@ -169,13 +173,16 @@ export default function ViewLogsModal({ video, onClose, nicheTimezone }: ViewLog
                     </div>
                     <span className="text-xs text-gray-400 flex-shrink-0">{formatLogTime(log.created_at, nicheTimezone, getLocale())}</span>
                   </div>
-                  {/* ✅ Removido mb-1 e adicionado pt-1 para uma separação mínima */}
-                  <p className="text-sm text-gray-300 break-words pt-1">{translateLogDetails(log.details, t)}</p> 
+                  {/* ✅ Removemos a margem pt-1 e confiamos que o flexbox fará o trabalho */}
+                  <p className="text-sm text-gray-300 break-words">{translateLogDetails(log.details, t)}</p> 
                 </div>
               ))}
             </div>
           )}
         </div>
+      </div>
+      <div className="p-4 bg-gray-800 border-t border-gray-700">
+        <p className="text-xs text-gray-500">Horários exibidos no fuso horário do nicho.</p>
       </div>
     </div>
   );
