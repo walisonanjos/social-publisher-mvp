@@ -5,7 +5,7 @@ import { Video } from "@/types";
 import { X, Loader2 } from "lucide-react";
 import { useEffect, useState } from "react";
 import { createClient } from "@/lib/supabaseClient";
-import { format, Locale } from "date-fns"; // ✅ CORRIGIDO: Importando o tipo Locale
+import { format, Locale } from "date-fns";
 import { ptBR, enUS, es, fr } from "date-fns/locale";
 import { toast } from "sonner";
 import { useTranslation } from "react-i18next";
@@ -44,7 +44,7 @@ interface PostLog {
 interface ViewLogsModalProps {
   video: Video;
   onClose: () => void;
-  nicheTimezone: string; // ✅ Mantendo a prop para ser usada na função formatLogTime
+  nicheTimezone: string; 
 }
 
 const statusStyles = {
@@ -164,7 +164,7 @@ export default function ViewLogsModal({ video, onClose, nicheTimezone }: ViewLog
             <div className="space-y-4">
               {logs.map((log) => (
                 <div key={log.id} className="bg-gray-900/70 p-4 rounded-lg">
-                  <div className="flex justify-between items-center">
+                  <div className="flex justify-between items-center mb-1">
                     <div className="flex items-center gap-3">
                       <span className={`text-xs font-bold px-2 py-1 rounded-full ${statusStyles[log.status as keyof typeof statusStyles]}`}>
                         {t(statusTranslationKey[log.status as keyof typeof statusTranslationKey])}
@@ -175,7 +175,7 @@ export default function ViewLogsModal({ video, onClose, nicheTimezone }: ViewLog
                       {formatLogTime(log.created_at, nicheTimezone, getLocale())}
                     </span>
                   </div>
-                  <p className="text-sm text-gray-300 mt-2 break-words">{translateLogDetails(log.details, t)}</p>
+                  <p className="text-sm text-gray-300 break-words">{translateLogDetails(log.details, t)}</p>
                 </div>
               ))}
             </div>

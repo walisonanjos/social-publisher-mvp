@@ -133,5 +133,10 @@
   "signup_success_check_email": "Cadastro realizado! Por favor, verifique seu e-mail para confirmar a conta.",
   "unknown_error_occurred": "Ocorreu um erro desconhecido",
    "home": "Início", 
-   "post_history": "Histórico de Posts"
+   "post_history": "Histórico de Posts",
+   "log_posted_directly_private": "Vídeo postado diretamente (privado). ID:",
+  "log_reel_posted_success": "Reel postado com sucesso. ID do post:",
+  "log_video_posted_success_youtube_id": "Vídeo postado. ID no YouTube:",
+  "log_error_token_invalid_auto_disconnect": "Token inválido. Desconectando conta automaticamente.",
+  "log_error_token_expired_or_revoked": "Token expirou ou foi revogado."
 }

@@ -133,5 +133,10 @@
   "signup_success_check_email": "Registro exitoso. Por favor, verifica tu correo electrónico para confirmar tu cuenta.",
   "unknown_error_occurred": "Ha ocurrido un error desconocido",
   "home": "Inicio", 
-  "post_history": "Historial de publicaciones"
+  "post_history": "Historial de publicaciones",
+  "log_posted_directly_private": "Video publicado directamente (privado). ID:",
+  "log_reel_posted_success": "Reel publicado con éxito. ID de la publicación:",
+  "log_video_posted_success_youtube_id": "Video publicado. ID de YouTube:",
+  "log_error_token_invalid_auto_disconnect": "Token inválido. Desconectando cuenta automáticamente.",
+  "log_error_token_expired_or_revoked": "El token ha caducado o ha sido revocado."
 }

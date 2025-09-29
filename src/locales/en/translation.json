@@ -133,5 +133,10 @@
   "signup_success_check_email": "Sign up successful! Please check your email to confirm your account.",
   "unknown_error_occurred": "An unknown error occurred",
   "home": "Home",
-  "post_history": "Post History"
+  "post_history": "Post History",
+  "log_posted_directly_private": "Video posted directly (private). ID:",
+  "log_reel_posted_success": "Reel posted successfully. Post ID:",
+  "log_video_posted_success_youtube_id": "Video posted. YouTube ID:",
+  "log_error_token_invalid_auto_disconnect": "Invalid token. Automatically disconnecting account.",
+  "log_error_token_expired_or_revoked": "Token has been expired or revoked."
 }

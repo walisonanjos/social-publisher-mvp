@@ -133,5 +133,10 @@
   "signup_success_check_email": "Inscription réussie ! Veuillez vérifier votre e-mail pour confirmer votre compte.",
   "unknown_error_occurred": "Une erreur inconnue est survenue",
   "home": "Accueil",
-  "post_history": "Historique des publications"
+  "post_history": "Historique des publications",
+  "log_posted_directly_private": "Vidéo publiée directement (privée). ID:",
+  "log_reel_posted_success": "Reel publié avec succès. ID de la publication:",
+  "log_video_posted_success_youtube_id": "Vidéo publiée. ID YouTube:",
+  "log_error_token_invalid_auto_disconnect": "Jeton invalide. Déconnexion automatique du compte.",
+  "log_error_token_expired_or_revoked": "Le jeton a expiré ou a été révoqué."
 }
