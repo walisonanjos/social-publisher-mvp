@@ -13,7 +13,7 @@ import { useEffect, useState } from "react";
 
 export default function LanguageSwitcher() {
   const { i18n } = useTranslation();
-  const [currentLanguage, setCurrentLanguage] = useState("pt");
+  const [currentLanguage, setCurrentLanguage] = useState("en"); // ✅ MUDANÇA AQUI: "pt" → "en"
 
   const languages = [
     { code: "pt", name: "Português" },
@@ -22,12 +22,10 @@ export default function LanguageSwitcher() {
     { code: "fr", name: "Français" },
   ];
 
-  // ✅ Garantir que pegamos apenas a parte principal do código (ex: "en" em vez de "en-US")
   const getBaseLanguageCode = (languageCode: string) => {
     return languageCode.split('-')[0];
   };
 
-  // ✅ Atualizar o idioma atual quando o i18n mudar
   useEffect(() => {
     const baseLanguage = getBaseLanguageCode(i18n.language);
     setCurrentLanguage(baseLanguage);
@@ -38,8 +36,7 @@ export default function LanguageSwitcher() {
     setCurrentLanguage(lng);
   };
 
-  // ✅ Encontrar o nome do idioma atual
-  const currentLanguageName = languages.find(l => l.code === currentLanguage)?.name || "Português";
+  const currentLanguageName = languages.find(l => l.code === currentLanguage)?.name || "English"; // ✅ MUDANÇA AQUI: "Português" → "English"
 
   return (
     <DropdownMenu>

@@ -29,7 +29,7 @@ i18n
   .use(initReactI18next)
   .init({
     resources,
-    fallbackLng: 'pt',
+    fallbackLng: 'en', // ✅ MUDANÇA AQUI: 'pt' → 'en'
     interpolation: {
       escapeValue: false,
     },
